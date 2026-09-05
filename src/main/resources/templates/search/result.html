@@ -300,10 +300,11 @@
             <span class="brand-kr">스모아카이브</span>
         </div>
         <div class="search-wrap">
-            <form th:action="@{/search}" method="get" style="display: flex; gap: 10px; width: 100%;">
+            <form th:action="@{/search}" method="get" style="display: flex; gap: 10px; flex: 1;">
                 <input type="text" name="keyword" th:value="${keyword}" placeholder="시코나 또는 본명 검색">
                 <button type="submit">검색</button>
             </form>
+            <a th:href="@{/bookmark}" style="white-space: nowrap; align-self: center; font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; color: var(--sumi-soft); text-decoration: none;">★ 즐겨찾기</a>
         </div>
     </header>
 

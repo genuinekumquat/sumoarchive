@@ -94,6 +94,20 @@
         }
         .status-badge.retired { border-color: var(--sumi-faint); color: var(--sumi-faint); }
 
+        .bookmark-btn {
+            float: right;
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 12px;
+            letter-spacing: 1px;
+            padding: 5px 12px;
+            border: 1px solid var(--washi-line);
+            background: transparent;
+            color: var(--sumi-soft);
+            cursor: pointer;
+        }
+        .bookmark-btn:hover { border-color: var(--shu); color: var(--shu); }
+        .bookmark-btn.is-active { border-color: var(--shu); color: var(--shu); background: var(--shu-faint); }
+
         .shikona-row {
             display: flex;
             align-items: baseline;
@@ -498,11 +512,11 @@
 
     <header>
         <div class="brand-row">
-            <a class="brand-jp" th:href="@{/static}">相撲archive</a>
+            <a class="brand-jp" th:href="@{/}">相撲archive</a>
             <span class="brand-kr">스모아카이브</span>
         </div>
         <div class="breadcrumb">
-            <a th:href="@{/static}">반즈케</a> &gt; <span th:text="${rikishi.shikonaKr}">시코나</span>
+            <a th:href="@{/}">반즈케</a> &gt; <span th:text="${rikishi.shikonaKr}">시코나</span>
         </div>
     </header>
 
@@ -511,6 +525,9 @@
         <div class="profile-inner">
 
             <div class="profile-info">
+                <button type="button" id="bookmarkBtn" class="bookmark-btn" th:attr="data-rikishi-id=${rikishi.id}">
+                    <span id="bookmarkIcon">☆</span> 북마크
+                </button>
                 <span class="status-badge"
                       th:classappend="${rikishi.isActive} ? '' : 'retired'"
                       th:text="${rikishi.isActive} ? '現役' : (${rikishi.oyakataNameKr} != null ? '親方' : '引退')">現役</span>
@@ -681,6 +698,7 @@
     </aside>
 </div>
 
+<script th:src="@{/js/bookmark.js}"></script>
 <script th:src="@{/js/comments.js}"></script>
 <script th:inline="javascript">
     /*<![CDATA[*/
@@ -690,6 +708,25 @@
         /*[/]*/
     ];
     /*]]>*/
+
+    // ===== 북마크 버튼 =====
+    (function () {
+        var btn = document.getElementById('bookmarkBtn');
+        var icon = document.getElementById('bookmarkIcon');
+        var rikishiId = btn.dataset.rikishiId;
+
+        function render() {
+            var on = window.SumoBookmark.isBookmarked(rikishiId);
+            icon.textContent = on ? '★' : '☆';
+            btn.classList.toggle('is-active', on);
+        }
+
+        btn.addEventListener('click', function () {
+            window.SumoBookmark.toggle(rikishiId);
+            render();
+        });
+        render();
+    })();
 
     if (kimariteData.length > 0) {
         // 프로젝트 팔레트(먹색/낙관다홍 계열 + 일본 전통색 톤 4종 추가)로 원형차트 배색.

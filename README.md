@@ -42,8 +42,8 @@ MVP(현재 단계) 이후에는 다음과 같은 방향으로 서비스를 확�
 8. *(관리자)* `/admin/login`으로 로그인하면 댓글 관리 대시보드(`/admin/comments`)로 이동해, 사이트
    전체 토리쿠미의 댓글을 최신순으로 한눈에 모아보고 부적절한 댓글을 비밀번호 검증 없이 즉시
    블라인드 처리할 수 있다.
-9. *(계획 중, 미구현)* 관심 리키시를 북마크해서(LocalStorage 기반, 로그인 불필요) 나만의 리스트를
-   드래그 앤 드롭으로 정렬해볼 수 있다.
+9. **즐겨찾기 페이지**(`/bookmark`)에서 관심 리키시를 북마크해서(LocalStorage 기반, 로그인 불필요)
+   나만의 리스트를 만들고, 드래그 앤 드롭으로 순서를 바꿀 수 있다.
 
 ---
 
@@ -107,6 +107,7 @@ application-local.properties            # git 제외 — 실제 DB/관리자 비
 | GET | `/rikishi/{id}` | 리키시 상세 프로필 |
 | GET | `/torikumi/{id}` | 토리쿠미(경기) 상세 전체 페이지 |
 | GET | `/torikumi/{id}/fragment` | 위와 동일한 내용의 조각(fragment) — 슬라이드 패널 삽입용 |
+| GET | `/bookmark` | 즐겨찾기 페이지 (LocalStorage ID 배열로 카드 목록 구성) |
 | GET / POST | `/admin/login` | 관리자 로그인 폼 조회 / 로그인 처리 (성공 시 `/admin/comments`로 이동) |
 | POST | `/admin/logout` | 관리자 로그아웃 (세션 무효화) |
 | GET | `/admin/comments?page=` | 관리자 댓글 관리 대시보드 (`/admin/**`, 세션 `isAdmin` 가드) |
@@ -117,6 +118,7 @@ application-local.properties            # git 제외 — 실제 DB/관리자 비
 |---|---|---|
 | GET | `/api/banzuke?division=` | 디비전별 최신 반즈케 목록 (탭 전환 시 비동기 호출) |
 | GET | `/api/search?keyword=&page=` | 리키시 검색 (페이지네이션) |
+| GET | `/api/rikishiEntity?ids=3,15,24` | 즐겨찾기 페이지용 — ID 목록으로 리키시 카드 조회 (요청 순서 유지) |
 | GET | `/api/torikumi/{torikumiId}/comments` | 해당 경기 댓글 전체 조회 |
 | POST | `/api/torikumi/{torikumiId}/comments` | 댓글 작성 (nickname, password, content) |
 | POST | `/api/torikumi/{torikumiId}/comments/{commentId}/delete` | 본인 댓글 삭제 (password 검증) |
@@ -150,6 +152,9 @@ application-local.properties            # git 제외 — 실제 DB/관리자 비
 - **화면-API 재사용**: 댓글 관리 대시보드(`/admin/comments`)는 새 삭제 API를 만들지 않고, 토리쿠미
   상세 화면이 쓰던 블라인드 API(`POST /api/torikumi/{id}/comments/{id}/blind`)를 fetch로 그대로
   호출합니다.
+- **서버가 모르는 개인화**: 즐겨찾기는 DB에 전혀 저장하지 않고 브라우저 LocalStorage의 ID 배열이
+  유일한 저장소입니다. 서버는 그 배열을 절대 순서를 바꾸지 않고 그대로 응답 순서에 반영해서, 드래그로
+  바꾼 정렬이 새로고침 후에도 유지되도록 합니다.
 
 ---
 
@@ -191,7 +196,7 @@ cp src/main/resources/application-local.properties.example \
 ## 8. 다음 단계 (로드맵)
 
 - [x] 관리자 댓글 관리 대시보드 (`/admin/comments` — 전체 댓글 조회 + 블라인드)
-- [ ] 북마크 페이지 (LocalStorage 기반, 로그인 불필요)
+- [x] 즐겨찾기 페이지 (`/bookmark`, LocalStorage 기반, 로그인 불필요, 드래그 정렬)
 - [ ] 관리자 데이터 수동 갱신 (반즈케/리키시 데이터 편집 UI)
 - [ ] 키마리테 상세 설명 백과사전
 - [ ] 반즈케 예측 시뮬레이터

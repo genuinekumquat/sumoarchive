@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>즐겨찾기 | 스모아카이브</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Yuji+Syuku&family=Noto+Serif+KR:wght@400;600;900&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --sumi: #1a1a18;
+            --sumi-soft: #56554e;
+            --sumi-faint: #86857f;
+            --washi: #f7f6f3;
+            --washi-line: rgba(26, 26, 24, 0.14);
+            --shu: #a3272c;
+            --shu-deep: #7c1d20;
+            --shu-faint: rgba(163, 39, 44, 0.10);
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            background-color: var(--washi);
+            background-image:
+                    repeating-linear-gradient(90deg, rgba(26,26,24,0.022) 0px, rgba(26,26,24,0.022) 1px, transparent 1px, transparent 3px),
+                    repeating-linear-gradient(0deg, rgba(26,26,24,0.012) 0px, rgba(26,26,24,0.012) 1px, transparent 1px, transparent 5px);
+            color: var(--sumi);
+            font-family: 'Noto Serif KR', serif;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+        .page { max-width: 760px; margin: 0 auto; padding: 40px 24px 80px; }
+        a { color: inherit; }
+
+        header { position: relative; border: 3px double var(--sumi); padding: 22px 28px 18px; margin-bottom: 26px; }
+        .brand-row { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+        .brand-jp { font-family: 'Yuji Syuku', serif; font-size: 28px; letter-spacing: 3px; color: var(--sumi); text-decoration: none; }
+        .brand-kr { font-family: 'Noto Serif KR', serif; font-weight: 900; font-size: 15px; letter-spacing: 1px; color: var(--sumi-soft); }
+        .breadcrumb { margin-top: 10px; font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; letter-spacing: 1px; color: var(--sumi-faint); }
+        .breadcrumb a:hover { color: var(--shu); }
+
+        h1 { font-size: 19px; letter-spacing: 1px; margin: 0 0 4px; }
+        .hint { font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; color: var(--sumi-faint); margin-bottom: 20px; }
+
+        #bookmarkEmpty {
+            border: 1px dashed var(--washi-line);
+            padding: 48px 20px;
+            text-align: center;
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 13px;
+            color: var(--sumi-faint);
+            letter-spacing: 1px;
+        }
+        #bookmarkEmpty a { color: var(--shu); text-decoration: none; }
+
+        .bm-card {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            border: 1px solid var(--washi-line);
+            background: #fff;
+            padding: 10px 14px;
+            margin-bottom: 8px;
+            cursor: grab;
+        }
+        .bm-card.sortable-ghost { opacity: 0.35; }
+        .bm-card:hover { border-color: var(--shu); }
+
+        .bm-handle { color: var(--sumi-faint); font-size: 16px; user-select: none; }
+
+        .bm-photo {
+            flex-shrink: 0;
+            width: 44px; height: 44px;
+            border: 1px solid var(--washi-line);
+            display: flex; align-items: center; justify-content: center;
+            overflow: hidden;
+            background: var(--washi);
+        }
+        .bm-photo img { width: 100%; height: 100%; object-fit: cover; }
+        .bm-photo-placeholder { font-family: 'Yuji Syuku', serif; font-size: 18px; color: var(--sumi-faint); }
+
+        .bm-link { display: flex; align-items: center; gap: 14px; flex: 1; min-width: 0; text-decoration: none; }
+        .bm-info { min-width: 0; }
+        .bm-name { font-weight: 900; font-size: 15.5px; color: var(--sumi); }
+        .bm-link:hover .bm-name { color: var(--shu); }
+        .bm-sub { font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 11.5px; color: var(--sumi-faint); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+        .bm-remove {
+            flex-shrink: 0;
+            border: 1px solid var(--washi-line);
+            background: transparent;
+            color: var(--sumi-soft);
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 12px;
+            padding: 6px 10px;
+            cursor: pointer;
+        }
+        .bm-remove:hover { border-color: var(--shu); color: var(--shu); }
+
+        footer { text-align: center; margin-top: 30px; font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 11px; letter-spacing: 2px; color: var(--sumi-faint); }
+    </style>
+</head>
+<body>
+<div class="page">
+
+    <header>
+        <div class="brand-row">
+            <a class="brand-jp" th:href="@{/}">相撲archive</a>
+            <span class="brand-kr">스모아카이브</span>
+        </div>
+        <div class="breadcrumb"><a th:href="@{/}">반즈케</a> &gt; 즐겨찾기</div>
+    </header>
+
+    <h1>★ 즐겨찾기</h1>
+    <p class="hint">이 목록은 이 브라우저에만 저장돼요 (로그인 불필요). 드래그로 순서를 바꿀 수 있어요.</p>
+
+    <div id="bookmarkEmpty" hidden>
+        아직 즐겨찾기한 리키시가 없습니다.<br>
+        리키시 프로필 페이지에서 <strong>★ 북마크</strong> 버튼을 눌러보세요.
+        <div style="margin-top: 10px;"><a th:href="@{/search}">선수 검색하러 가기 →</a></div>
+    </div>
+
+    <div id="bookmarkList"></div>
+
+    <footer>SUMOARCHIVE — 韓国語で見る大相撲情報アーカイブ</footer>
+</div>
+
+<script th:src="@{/js/bookmark.js}"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+<script>
+    (function () {
+        var listEl = document.getElementById('bookmarkList');
+        var emptyEl = document.getElementById('bookmarkEmpty');
+
+        function esc(s) {
+            return String(s == null ? '' : s)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+
+        function showEmptyIfNeeded() {
+            if (listEl.children.length === 0) emptyEl.hidden = false;
+        }
+
+        function render(orderIds, cards) {
+            var byId = {};
+            cards.forEach(function (c) { byId[c.rikishiId] = c; });
+
+            listEl.innerHTML = '';
+            orderIds.forEach(function (id) {
+                var c = byId[id];
+                if (!c) return; // 삭제된 리키시 등 더 이상 존재하지 않으면 조용히 스킵
+
+                var photo = c.photoUrl
+                    ? '<img src="' + esc(c.photoUrl) + '" alt="">'
+                    : '<span class="bm-photo-placeholder">' + esc((c.shikonaKr || '?').charAt(0)) + '</span>';
+
+                var card = document.createElement('div');
+                card.className = 'bm-card';
+                card.dataset.rikishiId = id;
+                card.innerHTML =
+                    '<span class="bm-handle">⠿</span>' +
+                    '<a class="bm-link" href="/rikishi/' + id + '">' +
+                        '<span class="bm-photo">' + photo + '</span>' +
+                        '<span class="bm-info">' +
+                            '<span class="bm-name">' + esc(c.shikonaKr) + '</span>' +
+                            '<span class="bm-sub">' + esc(c.heyaName || '무소속') + ' · ' + esc(c.highestRank || '-') + '</span>' +
+                            '<span class="bm-sub">' + esc(c.activePeriod) + ' · ' + esc(c.statusLabel) + '</span>' +
+                        '</span>' +
+                    '</a>' +
+                    '<button type="button" class="bm-remove" data-id="' + id + '">제거</button>';
+                listEl.appendChild(card);
+            });
+
+            listEl.querySelectorAll('.bm-remove').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    window.SumoBookmark.toggle(btn.dataset.id);
+                    btn.closest('.bm-card').remove();
+                    showEmptyIfNeeded();
+                });
+            });
+
+            if (window.Sortable) {
+                Sortable.create(listEl, {
+                    handle: '.bm-handle',
+                    animation: 150,
+                    onEnd: function () {
+                        var newOrder = Array.prototype.map.call(listEl.children, function (el) {
+                            return Number(el.dataset.rikishiId);
+                        });
+                        window.SumoBookmark.setIds(newOrder);
+                    }
+                });
+            }
+        }
+
+        var ids = window.SumoBookmark.getIds();
+        if (ids.length === 0) {
+            emptyEl.hidden = false;
+        } else {
+            fetch('/api/rikishiEntity?ids=' + ids.join(','))
+                .then(function (res) { return res.json(); })
+                .then(function (cards) {
+                    render(ids, cards);
+                    showEmptyIfNeeded();
+                })
+                .catch(function () {
+                    listEl.innerHTML = '<p class="hint">즐겨찾기 목록을 불러오지 못했습니다.</p>';
+                });
+        }
+    })();
+</script>
+</body>
+</html>

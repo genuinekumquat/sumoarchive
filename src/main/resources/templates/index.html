@@ -315,10 +315,11 @@
         <div class="brand-sub">SUMO RANKING &amp; RIKISHI ARCHIVE</div>
 
         <div class="search-wrap">
-            <form th:action="@{/search}" method="get" style="display: flex; gap: 10px; width: 100%;">
+            <form th:action="@{/search}" method="get" style="display: flex; gap: 10px; flex: 1;">
                 <input type="text" name="keyword" placeholder="시코나 또는 본명 검색 (예: 코토자쿠라)">
                 <button type="submit">검색</button>
             </form>
+            <a th:href="@{/bookmark}" style="white-space: nowrap; align-self: center; font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; color: var(--sumi-soft); text-decoration: none;">★ 즐겨찾기</a>
         </div>
     </header>
 
