@@ -39,8 +39,9 @@ MVP(현재 단계) 이후에는 다음과 같은 방향으로 서비스를 확�
    하이라이트 영상을 확인할 수 있다.
 7. 토리쿠미 상세 화면에서 **닉네임/숫자 4자리 비밀번호로 익명 댓글**을 남기고, 본인이 남긴 댓글을
    비밀번호로 직접 지울 수 있다.
-8. *(관리자)* `/admin/login`으로 로그인해 부적절한 댓글을 비밀번호 검증 없이 즉시 블라인드 처리할 수
-   있다.
+8. *(관리자)* `/admin/login`으로 로그인하면 댓글 관리 대시보드(`/admin/comments`)로 이동해, 사이트
+   전체 토리쿠미의 댓글을 최신순으로 한눈에 모아보고 부적절한 댓글을 비밀번호 검증 없이 즉시
+   블라인드 처리할 수 있다.
 9. *(계획 중, 미구현)* 관심 리키시를 북마크해서(LocalStorage 기반, 로그인 불필요) 나만의 리스트를
    드래그 앤 드롭으로 정렬해볼 수 있다.
 
@@ -106,8 +107,9 @@ application-local.properties            # git 제외 — 실제 DB/관리자 비
 | GET | `/rikishi/{id}` | 리키시 상세 프로필 |
 | GET | `/torikumi/{id}` | 토리쿠미(경기) 상세 전체 페이지 |
 | GET | `/torikumi/{id}/fragment` | 위와 동일한 내용의 조각(fragment) — 슬라이드 패널 삽입용 |
-| GET / POST | `/admin/login` | 관리자 로그인 폼 조회 / 로그인 처리 |
+| GET / POST | `/admin/login` | 관리자 로그인 폼 조회 / 로그인 처리 (성공 시 `/admin/comments`로 이동) |
 | POST | `/admin/logout` | 관리자 로그아웃 (세션 무효화) |
+| GET | `/admin/comments?page=` | 관리자 댓글 관리 대시보드 (`/admin/**`, 세션 `isAdmin` 가드) |
 
 ### API 라우트 — JSON
 
@@ -145,6 +147,9 @@ application-local.properties            # git 제외 — 실제 DB/관리자 비
 - **경량 관리자 인증**: Spring Security 없이 세션 속성 `isAdmin`만으로 관리자를 구분합니다.
   `AdminAuthInterceptor` + `WebConfig`가 `/admin/**` 경로를 가드하고, 댓글 블라인드 API는
   별도로 자체 세션 체크 후 `AdminOnlyException`(401)을 던지는 방식으로 이중 게이트를 둡니다.
+- **화면-API 재사용**: 댓글 관리 대시보드(`/admin/comments`)는 새 삭제 API를 만들지 않고, 토리쿠미
+  상세 화면이 쓰던 블라인드 API(`POST /api/torikumi/{id}/comments/{id}/blind`)를 fetch로 그대로
+  호출합니다.
 
 ---
 
@@ -179,14 +184,15 @@ cp src/main/resources/application-local.properties.example \
 ```
 
 기본 접속: `http://localhost:8080`
-관리자 로그인: `http://localhost:8080/admin/login`
+관리자 로그인: `http://localhost:8080/admin/login` (로그인 성공 시 댓글 관리 대시보드로 이동)
 
 ---
 
 ## 8. 다음 단계 (로드맵)
 
+- [x] 관리자 댓글 관리 대시보드 (`/admin/comments` — 전체 댓글 조회 + 블라인드)
 - [ ] 북마크 페이지 (LocalStorage 기반, 로그인 불필요)
-- [ ] 관리자 대시보드 — 데이터 수동 갱신, 전체 댓글 무조건 삭제
+- [ ] 관리자 데이터 수동 갱신 (반즈케/리키시 데이터 편집 UI)
 - [ ] 키마리테 상세 설명 백과사전
 - [ ] 반즈케 예측 시뮬레이터
 - [ ] 외부 스모 데이터 API 연동 (MVP 안정화 이후, `externalApiId` 필드로 동기화 배치 예정)
