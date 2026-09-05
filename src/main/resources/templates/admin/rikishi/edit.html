@@ -105,11 +105,32 @@
         <fieldset>
             <legend>계급 / 커리어</legend>
             <div class="field-row">
-                <div class="field"><label>현재 계급</label><input type="text" th:field="*{currentRank}" placeholder="예: Maegashira10"></div>
-                <div class="field"><label>최고 계급</label><input type="text" th:field="*{highestRank}" placeholder="예: Ozeki"></div>
+                <div class="field">
+                    <label>현재 계급</label>
+                    <select th:field="*{currentRank}">
+                        <option value="">(미지정)</option>
+                        <option th:each="rn : ${rankOptions}" th:value="${rn}" th:text="${rn}">Maegashira</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>최고 계급</label>
+                    <select th:field="*{highestRank}">
+                        <option value="">(미지정)</option>
+                        <option th:each="rn : ${rankOptions}" th:value="${rn}" th:text="${rn}">Ozeki</option>
+                    </select>
+                </div>
             </div>
             <div class="field-row">
-                <div class="field"><label>파이팅 스타일</label><input type="text" th:field="*{fightingStyle}" placeholder="오시 / 요츠 / 믹스 / Unorthodox"></div>
+                <div class="field">
+                    <label>파이팅 스타일</label>
+                    <select th:field="*{fightingStyle}">
+                        <option value="">(미분류)</option>
+                        <option value="오시">오시</option>
+                        <option value="요츠">요츠</option>
+                        <option value="복합형">복합형</option>
+                        <option value="언오소독스">언오소독스</option>
+                    </select>
+                </div>
                 <div class="field"><label>데뷔일</label><input type="date" th:field="*{debutDate}"></div>
             </div>
         </fieldset>
