@@ -1,0 +1,175 @@
+- generic [ref=f4e2]:
+  - banner [ref=f4e3]:
+    - generic [ref=f4e4]:
+      - link "相撲archive" [ref=f4e5] [cursor=pointer]:
+        - /url: /
+      - generic [ref=f4e6]: 스모아카이브
+    - generic [ref=f4e7]:
+      - link "반즈케" [ref=f4e8] [cursor=pointer]:
+        - /url: /
+      - text: "> 아사노야마 히로키"
+  - generic [ref=f4e10]:
+    - generic [ref=f4e11]:
+      - button "★ 북마크" [active] [ref=f4e183] [cursor=pointer]
+      - generic [ref=f4e13]: 現役
+      - generic [ref=f4e14]:
+        - generic [ref=f4e15]: 아사노야마 히로키
+        - generic [ref=f4e16]: 東 前頭10枚目
+      - generic [ref=f4e17]: 朝乃山 広暉
+      - generic [ref=f4e18]: 이시바시 (2015.11~2016.11) → 아사노야마 히로키 (현재)
+      - table [ref=f4e19]:
+        - rowgroup [ref=f4e20]:
+          - row [ref=f4e21]:
+            - rowheader "소속부옥" [ref=f4e22]
+            - cell "타카사고" [ref=f4e23]
+          - row [ref=f4e24]:
+            - rowheader "본명" [ref=f4e25]
+            - cell "Ishibashi Hiroki" [ref=f4e26]
+          - row [ref=f4e27]:
+            - rowheader "생년월일" [ref=f4e28]
+            - cell "1994.03.01 (32세)" [ref=f4e29]
+          - row [ref=f4e30]:
+            - rowheader "출신지" [ref=f4e31]
+            - cell "일본 토야마" [ref=f4e32]
+          - row [ref=f4e33]:
+            - rowheader "국적" [ref=f4e34]
+            - cell "일본" [ref=f4e35]
+          - row [ref=f4e36]:
+            - rowheader "신장 / 체중" [ref=f4e37]
+            - cell "188.0cm / 175.0kg" [ref=f4e38]
+          - row [ref=f4e39]:
+            - rowheader "파이팅스타일" [ref=f4e40]
+            - cell "요츠" [ref=f4e41]
+          - row [ref=f4e42]:
+            - rowheader "데뷔" [ref=f4e43]
+            - cell "2016.03" [ref=f4e44]
+          - row [ref=f4e45]:
+            - rowheader "최고위" [ref=f4e46]
+            - cell "Ozeki" [ref=f4e47]
+    - img "아사노야마 히로키" [ref=f4e49]
+  - generic [ref=f4e50]:
+    - generic [ref=f4e51]:
+      - generic [ref=f4e52]: 戦歴・受賞歴
+      - generic [ref=f4e53]:
+        - text: 7승 8패
+        - generic [ref=f4e54]: 통산 1바쇼
+      - generic [ref=f4e55]:
+        - generic [ref=f4e56]:
+          - generic [ref=f4e57]: 마쿠우치 우승
+          - generic [ref=f4e58]: 0회
+        - generic [ref=f4e59]:
+          - generic [ref=f4e60]: 주료 우승
+          - generic [ref=f4e61]: 0회
+        - generic [ref=f4e62]:
+          - generic [ref=f4e63]: 슈쿤상
+          - generic [ref=f4e64]: 0회
+        - generic [ref=f4e65]:
+          - generic [ref=f4e66]: 감투상
+          - generic [ref=f4e67]: 0회
+        - generic [ref=f4e68]:
+          - generic [ref=f4e69]: 기능상
+          - generic [ref=f4e70]: 0회
+        - generic [ref=f4e71]:
+          - generic [ref=f4e72]: 킨보시
+          - generic [ref=f4e73]: 0개
+    - generic [ref=f4e74]:
+      - generic [ref=f4e75]: 決まり手の傾向
+      - generic [ref=f4e76]:
+        - generic [ref=f4e79]:
+          - generic [ref=f4e80]:
+            - generic [ref=f4e82]: 히키오토시
+            - generic [ref=f4e83]: 14.3%
+          - generic [ref=f4e84]:
+            - generic [ref=f4e86]: 츠키다시
+            - generic [ref=f4e87]: 14.3%
+          - generic [ref=f4e88]:
+            - generic [ref=f4e90]: 요리키리
+            - generic [ref=f4e91]: 14.3%
+          - generic [ref=f4e92]:
+            - generic [ref=f4e94]: 소토가케
+            - generic [ref=f4e95]: 14.3%
+          - generic [ref=f4e96]:
+            - generic [ref=f4e98]: 오시다시
+            - generic [ref=f4e99]: 14.3%
+          - generic [ref=f4e100]:
+            - generic [ref=f4e102]: 카케나게
+            - generic [ref=f4e103]: 14.3%
+          - generic [ref=f4e104]:
+            - generic [ref=f4e106]: 코테나게
+            - generic [ref=f4e107]: 14.3%
+        - generic [ref=f4e108]: ※ 등록된 토리쿠미 결과 기준으로 산출됩니다
+  - generic [ref=f4e109]:
+    - generic [ref=f4e110]: 星取表
+    - generic [ref=f4e111]:
+      - generic [ref=f4e112]:
+        - generic [ref=f4e113]: 2026年07月場所
+        - generic [ref=f4e114]: 前頭10枚目
+        - generic [ref=f4e115]: 7勝8敗
+      - generic [ref=f4e117]:
+        - button "1 ● 오노사토" [ref=f4e118] [cursor=pointer]:
+          - generic [ref=f4e119]: "1"
+          - generic [ref=f4e120]: ●
+          - generic [ref=f4e121]: 오노사토
+        - button "2 ● 키리시마" [ref=f4e122] [cursor=pointer]:
+          - generic [ref=f4e123]: "2"
+          - generic [ref=f4e124]: ●
+          - generic [ref=f4e125]: 키리시마
+        - button "3 ● 아오니시키" [ref=f4e126] [cursor=pointer]:
+          - generic [ref=f4e127]: "3"
+          - generic [ref=f4e128]: ●
+          - generic [ref=f4e129]: 아오니시키
+        - button "4 ○ 와카타카카게" [ref=f4e130] [cursor=pointer]:
+          - generic [ref=f4e131]: "4"
+          - generic [ref=f4e132]: ○
+          - generic [ref=f4e133]: 와카타카카게
+        - button "5 ○ 아타미후지" [ref=f4e134] [cursor=pointer]:
+          - generic [ref=f4e135]: "5"
+          - generic [ref=f4e136]: ○
+          - generic [ref=f4e137]: 아타미후지
+        - button "6 ● 코토쇼호" [ref=f4e138] [cursor=pointer]:
+          - generic [ref=f4e139]: "6"
+          - generic [ref=f4e140]: ●
+          - generic [ref=f4e141]: 코토쇼호
+        - button "7 ○ 요시노후지" [ref=f4e142] [cursor=pointer]:
+          - generic [ref=f4e143]: "7"
+          - generic [ref=f4e144]: ○
+          - generic [ref=f4e145]: 요시노후지
+        - button "8 ○ 오호" [ref=f4e146] [cursor=pointer]:
+          - generic [ref=f4e147]: "8"
+          - generic [ref=f4e148]: ○
+          - generic [ref=f4e149]: 오호
+        - button "9 ○ 후지노카와" [ref=f4e150] [cursor=pointer]:
+          - generic [ref=f4e151]: "9"
+          - generic [ref=f4e152]: ○
+          - generic [ref=f4e153]: 후지노카와
+        - button "10 ● 타카노쇼" [ref=f4e154] [cursor=pointer]:
+          - generic [ref=f4e155]: "10"
+          - generic [ref=f4e156]: ●
+          - generic [ref=f4e157]: 타카노쇼
+        - button "11 ○ 후지료가" [ref=f4e158] [cursor=pointer]:
+          - generic [ref=f4e159]: "11"
+          - generic [ref=f4e160]: ○
+          - generic [ref=f4e161]: 후지료가
+        - button "12 ● 히라도우미" [ref=f4e162] [cursor=pointer]:
+          - generic [ref=f4e163]: "12"
+          - generic [ref=f4e164]: ●
+          - generic [ref=f4e165]: 히라도우미
+        - button "13 ○ 츄라노우미" [ref=f4e166] [cursor=pointer]:
+          - generic [ref=f4e167]: "13"
+          - generic [ref=f4e168]: ○
+          - generic [ref=f4e169]: 츄라노우미
+        - button "14 ● 이치야마모토" [ref=f4e170] [cursor=pointer]:
+          - generic [ref=f4e171]: "14"
+          - generic [ref=f4e172]: ●
+          - generic [ref=f4e173]: 이치야마모토
+        - button "15 ● 다이에이쇼" [ref=f4e174] [cursor=pointer]:
+          - generic [ref=f4e175]: "15"
+          - generic [ref=f4e176]: ●
+          - generic [ref=f4e177]: 다이에이쇼
+  - contentinfo [ref=f4e178]: SUMOARCHIVE — 韓国語で見る大相撲情報アーカイブ
+  - complementary [aria-hidden] [ref=f4e179]:
+    - generic [ref=f4e180]:
+      - link [ref=f4e181] [cursor=pointer]:
+        - /url: "#"
+        - text: 전체 페이지로 보기 →
+      - button [ref=f4e182] [cursor=pointer]: ×

@@ -1,0 +1,18 @@
+- generic [ref=f5e2]:
+  - banner [ref=f5e3]:
+    - generic [ref=f5e4]:
+      - link "相撲archive" [ref=f5e5] [cursor=pointer]:
+        - /url: /
+      - generic [ref=f5e6]: 스모아카이브
+    - generic [ref=f5e7]:
+      - link "반즈케" [ref=f5e8] [cursor=pointer]:
+        - /url: /
+      - text: "> 즐겨찾기"
+  - heading "★ 즐겨찾기" [level=1] [ref=f5e9]
+  - paragraph [ref=f5e10]: 이 목록은 이 브라우저에만 저장돼요 (로그인 불필요). 드래그로 순서를 바꿀 수 있어요.
+  - generic [ref=f5e12]:
+    - generic [ref=f5e13]: ⠿
+    - link "아사노야마 히로키타카사고 · Ozeki2016 ~ 현재 · 현역" [ref=f5e14] [cursor=pointer]:
+      - /url: /rikishi/3
+    - button "제거" [ref=f5e17] [cursor=pointer]
+  - contentinfo [ref=f5e18]: SUMOARCHIVE — 韓国語で見る大相撲情報アーカイブ
