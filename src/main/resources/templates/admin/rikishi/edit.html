@@ -104,14 +104,10 @@
 
         <fieldset>
             <legend>계급 / 커리어</legend>
+            <p style="font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 11.5px; color: var(--sumi-faint); margin: 0 0 12px;">
+                현재 계급(번호·동서 포함)은 그 바쇼의 반즈케 데이터를 기준으로 정해집니다 — 반즈케 관리 기능에서 갱신하세요.
+            </p>
             <div class="field-row">
-                <div class="field">
-                    <label>현재 계급</label>
-                    <select th:field="*{currentRank}">
-                        <option value="">(미지정)</option>
-                        <option th:each="rn : ${rankOptions}" th:value="${rn}" th:text="${rn}">Maegashira</option>
-                    </select>
-                </div>
                 <div class="field">
                     <label>최고 계급</label>
                     <select th:field="*{highestRank}">

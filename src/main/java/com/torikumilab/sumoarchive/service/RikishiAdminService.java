@@ -19,7 +19,8 @@ import java.util.List;
 
 /**
  * 관리자 "데이터 수동 갱신" 중 리키시 프로필 수정 부분. 반즈케/시코나 이력/토리쿠미 등
- * 다른 데이터 갱신은 범위 밖(기능명세서 상 별도 항목).
+ * 다른 데이터 갱신은 범위 밖(기능명세서 상 별도 항목). currentRank(현재 계급)도 같은 이유로 제외 —
+ * 그 바쇼의 반즈케가 source of truth라 프로필 수정과는 별도로 반즈케 갱신 시 정해져야 한다.
  */
 @Service
 @RequiredArgsConstructor
@@ -52,7 +53,6 @@ public class RikishiAdminService {
 		form.setHeight(r.getHeight());
 		form.setWeight(r.getWeight());
 		form.setHeyaId(r.getHeyaEntity() != null ? r.getHeyaEntity().getId() : null);
-		form.setCurrentRank(r.getCurrentRank());
 		form.setHighestRank(r.getHighestRank());
 		form.setFightingStyle(r.getFightingStyle());
 		form.setDebutDate(r.getDebutDate());
@@ -84,7 +84,6 @@ public class RikishiAdminService {
 				form.getHeight(),
 				form.getWeight(),
 				heya,
-				blankToNull(form.getCurrentRank()),
 				blankToNull(form.getHighestRank()),
 				blankToNull(form.getFightingStyle()),
 				form.getDebutDate(),

@@ -29,8 +29,7 @@ public class RikishiEditFormDTO {
 	private BigDecimal height;
 	private BigDecimal weight;
 	private Integer heyaId; // null이면 무소속
-	private String currentRank;
-	private String highestRank;
+	private String highestRank; // 현재 계급(currentRank)은 반즈케가 source of truth라 이 폼에서 다루지 않는다
 	private String fightingStyle;
 	@DateTimeFormat(pattern = "yyyy-MM-dd")
 	private LocalDate debutDate;

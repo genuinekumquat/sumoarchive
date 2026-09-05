@@ -123,7 +123,11 @@ public class RikishiEntity {
 		this.photoUrl = photoUrl;
 	}
 
-	/** 관리자 프로필 수정 화면(/admin/rikishi/{id}/edit)에서 호출. 시코나 이력/반즈케는 별도 관리 대상이라 여기서 건드리지 않는다. */
+	/**
+	 * 관리자 프로필 수정 화면(/admin/rikishi/{id}/edit)에서 호출. 시코나 이력/반즈케는 별도 관리 대상이라
+	 * 여기서 건드리지 않는다. currentRank도 마찬가지 이유(그 바쇼 반즈케가 source of truth)로 대상에서 제외 —
+	 * 이 메서드가 currentRank를 손대면 반즈케 갱신 없이도 조용히 null로 덮어써질 수 있다.
+	 */
 	public void updateProfile(
 			String shikonaKr,
 			String shikonaJp,
@@ -134,7 +138,6 @@ public class RikishiEntity {
 			BigDecimal height,
 			BigDecimal weight,
 			HeyaEntity heyaEntity,
-			String currentRank,
 			String highestRank,
 			String fightingStyle,
 			LocalDate debutDate,
@@ -153,7 +156,6 @@ public class RikishiEntity {
 		this.height = height;
 		this.weight = weight;
 		this.heyaEntity = heyaEntity;
-		this.currentRank = currentRank;
 		this.highestRank = highestRank;
 		this.fightingStyle = fightingStyle;
 		this.debutDate = debutDate;
