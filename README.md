@@ -44,6 +44,8 @@ MVP(현재 단계) 이후에는 다음과 같은 방향으로 서비스를 확�
    블라인드 처리할 수 있다.
 9. **즐겨찾기 페이지**(`/bookmark`)에서 관심 리키시를 북마크해서(LocalStorage 기반, 로그인 불필요)
    나만의 리스트를 만들고, 드래그 앤 드롭으로 순서를 바꿀 수 있다.
+10. *(관리자)* `/admin/rikishi`에서 리키시를 검색해 프로필 정보(기본 정보/계급/현역·은퇴/사진)를
+    직접 수정할 수 있다.
 
 ---
 
@@ -111,6 +113,8 @@ application-local.properties            # git 제외 — 실제 DB/관리자 비
 | GET / POST | `/admin/login` | 관리자 로그인 폼 조회 / 로그인 처리 (성공 시 `/admin/comments`로 이동) |
 | POST | `/admin/logout` | 관리자 로그아웃 (세션 무효화) |
 | GET | `/admin/comments?page=` | 관리자 댓글 관리 대시보드 (`/admin/**`, 세션 `isAdmin` 가드) |
+| GET | `/admin/rikishi?keyword=&page=` | 관리자 리키시 목록/검색 |
+| GET / POST | `/admin/rikishi/{id}/edit` | 리키시 프로필 수정 폼 조회 / 저장 |
 
 ### API 라우트 — JSON
 
@@ -155,6 +159,9 @@ application-local.properties            # git 제외 — 실제 DB/관리자 비
 - **서버가 모르는 개인화**: 즐겨찾기는 DB에 전혀 저장하지 않고 브라우저 LocalStorage의 ID 배열이
   유일한 저장소입니다. 서버는 그 배열을 절대 순서를 바꾸지 않고 그대로 응답 순서에 반영해서, 드래그로
   바꾼 정렬이 새로고침 후에도 유지되도록 합니다.
+- **`<input type="date">`는 로케일 포맷을 믿지 않음**: `@DateTimeFormat(pattern = "yyyy-MM-dd")`을
+  명시하지 않으면 Spring이 요청 로케일(한국어) 기준 short style("94. 3. 1.")로 값을 내려줘서 브라우저가
+  날짜를 못 읽습니다. 관리자 리키시 수정 폼의 생년월일/데뷔일/은퇴일 모두 이 패턴을 명시했습니다.
 
 ---
 
@@ -197,7 +204,8 @@ cp src/main/resources/application-local.properties.example \
 
 - [x] 관리자 댓글 관리 대시보드 (`/admin/comments` — 전체 댓글 조회 + 블라인드)
 - [x] 즐겨찾기 페이지 (`/bookmark`, LocalStorage 기반, 로그인 불필요, 드래그 정렬)
-- [ ] 관리자 데이터 수동 갱신 (반즈케/리키시 데이터 편집 UI)
+- [x] 관리자 리키시 프로필 수정 (`/admin/rikishi` — 목록/검색 + 수정 폼)
+- [ ] 관리자 반즈케 데이터 수동 갱신 (신규 바쇼 반즈케 입력 UI)
 - [ ] 키마리테 상세 설명 백과사전
 - [ ] 반즈케 예측 시뮬레이터
 - [ ] 외부 스모 데이터 API 연동 (MVP 안정화 이후, `externalApiId` 필드로 동기화 배치 예정)
