@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>리키시 관리 | 스모아카이브 관리자</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;900&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --sumi: #1a1a18; --sumi-soft: #56554e; --sumi-faint: #86857f;
+            --washi: #f7f6f3; --washi-line: rgba(26, 26, 24, 0.14);
+            --shu: #a3272c; --shu-faint: rgba(163, 39, 44, 0.10);
+        }
+        * { box-sizing: border-box; }
+        body { margin: 0; min-height: 100vh; background-color: var(--washi); color: var(--sumi); font-family: 'Noto Serif KR', serif; }
+        .page { max-width: 900px; margin: 0 auto; padding: 32px 24px 60px; }
+        a { color: inherit; }
+
+        header { border-bottom: 3px double var(--sumi); padding-bottom: 14px; margin-bottom: 20px; }
+        .header-top { display: flex; align-items: baseline; justify-content: space-between; }
+        h1 { font-size: 20px; margin: 0; letter-spacing: 1px; }
+        .admin-nav { font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; margin-top: 10px; }
+        .admin-nav a { color: var(--sumi-soft); text-decoration: none; margin-right: 14px; }
+        .admin-nav a:hover, .admin-nav a.current { color: var(--shu); }
+        .logout-form button {
+            border: 1px solid var(--washi-line); background: transparent; color: var(--sumi-soft);
+            font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; padding: 6px 14px; cursor: pointer;
+        }
+        .logout-form button:hover { border-color: var(--sumi); color: var(--sumi); }
+
+        .search-row { display: flex; gap: 8px; margin-bottom: 18px; }
+        .search-row input {
+            flex: 1; border: 1px solid var(--washi-line); padding: 9px 12px;
+            font-family: 'Noto Serif KR', serif; font-size: 14px; background: #fff; color: var(--sumi);
+        }
+        .search-row button {
+            border: 1px solid var(--sumi); background: var(--sumi); color: var(--washi);
+            font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 13px; padding: 0 18px; cursor: pointer;
+        }
+
+        table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+        thead th {
+            text-align: left; font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 11px;
+            letter-spacing: 1px; color: var(--sumi-faint); border-bottom: 1px solid var(--sumi); padding: 8px;
+        }
+        tbody td { padding: 9px 8px; border-bottom: 1px solid var(--washi-line); }
+        tbody tr:hover { background: rgba(163, 39, 44, 0.04); }
+        .badge {
+            display: inline-block; font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 11px;
+            padding: 2px 8px; border: 1px solid var(--washi-line); color: var(--sumi-soft);
+        }
+        .edit-link {
+            font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; color: var(--shu); text-decoration: none;
+        }
+        .edit-link:hover { text-decoration: underline; }
+        .empty-note { padding: 30px 0; text-align: center; color: var(--sumi-faint); }
+
+        .pager { display: flex; justify-content: center; gap: 10px; margin-top: 24px; }
+        .pager a, .pager span {
+            font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; padding: 6px 12px;
+            border: 1px solid var(--washi-line); color: var(--sumi-soft); text-decoration: none;
+        }
+        .pager a:hover { border-color: var(--sumi); color: var(--sumi); }
+        .pager .disabled { opacity: 0.35; }
+    </style>
+</head>
+<body>
+<div class="page">
+    <header>
+        <div class="header-top">
+            <h1>리키시 관리</h1>
+            <form class="logout-form" th:action="@{/admin/logout}" method="post">
+                <button type="submit">로그아웃</button>
+            </form>
+        </div>
+        <nav class="admin-nav">
+            <a th:href="@{/admin/comments}">댓글 관리</a>
+            <a th:href="@{/admin/rikishi}" class="current">리키시 관리</a>
+        </nav>
+    </header>
+
+    <form class="search-row" th:action="@{/admin/rikishi}" method="get">
+        <input type="text" name="keyword" th:value="${keyword}" placeholder="시코나(한/일)로 검색">
+        <button type="submit">검색</button>
+    </form>
+
+    <table th:if="${result.hasContent()}">
+        <thead>
+        <tr>
+            <th style="width: 8%">ID</th>
+            <th style="width: 30%">시코나</th>
+            <th style="width: 22%">소속 헤야</th>
+            <th style="width: 15%">최고위</th>
+            <th style="width: 12%">상태</th>
+            <th style="width: 13%">조치</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="r : ${result.content}">
+            <td th:text="${r.id}">1</td>
+            <td th:text="${r.shikonaKr}">시코나</td>
+            <td th:text="${r.heyaName} ?: '무소속'">헤야</td>
+            <td th:text="${r.highestRank} ?: '-'">최고위</td>
+            <td><span class="badge" th:text="${r.statusLabel}">현역</span></td>
+            <td><a class="edit-link" th:href="@{'/admin/rikishi/' + ${r.id} + '/edit'}">수정 →</a></td>
+        </tr>
+        </tbody>
+    </table>
+    <div class="empty-note" th:unless="${result.hasContent()}">검색 결과가 없습니다.</div>
+
+    <div class="pager" th:if="${result.totalPages > 1}">
+        <a th:if="${result.hasPrevious()}" th:href="@{/admin/rikishi(keyword=${keyword}, page=${result.number - 1})}">← 이전</a>
+        <span th:unless="${result.hasPrevious()}" class="disabled">← 이전</span>
+        <span th:text="${result.number + 1} + ' / ' + ${result.totalPages}">1 / 1</span>
+        <a th:if="${result.hasNext()}" th:href="@{/admin/rikishi(keyword=${keyword}, page=${result.number + 1})}">다음 →</a>
+        <span th:unless="${result.hasNext()}" class="disabled">다음 →</span>
+    </div>
+</div>
+</body>
+</html>

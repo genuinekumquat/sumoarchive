@@ -1,0 +1,61 @@
+package com.torikumilab.sumoarchive.controller;
+
+import com.torikumilab.sumoarchive.domain.dto.RikishiAdminRowDTO;
+import com.torikumilab.sumoarchive.domain.dto.RikishiEditFormDTO;
+import com.torikumilab.sumoarchive.service.RikishiAdminService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.propertyeditors.CustomNumberEditor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.WebDataBinder;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+/**
+ * 관리자 "데이터 수동 갱신" 중 리키시 프로필 수정. /admin/** 경로라 AdminAuthInterceptor가
+ * 세션 isAdmin 여부를 먼저 검사한다.
+ */
+@Controller
+@RequiredArgsConstructor
+public class AdminRikishiViewController {
+
+	private static final int PAGE_SIZE = 30;
+
+	private final RikishiAdminService rikishiAdminService;
+
+	// 소속 헤야 select의 "무소속"(빈 문자열) 옵션을 null로 변환.
+	@InitBinder
+	public void initBinder(WebDataBinder binder) {
+		binder.registerCustomEditor(Integer.class, "heyaId", new CustomNumberEditor(Integer.class, true));
+	}
+
+	@GetMapping("/admin/rikishi")
+	public String list(@RequestParam(required = false) String keyword,
+						@RequestParam(defaultValue = "0") int page,
+						Model model) {
+		Page<RikishiAdminRowDTO> result = rikishiAdminService.list(
+				keyword, PageRequest.of(page, PAGE_SIZE, Sort.by("id")));
+		model.addAttribute("result", result);
+		model.addAttribute("keyword", keyword);
+		return "admin/rikishi/list";
+	}
+
+	@GetMapping("/admin/rikishi/{id}/edit")
+	public String editForm(@PathVariable Integer id, Model model) {
+		model.addAttribute("form", rikishiAdminService.getEditForm(id));
+		model.addAttribute("heyaOptions", rikishiAdminService.getHeyaOptions());
+		return "admin/rikishi/edit";
+	}
+
+	@PostMapping("/admin/rikishi/{id}/edit")
+	public String update(@PathVariable Integer id,
+						  @ModelAttribute("form") RikishiEditFormDTO form,
+						  RedirectAttributes redirectAttributes) {
+		rikishiAdminService.updateProfile(id, form);
+		redirectAttributes.addFlashAttribute("saved", true);
+		return "redirect:/admin/rikishi/" + id + "/edit";
+	}
+}

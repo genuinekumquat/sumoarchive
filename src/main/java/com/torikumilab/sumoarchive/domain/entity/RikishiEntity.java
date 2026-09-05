@@ -122,5 +122,46 @@ public class RikishiEntity {
 		this.oyakataNameJp = oyakataNameJp;
 		this.photoUrl = photoUrl;
 	}
+
+	/** 관리자 프로필 수정 화면(/admin/rikishi/{id}/edit)에서 호출. 시코나 이력/반즈케는 별도 관리 대상이라 여기서 건드리지 않는다. */
+	public void updateProfile(
+			String shikonaKr,
+			String shikonaJp,
+			String name,
+			LocalDate birthdate,
+			String birthplace,
+			String nationality,
+			BigDecimal height,
+			BigDecimal weight,
+			HeyaEntity heyaEntity,
+			String currentRank,
+			String highestRank,
+			String fightingStyle,
+			LocalDate debutDate,
+			boolean isActive,
+			LocalDate retiredDate,
+			String oyakataNameKr,
+			String oyakataNameJp,
+			String photoUrl
+	) {
+		this.shikonaKr = shikonaKr;
+		this.shikonaJp = shikonaJp;
+		this.name = name;
+		this.birthdate = birthdate;
+		this.birthplace = birthplace;
+		this.nationality = nationality;
+		this.height = height;
+		this.weight = weight;
+		this.heyaEntity = heyaEntity;
+		this.currentRank = currentRank;
+		this.highestRank = highestRank;
+		this.fightingStyle = fightingStyle;
+		this.debutDate = debutDate;
+		this.isActive = isActive;
+		this.retiredDate = retiredDate;
+		this.oyakataNameKr = oyakataNameKr;
+		this.oyakataNameJp = oyakataNameJp;
+		this.photoUrl = photoUrl;
+	}
 }
 
