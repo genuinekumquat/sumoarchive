@@ -38,3 +38,6 @@ out/
 
 ### 로컬 전용 민감정보 (DB/관리자 비밀번호) ###
 application-local.properties
+
+### Playwright MCP 브라우저 테스트 디버그 산출물 (스크린샷/스냅샷/콘솔로그) ###
+.playwright-mcp/
