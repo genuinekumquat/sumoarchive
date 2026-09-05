@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>댓글 관리 | 스모아카이브 관리자</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;900&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --sumi: #1a1a18;
+            --sumi-soft: #56554e;
+            --sumi-faint: #86857f;
+            --washi: #f7f6f3;
+            --washi-panel: #eceae4;
+            --washi-line: rgba(26, 26, 24, 0.14);
+            --shu: #a3272c;
+            --shu-faint: rgba(163, 39, 44, 0.10);
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background-color: var(--washi);
+            color: var(--sumi);
+            font-family: 'Noto Serif KR', serif;
+        }
+        .page { max-width: 960px; margin: 0 auto; padding: 32px 24px 60px; }
+        header {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            border-bottom: 3px double var(--sumi);
+            padding-bottom: 14px;
+            margin-bottom: 22px;
+        }
+        h1 { font-size: 20px; margin: 0; letter-spacing: 1px; }
+        .sub { font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; color: var(--sumi-faint); }
+        .logout-form button {
+            border: 1px solid var(--washi-line);
+            background: transparent;
+            color: var(--sumi-soft);
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 12px;
+            padding: 6px 14px;
+            cursor: pointer;
+        }
+        .logout-form button:hover { border-color: var(--sumi); color: var(--sumi); }
+
+        table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+        thead th {
+            text-align: left;
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 11px;
+            letter-spacing: 1px;
+            color: var(--sumi-faint);
+            border-bottom: 1px solid var(--sumi);
+            padding: 8px 8px;
+        }
+        tbody td { padding: 10px 8px; border-bottom: 1px solid var(--washi-line); vertical-align: top; }
+        tbody tr.is-gone { color: var(--sumi-faint); }
+        .match-label a { text-decoration: none; color: var(--sumi-soft); font-size: 12.5px; }
+        .match-label a:hover { color: var(--shu); }
+        .content-cell { max-width: 320px; word-break: break-word; }
+        .badge {
+            display: inline-block;
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 11px;
+            padding: 2px 8px;
+            border: 1px solid var(--washi-line);
+            color: var(--sumi-soft);
+        }
+        .badge.blinded { color: var(--shu); border-color: var(--shu); background: var(--shu-faint); }
+        .blind-btn {
+            border: 1px solid var(--shu);
+            background: transparent;
+            color: var(--shu);
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 12px;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+        .blind-btn:hover { background: var(--shu); color: var(--washi); }
+        .empty-note { padding: 30px 0; text-align: center; color: var(--sumi-faint); }
+
+        .pager { display: flex; justify-content: center; gap: 10px; margin-top: 24px; }
+        .pager a, .pager span {
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 12px;
+            padding: 6px 12px;
+            border: 1px solid var(--washi-line);
+            color: var(--sumi-soft);
+            text-decoration: none;
+        }
+        .pager a:hover { border-color: var(--sumi); color: var(--sumi); }
+        .pager .disabled { opacity: 0.35; }
+    </style>
+</head>
+<body>
+<div class="page">
+    <header>
+        <div>
+            <h1>댓글 관리</h1>
+            <div class="sub">전체 토리쿠미 댓글 · 최신순</div>
+        </div>
+        <form class="logout-form" th:action="@{/admin/logout}" method="post">
+            <button type="submit">로그아웃</button>
+        </form>
+    </header>
+
+    <table th:if="${result.hasContent()}">
+        <thead>
+        <tr>
+            <th style="width: 30%">경기</th>
+            <th style="width: 10%">닉네임</th>
+            <th style="width: 30%">내용</th>
+            <th style="width: 14%">작성일시</th>
+            <th style="width: 8%">상태</th>
+            <th style="width: 8%">조치</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="c : ${result.content}" th:classappend="${c.deleted} ? 'is-gone' : ''" th:id="'row-' + ${c.id}">
+            <td class="match-label">
+                <a th:href="@{'/torikumi/' + ${c.torikumiId}}" th:text="${c.matchLabel}">2026년 7월 나고야바쇼 3일째 · 아사노야마 vs 오노사토</a>
+            </td>
+            <td th:text="${c.nickName} ?: '-'">닉네임</td>
+            <td class="content-cell" th:text="${c.displayContent}">댓글 내용</td>
+            <td th:text="${c.createdAt}">2026-09-05 12:00</td>
+            <td>
+                <span class="badge" th:if="${!c.deleted}">정상</span>
+                <span class="badge" th:if="${c.deleted and !c.blinded}">본인삭제</span>
+                <span class="badge blinded" th:if="${c.deleted and c.blinded}">블라인드</span>
+            </td>
+            <td>
+                <button type="button" class="blind-btn" th:if="${!c.deleted}"
+                        th:attr="data-torikumi-id=${c.torikumiId},data-comment-id=${c.id}">블라인드</button>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+    <div class="empty-note" th:unless="${result.hasContent()}">등록된 댓글이 없습니다.</div>
+
+    <div class="pager" th:if="${result.totalPages > 1}">
+        <a th:if="${result.hasPrevious()}" th:href="@{/admin/comments(page=${result.number - 1})}">← 이전</a>
+        <span th:unless="${result.hasPrevious()}" class="disabled">← 이전</span>
+        <span th:text="${result.number + 1} + ' / ' + ${result.totalPages}">1 / 1</span>
+        <a th:if="${result.hasNext()}" th:href="@{/admin/comments(page=${result.number + 1})}">다음 →</a>
+        <span th:unless="${result.hasNext()}" class="disabled">다음 →</span>
+    </div>
+</div>
+
+<script>
+    document.querySelectorAll('.blind-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var torikumiId = btn.dataset.torikumiId;
+            var commentId = btn.dataset.commentId;
+            if (!confirm('이 댓글을 블라인드 처리할까요?')) return;
+            btn.disabled = true;
+            fetch('/api/torikumi/' + torikumiId + '/comments/' + commentId + '/blind', { method: 'POST' })
+                .then(function (res) {
+                    if (!res.ok) throw new Error('blind failed');
+                    location.reload();
+                })
+                .catch(function () {
+                    alert('블라인드 처리에 실패했습니다.');
+                    btn.disabled = false;
+                });
+        });
+    });
+</script>
+</body>
+</html>

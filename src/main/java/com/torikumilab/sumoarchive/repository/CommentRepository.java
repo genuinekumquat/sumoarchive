@@ -1,6 +1,8 @@
 package com.torikumilab.sumoarchive.repository;
 
 import com.torikumilab.sumoarchive.domain.entity.CommentEntity;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -18,4 +20,18 @@ public interface CommentRepository extends JpaRepository<CommentEntity, Integer>
         ORDER BY c.createdAt ASC, c.id ASC
     """)
 	List<CommentEntity> findByTorikumiId(@Param("torikumiId") Integer torikumiId);
+
+	// 관리자 댓글 관리 대시보드(/admin/comments)용 - 전체 사이트 댓글을 최신순으로, 경기 정보까지 한 번에 조회.
+	@Query(
+			value = """
+        SELECT c FROM CommentEntity c
+        JOIN FETCH c.torikumiEntity t
+        JOIN FETCH t.bashoEntity
+        JOIN FETCH t.eastRikishiEntity
+        JOIN FETCH t.westRikishiEntity
+        ORDER BY c.createdAt DESC, c.id DESC
+    """,
+			countQuery = "SELECT COUNT(c) FROM CommentEntity c"
+	)
+	Page<CommentEntity> findAllForAdmin(Pageable pageable);
 }

@@ -1,6 +1,8 @@
 package com.torikumilab.sumoarchive.service;
 
+import com.torikumilab.sumoarchive.domain.dto.AdminCommentDTO;
 import com.torikumilab.sumoarchive.domain.dto.CommentDTO;
+import com.torikumilab.sumoarchive.domain.entity.BashoEntity;
 import com.torikumilab.sumoarchive.domain.entity.CommentEntity;
 import com.torikumilab.sumoarchive.domain.entity.TorikumiEntity;
 import com.torikumilab.sumoarchive.domain.entity.constant.DeletedBy;
@@ -9,6 +11,8 @@ import com.torikumilab.sumoarchive.repository.TorikumiRepository;
 import com.torikumilab.sumoarchive.service.exception.PasswordMismatchException;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -112,6 +116,12 @@ public class CommentService {
 		return getComments(torikumiId);
 	}
 
+	/** 관리자 댓글 관리 대시보드(/admin/comments) - 사이트 전체 댓글을 최신순으로. */
+	@Transactional(readOnly = true)
+	public Page<AdminCommentDTO> getAllCommentsForAdmin(Pageable pageable) {
+		return commentRepository.findAllForAdmin(pageable).map(CommentService::toAdminDto);
+	}
+
 	private CommentEntity loadCommentOfTorikumi(Integer torikumiId, Integer commentId) {
 		CommentEntity comment = commentRepository.findById(commentId)
 				.orElseThrow(() -> new EntityNotFoundException("댓글을 찾을 수 없습니다. id=" + commentId));
@@ -139,6 +149,33 @@ public class CommentService {
 				deleted,
 				blinded
 		);
+	}
+
+	private static AdminCommentDTO toAdminDto(CommentEntity c) {
+		CommentDTO base = toDto(c);
+		TorikumiEntity t = c.getTorikumiEntity();
+		return new AdminCommentDTO(
+				base.id(), t.getId(), matchLabelOf(t),
+				base.nickName(), base.displayContent(), base.createdAt(),
+				base.deleted(), base.blinded()
+		);
+	}
+
+	private static String matchLabelOf(TorikumiEntity t) {
+		BashoEntity basho = t.getBashoEntity();
+		String bashoTitle = basho.getBashoYear() + "년 " + basho.getBashoMonth().getMonthValue()
+				+ "월 " + basho.getBashoMonth().getDisplayNameKr();
+		String east = firstToken(t.getEastRikishiEntity().getShikonaKr());
+		String west = firstToken(t.getWestRikishiEntity().getShikonaKr());
+		return bashoTitle + " " + t.getDay() + "일째 · " + east + " vs " + west;
+	}
+
+	private static String firstToken(String value) {
+		if (value == null) {
+			return null;
+		}
+		int idx = value.indexOf(' ');
+		return idx > 0 ? value.substring(0, idx) : value;
 	}
 
 	private static String sha256(String raw) {
