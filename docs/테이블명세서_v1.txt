@@ -1,0 +1,176 @@
+-- 1. 헤야 테이블 먼저 생성 (master_rikishi_id는 나중에 연결합니다)
+CREATE TABLE heyaEntity (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name_kr VARCHAR(100) NOT NULL,          -- 헤야 이름 (한국어)
+    name_jp VARCHAR(100) NOT NULL,          -- 헤야 이름 (일본어)
+    ichimon_kr VARCHAR(100),                -- 소속 일문 (한국어)
+    ichimon_jp VARCHAR(100),                -- 소속 일문 (일본어)
+    master_rikishi_id INT,                  -- 🌟 해당 헤야의 대장 오야카타 (리키시 ID 외래키)
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 2. 리키시(선수 & 은퇴 오야카타 통합) 테이블 생성
+CREATE TABLE rikishiEntity (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    external_api_id VARCHAR(50) UNIQUE,     -- 🌟 클로드 추천: 외부 스모 API의 선수 고유 ID (동기화용 키)
+    shikona_kr VARCHAR(100) NOT NULL,       -- 현재/은퇴당시 시코나 (한국어)
+    shikona_jp VARCHAR(100) NOT NULL,       -- 현재/은퇴당시 시코나 (일본어)
+    name VARCHAR(100),                      -- 본명
+    birthdate DATE NOT NULL,                -- 생년월일
+    birthplace VARCHAR(255),                -- 출생지
+    nationality VARCHAR(100),		-- 국적 ('일본', '몽골', '조지아' 등 한국어로 통일)
+    height DECIMAL(4,1),                    -- 키 (cm)
+    weight DECIMAL(4,1),                    -- 몸무게 (kg)
+    heya_id INT,                            -- 소속 헤야 ID (외래키)
+    current_rank VARCHAR(50),               -- 현재 계급 (은퇴자는 은퇴 당시 혹은 공백) | MVP 기준: 반즈케 테이블 없이 여기에 현재 계급만 캐시로 저장!
+    highest_rank VARCHAR(50),               -- 최고 계급
+    fighting_style VARCHAR(255),            -- 파이팅 스타일
+    debut_date DATE,                        -- 데뷔일
+    is_active BOOLEAN DEFAULT TRUE,         -- 현역 여부 (1:현역, 0:은퇴 후 오야카타 포함)
+    retired_date DATE,                      -- 은퇴일 (현역이면 NULL)
+    oyakata_name_kr VARCHAR(100),           -- 🌟 은퇴 후 습명한 오야카타 이름 (한국어, 현역은 NULL)
+    oyakata_name_jp VARCHAR(100),           -- 🌟 은퇴 후 습명한 오야카타 이름 (일본어, 현역은 NULL)
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    -- 외래키 설정: 리키시가 속한 헤야 연결
+    FOREIGN KEY (heya_id) REFERENCES heyaEntity(id) ON DELETE SET NULL
+);
+
+-- 3. 닭이 먼저냐 달걀이 먼저냐 문제를 해결하기 위해 헤야 테이블에 외래키 제약조건 추가
+-- (리키시 테이블이 존재해야 헤야의 대장 ID를 연결할 수 있기 때문입니다)
+ALTER TABLE heyaEntity
+ADD CONSTRAINT fk_heya_master_rikishi 
+FOREIGN KEY (master_rikishi_id) REFERENCES rikishiEntity(id) ON DELETE SET NULL;
+
+-- 4. 리키시 시코나 이력 테이블 (수정 버전)
+CREATE TABLE rikishi_shikona_history (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    rikishi_id INT NOT NULL,                -- 대상 선수 ID (외래키)
+    shikona_kr VARCHAR(100) NOT NULL,       -- 과거에 썼던 시코나 (한국어)
+    shikona_jp VARCHAR(100) NOT NULL,       -- 과거에 썼던 시코나 (일본어)
+    valid_from DATE,                        -- 이 시코나 쓰기 시작한 날
+    valid_to DATE,                          -- 이 시코나 그만 쓴 날 (NULL이면 현재 사용중)
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    FOREIGN KEY (rikishi_id) REFERENCES rikishiEntity(id) ON DELETE CASCADE
+);
+
+
+===================================================
+
+
+-- 1. 바쇼(대회) 마스터 테이블
+CREATE TABLE bashoEntity (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    basho_year INT NOT NULL,
+    basho_month ENUM('1', '3', '5', '7', '9', '11') NOT NULL,  -- 홀수 달만 고정값으로 강제!
+    start_date DATE,
+    end_date DATE,
+    UNIQUE KEY uq_basho (basho_year, basho_month)
+);
+
+-- 2. 반즈케(대회별 선수 계급) 테이블
+CREATE TABLE banzuke (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    rikishi_id INT NOT NULL,
+    basho_id INT NOT NULL,          -- 🌟 연도/월 대신 깔끔하게 바쇼 ID로 참조!
+    
+    -- 데이터 무결성을 위한 완벽한 ENUM 3형제
+    division ENUM('Makuuchi', 'Juryo', 'Makushita', 'Sandanme', 'Jonidan', 'Jonokuchi') NOT NULL,
+    rank_name ENUM('Yokozuna', 'Ozeki', 'Sekiwake', 'Komusubi', 'Maegashira', 'Juryo', 'Makushita', 'Sandanme', 'Jonidan', 'Jonokuchi') NOT NULL, 
+    side ENUM('E', 'W') NOT NULL,
+    
+    rank_value INT NOT NULL,        -- Maegashira 뒤에 붙는 숫자 (1, 2, 3...)
+    rank_score INT NOT NULL,        -- 전체 서열 점수 (변화량 계산용)
+    
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    -- 한 대회(basho_id)에 한 선수(rikishi_id)의 반즈케는 오직 하나!
+    UNIQUE KEY uq_rikishi_basho_id (rikishi_id, basho_id),
+    FOREIGN KEY (rikishi_id) REFERENCES rikishiEntity(id) ON DELETE CASCADE,
+    FOREIGN KEY (basho_id) REFERENCES bashoEntity(id) ON DELETE CASCADE
+); 
+
+-- 3. 토리쿠미 테이블 
+CREATE TABLE torikumiEntity (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    basho_id INT NOT NULL,                  -- 🔗 어느 대회인지 (바쇼 외래키)
+    day INT NOT NULL,                       -- 며칠째 시합인지 (1 ~ 15)
+    
+    -- 메인 화면 리그별 필터링을 위한 필수 ENUM
+    division ENUM('Makuuchi', 'Juryo', 'Makushita', 'Sandanme', 'Jonidan', 'Jonokuchi') NOT NULL, 
+    
+    east_rikishi_id INT NOT NULL,           -- 동쪽 선수 (외래키)
+    west_rikishi_id INT NOT NULL,           -- 서쪽 선수 (외래키)
+    
+    winner_rikishi_id INT,                  -- 승자 선수 ID (NULL 허용)
+    loser_rikishi_id INT,                   -- 패자 선수 ID (빠른 조회를 위해 추가)
+    
+    result_type ENUM('NORMAL', 'FUZEN') DEFAULT 'NORMAL', -- 정상 경기(NORMAL) / 부전승패(FUZEN) 구분
+    
+    -- 🌟 [API 연동을 위해 고유명사로 복구 완료!] 
+    kimarite VARCHAR(100),                  -- 결정 기술 (예: 'Yorikiri', 'Oshidashi' 등)
+    
+    is_extra_match BOOLEAN DEFAULT FALSE,   -- 동점 결정전(Kettei-sen) 여부 플래그
+    
+    -- 관리자 입력용 유튜브 링크 및 다국어 경기 내용 설명
+    youtube_url VARCHAR(255),               
+    description_kr TEXT,                    
+    description_jp TEXT,                    
+    
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    -- 외래키 제약 조건들
+    FOREIGN KEY (basho_id) REFERENCES bashoEntity(id) ON DELETE CASCADE,
+    FOREIGN KEY (east_rikishi_id) REFERENCES rikishiEntity(id),
+    FOREIGN KEY (west_rikishi_id) REFERENCES rikishiEntity(id),
+    FOREIGN KEY (winner_rikishi_id) REFERENCES rikishiEntity(id),
+    FOREIGN KEY (loser_rikishi_id) REFERENCES rikishiEntity(id),
+    
+    -- 결정전까지 고려한 중복 등록 완벽 방어 제약 조건
+    UNIQUE KEY uq_torikumi (basho_id, day, east_rikishi_id, west_rikishi_id)
+);
+
+-- 1. 수상경력 :  순수 수상 테이블 (우승 및 삼상만 관리)
+CREATE TABLE award (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    rikishi_id INT NOT NULL,
+    basho_id INT NOT NULL,
+-- 🌟 추가: 어느 디비전(리그)에서의 수상인지 기록!
+    division ENUM('Makuuchi', 'Juryo', 'Makushita', 'Sandanme', 'Jonidan', 'Jonokuchi') NOT NULL,
+-- 🌟 우승(YUSHO) 또는 삼상(SANSHO_...) 구분
+    award_type ENUM('YUSHO', 'SANSHO_SHUKUN', 'SANSHO_KANTO', 'SANSHO_GINO') NOT NULL,
+    FOREIGN KEY (rikishi_id) REFERENCES rikishiEntity(id),
+    FOREIGN KEY (basho_id) REFERENCES bashoEntity(id),
+    -- 유니크 제약 조건: 한 선수가 한 대회, 한 디비전에서 같은 상을 두 번 탈 수 없음
+    UNIQUE KEY uq_rikishi_basho_division_award (rikishi_id, basho_id, division, award_type)
+);
+
+-- 2. 킨보시 기록 테이블 (특정 경기와 매핑하여 요코즈나 사냥 기록 추적)
+CREATE TABLE kinboshi (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    torikumi_id INT NOT NULL,            -- 해당 토리쿠미 ID
+    winner_rikishi_id INT NOT NULL,      -- 이긴 마에가시라 ID
+    loser_yokozuna_id INT NOT NULL,      -- 패배한 요코즈나 ID
+    FOREIGN KEY (torikumi_id) REFERENCES torikumiEntity(id) ON DELETE CASCADE,
+    FOREIGN KEY (winner_rikishi_id) REFERENCES rikishiEntity(id),
+    FOREIGN KEY (loser_yokozuna_id) REFERENCES rikishiEntity(id)
+);
+
+===================================================
+
+그외에 더 필요한것 유저 테이블, 우승&삼상 등 수상 경력테이블?
+
+-- 7. comment (댓글 테이블 추가 완료)
+CREATE TABLE comment (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    torikumi_id INT NOT NULL,
+    nickname VARCHAR(8) NOT NULL,
+    password VARCHAR(255) NOT NULL, -- BCrypt 암호화 저장
+    content VARCHAR(200) NOT NULL,
+    is_deleted BOOLEAN DEFAULT FALSE, -- 관리자 가림처리용 (소프트 딜리트)
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (torikumi_id) REFERENCES torikumiEntity(id) ON DELETE CASCADE
+);
+
+

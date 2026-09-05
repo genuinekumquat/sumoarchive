@@ -1,0 +1,233 @@
+========================================
+스모아카이브 DB 테이블 명세서
+========================================
+
+
+========================================
+SECTION 1. 헤야 & 리키시
+========================================
+
+----------------------------------------
+[1-1] heyaEntity (헤야 테이블)
+----------------------------------------
+※ heyaEntity ↔ rikishiEntity 순환 참조로 인해 master_rikishi_id FK는 1-3에서 ALTER로 추가
+
+컬럼명                  타입                    설명
+---------------------------------------------------------------------------
+id                     INT AUTO_INCREMENT PK   고유 ID
+name_kr                VARCHAR(100) NOT NULL   헤야 이름 (한국어)
+name_jp                VARCHAR(100) NOT NULL   헤야 이름 (일본어)
+ichimon_kr             VARCHAR(100)            소속 이치몬 (한국어)
+ichimon_jp             VARCHAR(100)            소속 이치몬 (일본어)
+master_rikishi_id      INT                     헤야 대표 오야카타 ID (FK는 ALTER로 추가)
+created_at             TIMESTAMP               생성일시 (DEFAULT CURRENT_TIMESTAMP)
+
+
+----------------------------------------
+[1-2] rikishiEntity (리키시 테이블)
+----------------------------------------
+※ 현역 선수 + 은퇴 오야카타 통합 관리
+
+컬럼명                  타입                    설명
+---------------------------------------------------------------------------
+id                     INT AUTO_INCREMENT PK   고유 ID
+external_api_id        INT UNIQUE              sumo-api 선수 고유 ID (동기화용)
+shikona_kr             VARCHAR(100)            시코나 (한국어)
+shikona_jp             VARCHAR(100)            시코나 (일본어)
+name                   VARCHAR(100)            본명
+birthdate              DATE                    생년월일
+birthplace             VARCHAR(255)            출생지
+nationality            VARCHAR(100)            국적 ('일본', '몽골', '조지아' 등 한국어 통일)
+height                 DECIMAL(4,1)            키 (cm)
+weight                 DECIMAL(4,1)            몸무게 (kg)
+heya_id                INT                     소속 헤야 ID (FK → heyaEntity.id, ON DELETE SET NULL)
+current_rank           VARCHAR(50)             현재 계급 (캐시용 / source of truth는 banzuke)
+highest_rank           VARCHAR(50)             최고 계급
+fighting_style         VARCHAR(255)            파이팅 스타일 (관리자 입력)
+debut_date             DATE                    데뷔일
+is_active              BOOLEAN NOT NULL DEFAULT TRUE    현역 여부 (0 = 은퇴 / 오야카타 포함)
+retired_date           DATE                    은퇴일 (현역이면 NULL)
+oyakata_name_kr        VARCHAR(100)            은퇴 후 오야카타 습명 (한국어, 현역이면 NULL)
+oyakata_name_jp        VARCHAR(100)            은퇴 후 오야카타 습명 (일본어, 현역이면 NULL)
+photo_url              VARCHAR(255)            프로필 사진 URL
+created_at             TIMESTAMP               생성일시 (DEFAULT CURRENT_TIMESTAMP)
+
+
+----------------------------------------
+[1-3] ALTER TABLE heyaEntity (순환 참조 해결)
+----------------------------------------
+※ rikishiEntity 테이블 생성 후 heya에 FK 추가
+
+ALTER TABLE heyaEntity
+    ADD CONSTRAINT fk_heya_master_rikishi
+    FOREIGN KEY (master_rikishi_id) REFERENCES rikishiEntity(id) ON DELETE SET NULL;
+
+
+----------------------------------------
+[1-4] rikishi_shikona_history (시코나 변경 이력 테이블)
+----------------------------------------
+
+컬럼명                  타입                    설명
+---------------------------------------------------------------------------
+id                     INT AUTO_INCREMENT PK   고유 ID
+rikishi_id             INT NOT NULL            대상 선수 ID (FK → rikishiEntity.id, ON DELETE CASCADE)
+shikona_kr             VARCHAR(100) NOT NULL   과거 시코나 (한국어)
+shikona_jp             VARCHAR(100) NOT NULL   과거 시코나 (일본어)
+valid_from             DATE                    해당 시코나 사용 시작일
+valid_to               DATE                    해당 시코나 사용 종료일 (NULL = 현재 사용 중)
+created_at             TIMESTAMP               생성일시 (DEFAULT CURRENT_TIMESTAMP)
+
+
+========================================
+SECTION 2. 바쇼 & 반즈케
+========================================
+
+----------------------------------------
+[2-1] bashoEntity (바쇼 마스터 테이블)
+----------------------------------------
+
+컬럼명                  타입                    설명
+---------------------------------------------------------------------------
+id                     INT AUTO_INCREMENT PK   고유 ID
+basho_year             INT NOT NULL            대회 연도 (예: 2025)
+basho_month            ENUM NOT NULL           대회 개최월 ('1','3','5','7','9','11') 연 6회 고정
+start_date             DATE                    대회 시작일
+end_date               DATE                    대회 종료일
+
+UNIQUE KEY: uq_basho (basho_year, basho_month)
+
+
+----------------------------------------
+[2-2] banzuke (반즈케 테이블)
+----------------------------------------
+※ 바쇼별 선수 계급 기록
+
+컬럼명                  타입                    설명
+---------------------------------------------------------------------------
+id                     INT AUTO_INCREMENT PK   고유 ID
+rikishi_id             INT NOT NULL            선수 ID (FK → rikishiEntity.id, ON DELETE CASCADE)
+basho_id               INT NOT NULL            바쇼 ID (FK → bashoEntity.id, ON DELETE CASCADE)
+division               ENUM NOT NULL           디비전 (Makuuchi / Juryo / Makushita /
+                                               Sandanme / Jonidan / Jonokuchi)
+rank_name                   ENUM NOT NULL           계급 (Yokozuna / Ozeki / Sekiwake / Komusubi /
+                                               Maegashira / Juryo / Makushita /
+                                               Sandanme / Jonidan / Jonokuchi)
+side                   ENUM NOT NULL           동서 구분 (EAST / WEST)
+rank_value             INT                     숫자 서열 (마에가시라 등, 요코즈나 등은 NULL)
+rank_score             INT                     전체 서열 점수 (변화량 계산용, 추후 채워넣기)
+created_at             TIMESTAMP               생성일시 (DEFAULT CURRENT_TIMESTAMP)
+
+UNIQUE KEY: uq_rikishi_basho (rikishi_id, basho_id)
+※ 한 바쇼에 한 선수의 반즈케는 하나
+
+
+========================================
+SECTION 3. 토리쿠미 (경기 결과)
+========================================
+
+----------------------------------------
+[3-1] torikumiEntity (토리쿠미 테이블)
+----------------------------------------
+
+컬럼명                  타입                    설명
+---------------------------------------------------------------------------
+id                     INT AUTO_INCREMENT PK   고유 ID
+basho_id               INT NOT NULL            바쇼 ID (FK → bashoEntity.id, ON DELETE CASCADE)
+day                    INT NOT NULL            경기 일차 (1~15, 결정전은 16 이상)
+division               ENUM NOT NULL           디비전 (Makuuchi / Juryo / Makushita /
+                                               Sandanme / Jonidan / Jonokuchi)
+match_no               INT                     당일 경기 순서 (1, 2, 3...)
+external_id            VARCHAR(50) UNIQUE      API의 torikumiEntity id (중복 적재 방지용)
+east_rikishi_id        INT NOT NULL            동쪽 선수 (FK → rikishiEntity.id)
+west_rikishi_id        INT NOT NULL            서쪽 선수 (FK → rikishiEntity.id)
+winner_rikishi_id      INT                     승자 ID (부전패 등 예외 케이스 대비 NULL 허용)
+loser_rikishi_id       INT                     패자 ID (빠른 조회용)
+result_type            ENUM('NORMAL','FUZEN') NOT NULL DEFAULT 'NORMAL'   경기 구분 (NORMAL = 정상 / FUZEN = 부전승패)
+kimarite               VARCHAR(100)            결정 기술 (예: 'Yorikiri', 부전패면 NULL)
+is_extra_match         BOOLEAN NOT NULL DEFAULT FALSE   동점 결정전 여부
+youtube_url            VARCHAR(255)            하이라이트 유튜브 링크 (관리자 입력)
+description_kr         TEXT                    경기 설명 (한국어, 관리자 입력)
+description_jp         TEXT                    경기 설명 (일본어, 관리자 입력)
+created_at             TIMESTAMP               생성일시 (DEFAULT CURRENT_TIMESTAMP)
+
+UNIQUE KEY: uq_torikumi (basho_id, day, east_rikishi_id, west_rikishi_id, is_extra_match)
+※ is_extra_match 포함으로 결정전(동점 재경기) 중복 방지
+
+
+========================================
+SECTION 4. 수상 경력
+========================================
+
+----------------------------------------
+[4-1] award (수상 테이블)
+----------------------------------------
+※ 유쇼(우승) & 삼상(산쇼) 관리
+
+컬럼명                  타입                    설명
+---------------------------------------------------------------------------
+id                     INT AUTO_INCREMENT PK   고유 ID
+rikishi_id             INT NOT NULL            선수 ID (FK → rikishiEntity.id)
+basho_id               INT NOT NULL            바쇼 ID (FK → bashoEntity.id)
+division               ENUM NOT NULL           수상 디비전 (Makuuchi / Juryo / Makushita /
+                                               Sandanme / Jonidan / Jonokuchi)
+award_type             ENUM NOT NULL           수상 종류 (YUSHO / SANSHO_SHUKUN /
+                                               SANSHO_KANTO / SANSHO_GINO)
+
+UNIQUE KEY: uq_award (rikishi_id, basho_id, division, award_type)
+※ 한 선수가 한 대회, 한 디비전에서 같은 상을 두 번 탈 수 없음
+
+
+----------------------------------------
+[4-2] kinboshi (킨보시 테이블)
+----------------------------------------
+※ 마에가시라의 요코즈나 격파 기록
+
+컬럼명                  타입                    설명
+---------------------------------------------------------------------------
+id                     INT AUTO_INCREMENT PK   고유 ID
+torikumi_id            INT NOT NULL            킨보시가 발생한 경기 ID
+                                               (FK → torikumiEntity.id, ON DELETE CASCADE)
+winner_rikishi_id      INT NOT NULL            이긴 마에가시라 ID (FK → rikishiEntity.id)
+loser_yokozuna_id      INT NOT NULL            패배한 요코즈나 ID (FK → rikishiEntity.id)
+
+
+========================================
+SECTION 5. 댓글
+========================================
+
+----------------------------------------
+[5-1] comment (댓글 테이블)
+----------------------------------------
+
+컬럼명                  타입                    설명
+---------------------------------------------------------------------------
+id                     INT AUTO_INCREMENT PK   고유 ID
+torikumi_id            INT NOT NULL            대상 경기 ID
+                                               (FK → torikumiEntity.id, ON DELETE CASCADE)
+nickname               VARCHAR(8) NOT NULL     닉네임 (최대 8자)
+password               VARCHAR(255) NOT NULL   비밀번호 (BCrypt 암호화 저장)
+content                VARCHAR(200) NOT NULL   댓글 내용 (최대 200자)
+is_deleted             BOOLEAN DEFAULT FALSE   가림처리 여부 (소프트 딜리트)
+created_at             TIMESTAMP               생성일시 (DEFAULT CURRENT_TIMESTAMP)
+
+
+========================================
+기타 참고사항
+========================================
+
+- 관리자 계정은 DB 테이블 없이 application.properties에 하드코딩
+  (MVP 기준 / 추후 admin 테이블로 분리 가능)
+
+- 테이블 생성 순서 (FK 의존성 순서):
+  1. heyaEntity
+  2. rikishiEntity
+  3. ALTER TABLE heyaEntity (master_rikishi_id FK 추가)
+  4. rikishi_shikona_history
+  5. bashoEntity
+  6. banzuke
+  7. torikumiEntity
+  8. award
+  9. kinboshi
+  10. comment
+
+========================================

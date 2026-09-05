@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>스모아카이브 | 반즈케</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Yuji+Syuku&family=Noto+Serif+KR:wght@400;600;900&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --sumi: #1a1a18;
+            --sumi-soft: #56554e;
+            --sumi-faint: #86857f;
+            --washi: #f7f6f3;
+            --washi-panel: #eceae4;
+            --washi-line: rgba(26, 26, 24, 0.14);
+            --shu: #a3272c;
+            --shu-deep: #7c1d20;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            background-color: var(--washi);
+            background-image:
+                repeating-linear-gradient(90deg, rgba(26,26,24,0.022) 0px, rgba(26,26,24,0.022) 1px, transparent 1px, transparent 3px),
+                repeating-linear-gradient(0deg, rgba(26,26,24,0.012) 0px, rgba(26,26,24,0.012) 1px, transparent 1px, transparent 5px);
+            color: var(--sumi);
+            font-family: 'Noto Serif KR', serif;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .page {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 40px 24px 80px;
+        }
+
+        /* ===== Header ===== */
+        header {
+            position: relative;
+            border: 3px double var(--sumi);
+            padding: 28px 28px 22px;
+            margin-bottom: 36px;
+        }
+
+        .seal {
+            position: absolute;
+            top: -18px;
+            right: 22px;
+            width: 58px;
+            height: 58px;
+            background: var(--shu);
+            color: var(--washi);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Yuji Syuku', serif;
+            font-size: 26px;
+            letter-spacing: -2px;
+            transform: rotate(-4deg);
+            box-shadow: 0 2px 3px rgba(0,0,0,0.3), inset 0 0 0 2px rgba(247,246,243,0.5);
+        }
+
+        .brand-row {
+            display: flex;
+            align-items: baseline;
+            gap: 14px;
+            flex-wrap: wrap;
+        }
+
+        .brand-jp {
+            font-family: 'Yuji Syuku', serif;
+            font-size: 40px;
+            letter-spacing: 4px;
+            color: var(--sumi);
+            text-decoration: none;
+        }
+
+        .brand-kr {
+            font-family: 'Noto Serif KR', serif;
+            font-weight: 900;
+            font-size: 20px;
+            letter-spacing: 1px;
+            color: var(--sumi-soft);
+        }
+
+        .brand-sub {
+            margin-top: 6px;
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 12px;
+            letter-spacing: 3px;
+            color: var(--sumi-faint);
+        }
+
+        /* ===== Search ===== */
+        .search-wrap {
+            margin-top: 26px;
+            padding-top: 22px;
+            border-top: 1px solid var(--washi-line);
+            display: flex;
+            gap: 10px;
+        }
+
+        .search-wrap input[type="text"] {
+            flex: 1;
+            border: 1px solid var(--sumi);
+            background: rgba(255,255,255,0.55);
+            padding: 12px 14px;
+            font-family: 'Noto Serif KR', serif;
+            font-size: 15px;
+            color: var(--sumi);
+        }
+
+        .search-wrap input[type="text"]::placeholder { color: var(--sumi-faint); }
+
+        .search-wrap input[type="text"]:focus {
+            outline: 2px solid var(--shu);
+            outline-offset: -1px;
+        }
+
+        .search-wrap button {
+            border: 1px solid var(--sumi);
+            background: var(--sumi);
+            color: var(--washi);
+            padding: 0 26px;
+            font-family: 'Noto Serif KR', serif;
+            font-weight: 600;
+            font-size: 15px;
+            letter-spacing: 2px;
+            cursor: pointer;
+        }
+
+        .search-wrap button:hover { background: var(--shu-deep); border-color: var(--shu-deep); }
+
+        /* ===== Division Tabs ===== */
+        .tabs {
+            display: flex;
+            gap: 4px;
+            margin-bottom: -1px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .tab-btn {
+            font-family: 'Noto Serif KR', serif;
+            font-size: 14px;
+            padding: 9px 18px 8px;
+            background: var(--washi-panel);
+            border: 1px solid var(--sumi);
+            border-bottom: none;
+            color: var(--sumi-soft);
+            cursor: pointer;
+            clip-path: polygon(6% 0, 94% 0, 100% 100%, 0% 100%);
+        }
+
+        .tab-btn.active {
+            background: var(--washi);
+            color: var(--sumi);
+            font-weight: 700;
+        }
+
+        /* ===== Banzuke Panel ===== */
+        .banzuke {
+            border: 3px double var(--sumi);
+            background: transparent;
+            padding: 4px;
+        }
+
+        .banzuke-inner {
+            border: 1px solid var(--washi-line);
+            padding: 18px 8px 24px;
+        }
+
+        .banzuke-title { text-align: center; margin-bottom: 18px; }
+
+        .banzuke-title .jp {
+            font-family: 'Yuji Syuku', serif;
+            font-size: 30px;
+            letter-spacing: 10px;
+            display: block;
+        }
+
+        .banzuke-title .meta {
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 12px;
+            color: var(--sumi-soft);
+            letter-spacing: 2px;
+            margin-top: 4px;
+            display: block;
+        }
+
+        /* ===== 동서 페어 테이블 ===== */
+        table.banzuke-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+
+        .banzuke-table thead th {
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 12px;
+            letter-spacing: 4px;
+            font-weight: 500;
+            color: var(--sumi-faint);
+            padding: 4px 0 12px;
+            border-bottom: 1px solid var(--sumi);
+        }
+
+        .banzuke-table thead th.col-rank { width: 18%; }
+        .banzuke-table thead th.col-east,
+        .banzuke-table thead th.col-west { width: 41%; }
+
+        .banzuke-table tbody tr {
+            border-bottom: 1px solid var(--washi-line);
+        }
+
+        .banzuke-table tbody tr:hover {
+            background: rgba(163, 39, 44, 0.04);
+        }
+
+        .rikishi-cell {
+            padding: 10px 14px;
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        .rikishi-cell.empty-slot {
+            color: var(--sumi-faint);
+            font-size: 13px;
+        }
+
+        .shikona-link {
+            display: block;
+            font-family: 'Noto Serif KR', serif;
+            color: var(--sumi);
+            text-decoration: none;
+        }
+
+        .shikona-link:hover { color: var(--shu); }
+
+        .sub-info {
+            margin-top: 3px;
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 11px;
+            letter-spacing: 0.5px;
+            color: var(--sumi-faint);
+        }
+
+        .rank-cell {
+            padding: 10px 4px;
+            text-align: center;
+            vertical-align: middle;
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 13px;
+            color: var(--shu);
+            letter-spacing: 2px;
+            border-left: 1px solid var(--washi-line);
+            border-right: 1px solid var(--washi-line);
+            white-space: nowrap;
+        }
+
+        /* 실제 반즈케처럼 계급이 높을수록 시코나를 크게 */
+        .r-Yokozuna   { font-size: 26px; font-weight: 900; }
+        .r-Ozeki      { font-size: 22px; font-weight: 700; }
+        .r-Sekiwake,
+        .r-Komusubi   { font-size: 18px; font-weight: 700; }
+        .r-Maegashira { font-size: 15px; font-weight: 400; }
+        .r-Juryo, .r-Makushita, .r-Sandanme,
+        .r-Jonidan, .r-Jonokuchi { font-size: 13px; font-weight: 400; }
+
+        .empty-row {
+            text-align: center;
+            padding: 50px 0;
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            color: var(--sumi-faint);
+            font-size: 13px;
+            letter-spacing: 1px;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 30px;
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 11px;
+            letter-spacing: 2px;
+            color: var(--sumi-faint);
+        }
+
+        @media (max-width: 560px) {
+            .brand-jp { font-size: 30px; }
+            .r-Yokozuna { font-size: 19px; }
+            .r-Ozeki { font-size: 17px; }
+            .r-Sekiwake, .r-Komusubi { font-size: 14px; }
+            .r-Maegashira { font-size: 12.5px; }
+            .rikishi-cell { padding: 8px 6px; }
+            .sub-info { font-size: 9.5px; }
+            .rank-cell { font-size: 11px; letter-spacing: 0.5px; }
+            .banzuke-table thead th { font-size: 10px; letter-spacing: 2px; }
+        }
+    </style>
+</head>
+<body>
+<div class="page">
+
+    <header>
+        <div class="seal">相撲</div>
+        <div class="brand-row">
+            <a class="brand-jp" th:href="@{/}">相撲archive</a>
+            <span class="brand-kr">스모아카이브</span>
+        </div>
+        <div class="brand-sub">SUMO RANKING &amp; RIKISHI ARCHIVE</div>
+
+        <div class="search-wrap">
+            <form th:action="@{/search}" method="get" style="display: flex; gap: 10px; width: 100%;">
+                <input type="text" name="keyword" placeholder="시코나 또는 본명 검색 (예: 코토자쿠라)">
+                <button type="submit">검색</button>
+            </form>
+        </div>
+    </header>
+
+    <div class="tabs">
+        <button class="tab-btn active" data-division="Makuuchi">마쿠우치</button>
+        <button class="tab-btn" data-division="Juryo">주료</button>
+        <button class="tab-btn" data-division="Makushita">마쿠시타</button>
+        <button class="tab-btn" data-division="Sandanme">산단메</button>
+        <button class="tab-btn" data-division="Jonidan">조니단</button>
+        <button class="tab-btn" data-division="Jonokuchi">조노구치</button>
+    </div>
+
+    <div class="banzuke">
+        <div class="banzuke-inner">
+            <div class="banzuke-title">
+                <span class="jp">番付</span>
+                <span class="meta" id="division-meta">2026年 名古屋場所 · 마쿠우치</span>
+            </div>
+
+            <table class="banzuke-table">
+                <thead>
+                <tr>
+                    <th class="col-east">東 EAST</th>
+                    <th class="col-rank">番付</th>
+                    <th class="col-west">WEST 西</th>
+                </tr>
+                </thead>
+                <tbody id="banzuke-body">
+                <tr><td colspan="3" class="empty-row">불러오는 중…</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <footer>SUMOARCHIVE — 韓国語で見る大相撲情報アーカイブ</footer>
+</div>
+
+<script th:inline="javascript">
+    const tabButtons = document.querySelectorAll('.tab-btn');
+    const tbody = document.getElementById('banzuke-body');
+    const meta = document.getElementById('division-meta');
+
+    const DIVISION_LABEL = {
+        Makuuchi: '마쿠우치', Juryo: '주료', Makushita: '마쿠시타',
+        Sandanme: '산단메', Jonidan: '조니단', Jonokuchi: '조노구치'
+    };
+
+    // 계급 정렬 순서 (숫자가 작을수록 위쪽)
+    const RANK_ORDER = {
+        Yokozuna: 0, Ozeki: 1, Sekiwake: 2, Komusubi: 3, Maegashira: 4,
+        Juryo: 5, Makushita: 6, Sandanme: 7, Jonidan: 8, Jonokuchi: 9
+    };
+
+    // 반즈케 칸(番付欄) 표기용 한자 라벨
+    const RANK_LABEL = {
+        Yokozuna: '横綱', Ozeki: '大関', Sekiwake: '関脇', Komusubi: '小結',
+        Maegashira: '前頭', Juryo: '十両', Makushita: '幕下',
+        Sandanme: '三段目', Jonidan: '序二段', Jonokuchi: '序ノ口'
+    };
+
+    tabButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            tabButtons.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            const division = btn.dataset.division;
+            meta.textContent = '2026年 名古屋場所 · ' + DIVISION_LABEL[division];
+            loadDivision(division);
+        });
+    });
+
+    function loadDivision(division) {
+        fetch(`/api/banzuke?division=${division}`)
+            .then(response => {
+                if (!response.ok) throw new Error('서버 응답 오류: ' + response.status);
+                return response.json();
+            })
+            .then(renderTable)
+            .catch(error => {
+                console.error('반즈케 조회 실패:', error);
+                tbody.innerHTML = '<tr><td colspan="3" class="empty-row">데이터를 불러오지 못했습니다.</td></tr>';
+            });
+    }
+
+    // 같은 계급/순번(rankName + rankValue)의 東/西를 한 행으로 묶기
+    function pairByRank(data) {
+        const map = new Map();
+
+        data.forEach(row => {
+            const key = row.rankName + '-' + (row.rankValue ?? '');
+            if (!map.has(key)) {
+                map.set(key, { rankName: row.rankName, rankValue: row.rankValue, east: null, west: null });
+            }
+            const entry = map.get(key);
+            if (row.side === 'EAST') entry.east = row;
+            else entry.west = row;
+        });
+
+        return Array.from(map.values()).sort((a, b) => {
+            const orderDiff = RANK_ORDER[a.rankName] - RANK_ORDER[b.rankName];
+            if (orderDiff !== 0) return orderDiff;
+            return (a.rankValue ?? 0) - (b.rankValue ?? 0);
+        });
+    }
+
+    function rankCellText(rankName, rankValue) {
+        const label = RANK_LABEL[rankName] || rankName;
+        // 마에가시라/주료 이하는 순번을 붙임 (예: 前頭10)
+        if (rankValue != null && (rankName === 'Maegashira' || RANK_ORDER[rankName] >= RANK_ORDER.Juryo)) {
+            return label + rankValue;
+        }
+        return label;
+    }
+
+    function makeRikishiCell(row, rankName) {
+        const td = document.createElement('td');
+        td.className = 'rikishi-cell';
+
+        if (!row) {
+            td.classList.add('empty-slot');
+            td.textContent = '—';
+            return td;
+        }
+
+        const link = document.createElement('a');
+        link.className = 'shikona-link r-' + rankName;
+        link.href = '/rikishi/' + row.rikishiId;
+        // "아사노야마 히로키"처럼 시코나+이름이 함께 들어온 경우 공백 앞부분(시코나)만 표시
+        link.textContent = row.shikonaKr.split(' ')[0];
+        link.title = row.shikonaKr; // 전체 표기는 툴팁으로 확인 가능
+
+        const sub = document.createElement('div');
+        sub.className = 'sub-info';
+        // 출신지 · 소속 헤야 (둘 다 없으면 표시 생략)
+        sub.textContent = [row.birthplace, row.heyaNameKr].filter(Boolean).join(' · ');
+
+        td.appendChild(link);
+        if (sub.textContent) td.appendChild(sub);
+        return td;
+    }
+
+    function renderTable(data) {
+        tbody.innerHTML = '';
+
+        if (!data || data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="3" class="empty-row">등록된 반즈케가 없습니다.</td></tr>';
+            return;
+        }
+
+        const paired = pairByRank(data);
+
+        paired.forEach(entry => {
+            const tr = document.createElement('tr');
+
+            tr.appendChild(makeRikishiCell(entry.east, entry.rankName));
+
+            const rankTd = document.createElement('td');
+            rankTd.className = 'rank-cell';
+            rankTd.textContent = rankCellText(entry.rankName, entry.rankValue);
+            tr.appendChild(rankTd);
+
+            tr.appendChild(makeRikishiCell(entry.west, entry.rankName));
+
+            tbody.appendChild(tr);
+        });
+    }
+
+    // 최초 진입 시 마쿠우치 로드 (기존에 서버에서 내려주던 초기 렌더링을
+    // 탭 전환과 동일한 로직으로 통일해서 페어링 로직 중복을 없앴습니다)
+    loadDivision('Makuuchi');
+</script>
+</body>
+</html>

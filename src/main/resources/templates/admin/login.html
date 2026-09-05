@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>관리자 로그인 | 스모아카이브</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Yuji+Syuku&family=Noto+Serif+KR:wght@400;600;900&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --sumi: #1a1a18;
+            --sumi-soft: #56554e;
+            --sumi-faint: #86857f;
+            --washi: #f7f6f3;
+            --washi-line: rgba(26, 26, 24, 0.14);
+            --shu: #a3272c;
+            --shu-faint: rgba(163, 39, 44, 0.10);
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: var(--washi);
+            background-image:
+                    repeating-linear-gradient(90deg, rgba(26,26,24,0.022) 0px, rgba(26,26,24,0.022) 1px, transparent 1px, transparent 3px),
+                    repeating-linear-gradient(0deg, rgba(26,26,24,0.012) 0px, rgba(26,26,24,0.012) 1px, transparent 1px, transparent 5px);
+            color: var(--sumi);
+            font-family: 'Noto Serif KR', serif;
+        }
+        .login-card {
+            width: 100%;
+            max-width: 340px;
+            margin: 24px;
+            border: 3px double var(--sumi);
+            padding: 4px;
+        }
+        .login-card-inner {
+            border: 1px solid var(--washi-line);
+            padding: 30px 26px 28px;
+        }
+        .brand-jp {
+            display: block;
+            font-family: 'Yuji Syuku', serif;
+            font-size: 24px;
+            letter-spacing: 3px;
+            text-align: center;
+            margin-bottom: 4px;
+        }
+        .brand-sub {
+            display: block;
+            text-align: center;
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 11px;
+            letter-spacing: 2px;
+            color: var(--sumi-faint);
+            margin-bottom: 22px;
+        }
+        label {
+            display: block;
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 12px;
+            color: var(--sumi-soft);
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+        }
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            padding: 10px 12px;
+            margin-bottom: 16px;
+            border: 1px solid var(--washi-line);
+            background: #fff;
+            font-family: 'Noto Serif KR', serif;
+            font-size: 14px;
+            color: var(--sumi);
+        }
+        input[type="text"]:focus, input[type="password"]:focus {
+            outline: none;
+            border-color: var(--shu);
+            box-shadow: inset 0 0 0 1px var(--shu);
+        }
+        button {
+            width: 100%;
+            padding: 11px 0;
+            border: 1px solid var(--sumi);
+            background: var(--sumi);
+            color: var(--washi);
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 13px;
+            letter-spacing: 2px;
+            cursor: pointer;
+        }
+        button:hover { background: var(--shu); border-color: var(--shu); }
+        .msg {
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 12px;
+            letter-spacing: 0.5px;
+            padding: 10px 12px;
+            margin-bottom: 16px;
+        }
+        .msg-error { background: var(--shu-faint); color: var(--shu); }
+        .msg-info { background: rgba(26,26,24,0.06); color: var(--sumi-soft); }
+        form[data-logout] { margin-top: 10px; }
+        form[data-logout] button { background: transparent; color: var(--sumi-soft); border-color: var(--washi-line); }
+        form[data-logout] button:hover { background: rgba(26,26,24,0.06); color: var(--sumi); border-color: var(--sumi); }
+    </style>
+</head>
+<body>
+<div class="login-card">
+    <div class="login-card-inner">
+        <span class="brand-jp">相撲</span>
+        <span class="brand-sub">SUMOARCHIVE ADMIN</span>
+
+        <p class="msg msg-error" th:if="${error}" th:text="${error}">에러 메시지</p>
+        <p class="msg msg-info" th:if="${alreadyLoggedIn}">이미 관리자로 로그인되어 있습니다.</p>
+
+        <form th:action="@{/admin/login}" method="post" th:unless="${alreadyLoggedIn}">
+            <label for="username">아이디</label>
+            <input type="text" id="username" name="username" autocomplete="username" required>
+
+            <label for="password">비밀번호</label>
+            <input type="password" id="password" name="password" autocomplete="current-password" required>
+
+            <button type="submit">로그인</button>
+        </form>
+
+        <form th:action="@{/admin/logout}" method="post" data-logout th:if="${alreadyLoggedIn}">
+            <button type="submit">로그아웃</button>
+        </form>
+    </div>
+</div>
+</body>
+</html>

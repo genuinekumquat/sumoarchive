@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>찾을 수 없음 | 스모아카이브</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Yuji+Syuku&family=Noto+Serif+KR:wght@400;600;900&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --sumi: #1a1a18;
+            --sumi-faint: #86857f;
+            --washi: #f7f6f3;
+            --washi-line: rgba(26, 26, 24, 0.14);
+            --shu: #a3272c;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: var(--washi);
+            color: var(--sumi);
+            font-family: 'Noto Serif KR', serif;
+        }
+        .box {
+            text-align: center;
+            border: 3px double var(--sumi);
+            padding: 44px 48px;
+            max-width: 420px;
+        }
+        .jp {
+            font-family: 'Yuji Syuku', serif;
+            font-size: 56px;
+            letter-spacing: 6px;
+            color: var(--shu);
+        }
+        .code {
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 13px;
+            letter-spacing: 4px;
+            color: var(--sumi-faint);
+            margin-top: 6px;
+        }
+        p {
+            margin: 18px 0 24px;
+            font-size: 14px;
+            color: var(--sumi-faint);
+            word-break: keep-all;
+        }
+        a {
+            font-family: 'Noto Serif KR', serif;
+            font-size: 14px;
+            color: var(--sumi);
+            border-bottom: 1px solid var(--shu);
+            text-decoration: none;
+            padding-bottom: 2px;
+        }
+        a:hover { color: var(--shu); }
+    </style>
+</head>
+<body>
+<div class="box">
+    <div class="jp">不見当</div>
+    <div class="code">404 NOT FOUND</div>
+    <p th:text="${message} ?: '요청하신 페이지를 찾을 수 없습니다.'">요청하신 페이지를 찾을 수 없습니다.</p>
+    <a th:href="@{/}">← 반즈케로 돌아가기</a>
+</div>
+</body>
+</html>

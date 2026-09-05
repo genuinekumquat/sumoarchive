@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${rikishi.shikonaKr} + ' | 스모아카이브'">스모아카이브 | 리키시</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Yuji+Syuku&family=Noto+Serif+KR:wght@400;600;900&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+    <link rel="stylesheet" th:href="@{/css/torikumi.css}">
+    <style>
+        :root {
+            --sumi: #1a1a18;
+            --sumi-soft: #56554e;
+            --sumi-faint: #86857f;
+            --washi: #f7f6f3;
+            --washi-panel: #eceae4;
+            --washi-line: rgba(26, 26, 24, 0.14);
+            --shu: #a3272c;
+            --shu-deep: #7c1d20;
+            --shu-faint: rgba(163, 39, 44, 0.10);
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            background-color: var(--washi);
+            background-image:
+                    repeating-linear-gradient(90deg, rgba(26,26,24,0.022) 0px, rgba(26,26,24,0.022) 1px, transparent 1px, transparent 3px),
+                    repeating-linear-gradient(0deg, rgba(26,26,24,0.012) 0px, rgba(26,26,24,0.012) 1px, transparent 1px, transparent 5px);
+            color: var(--sumi);
+            font-family: 'Noto Serif KR', serif;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .page {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 40px 24px 80px;
+        }
+
+        a { color: inherit; }
+
+        /* ===== Header (index.html과 동일 톤) ===== */
+        header {
+            position: relative;
+            border: 3px double var(--sumi);
+            padding: 22px 28px 18px;
+            margin-bottom: 30px;
+        }
+
+        .brand-row { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+        .brand-jp { font-family: 'Yuji Syuku', serif; font-size: 28px; letter-spacing: 3px; color: var(--sumi); text-decoration: none; }
+        .brand-kr { font-family: 'Noto Serif KR', serif; font-weight: 900; font-size: 15px; letter-spacing: 1px; color: var(--sumi-soft); }
+
+        .breadcrumb {
+            margin-top: 10px;
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 12px;
+            letter-spacing: 1px;
+            color: var(--sumi-faint);
+        }
+        .breadcrumb a:hover { color: var(--shu); }
+
+        /* ===== 프로필 헤더 ===== */
+        .profile-card {
+            border: 3px double var(--sumi);
+            padding: 4px;
+            margin-bottom: 28px;
+        }
+
+        .profile-inner {
+            border: 1px solid var(--washi-line);
+            padding: 30px 28px;
+            display: flex;
+            gap: 32px;
+            align-items: stretch;
+        }
+
+        .profile-info { flex: 1; min-width: 0; }
+
+        .status-badge {
+            display: inline-block;
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 11px;
+            letter-spacing: 2px;
+            padding: 3px 10px;
+            border: 1px solid var(--shu);
+            color: var(--shu);
+            margin-bottom: 10px;
+        }
+        .status-badge.retired { border-color: var(--sumi-faint); color: var(--sumi-faint); }
+
+        .shikona-row {
+            display: flex;
+            align-items: baseline;
+            gap: 14px;
+            flex-wrap: wrap;
+            margin-bottom: 4px;
+        }
+
+        .shikona-main {
+            font-family: 'Yuji Syuku', serif;
+            font-size: 40px;
+            letter-spacing: 4px;
+            color: var(--sumi);
+        }
+
+        .rank-display {
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 15px;
+            color: var(--shu);
+            letter-spacing: 1px;
+            white-space: nowrap;
+        }
+
+        .shikona-kana {
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 13px;
+            color: var(--sumi-faint);
+            margin-bottom: 14px;
+        }
+
+        .shikona-history {
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 12px;
+            color: var(--sumi-soft);
+            padding-bottom: 14px;
+            margin-bottom: 18px;
+            border-bottom: 1px solid var(--washi-line);
+        }
+        .shikona-history .arrow { color: var(--sumi-faint); margin: 0 6px; }
+        .shikona-history .period { color: var(--sumi-faint); font-size: 10.5px; }
+
+        /* 정보 테이블 */
+        .info-table { width: 100%; border-collapse: collapse; }
+        .info-table tr { border-bottom: 1px solid var(--washi-line); }
+        .info-table tr:last-child { border-bottom: none; }
+        .info-table th {
+            width: 110px;
+            text-align: left;
+            padding: 9px 10px 9px 0;
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-weight: 500;
+            font-size: 12.5px;
+            color: var(--sumi-faint);
+            letter-spacing: 1px;
+            vertical-align: top;
+        }
+        .info-table td {
+            padding: 9px 0;
+            font-size: 14.5px;
+            color: var(--sumi);
+        }
+
+        /* 사진 없을 때(photoUrl null) 대체 낙관 플레이스홀더 */
+        .photo-slot {
+            flex-shrink: 0;
+            width: 300px;
+            /* 고정 height 대신 옆 정보 테이블 높이에 맞춰 늘어남 (.profile-inner의 align-items: stretch) */
+            border: 1px solid var(--sumi);
+            background: var(--washi-panel);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        .photo-slot img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .photo-placeholder {
+            font-family: 'Yuji Syuku', serif;
+            font-size: 160px;
+            color: var(--shu);
+            opacity: 0.85;
+        }
+        .photo-slot::before {
+            content: '';
+            position: absolute;
+            inset: 8px;
+            border: 1px solid var(--washi-line);
+            pointer-events: none;
+        }
+
+        @media (max-width: 620px) {
+            .profile-inner { flex-direction: column-reverse; align-items: stretch; }
+            .photo-slot { width: 100%; height: 280px; }
+            .shikona-main { font-size: 30px; }
+        }
+
+        /* ===== 하단 2단 (커리어 레코드 / 키마리테 차트) ===== */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 28px;
+        }
+        @media (max-width: 700px) {
+            .stats-grid { grid-template-columns: 1fr; }
+        }
+
+        .panel {
+            border: 1px solid var(--sumi);
+            padding: 18px 20px 22px;
+        }
+
+        .panel-title {
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 13px;
+            letter-spacing: 3px;
+            color: var(--sumi-soft);
+            padding-bottom: 10px;
+            margin-bottom: 14px;
+            border-bottom: 1px solid var(--sumi);
+        }
+
+        .record-summary {
+            text-align: center;
+            font-family: 'Noto Serif KR', serif;
+            font-size: 20px;
+            font-weight: 700;
+            padding: 10px 0 16px;
+            color: var(--sumi);
+        }
+        .record-summary .basho-count {
+            display: block;
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 11px;
+            color: var(--sumi-faint);
+            font-weight: 400;
+            margin-top: 4px;
+            letter-spacing: 1px;
+        }
+
+        .award-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0;
+        }
+        .award-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 7px 4px;
+            border-bottom: 1px solid var(--washi-line);
+            font-size: 13px;
+        }
+        .award-item .label { color: var(--sumi-soft); font-family: 'Zen Kaku Gothic New', sans-serif; }
+        .award-item .count { color: var(--shu); font-weight: 700; }
+
+        .chart-wrap { position: relative; height: 210px; margin-bottom: 12px; }
+
+        .kimarite-legend {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .kimarite-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12.5px;
+        }
+        .kimarite-legend-item .swatch {
+            width: 10px;
+            height: 10px;
+            flex-shrink: 0;
+        }
+        .kimarite-legend-item .kname { flex: 1; color: var(--sumi-soft); }
+        .kimarite-legend-item .kpct { color: var(--sumi-faint); font-family: 'Zen Kaku Gothic New', sans-serif; }
+
+        .chart-note {
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 10.5px;
+            color: var(--sumi-faint);
+            text-align: center;
+            margin-top: 8px;
+        }
+
+        .empty-note {
+            text-align: center;
+            padding: 30px 0;
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            color: var(--sumi-faint);
+            font-size: 13px;
+        }
+
+        /* ===== 호시토리표(星取表) - 바쇼별 가로 스트립 ===== */
+        .match-history-panel { margin-bottom: 28px; padding: 16px 20px 18px; }
+
+        .game-log-row { padding: 10px 0; }
+        .game-log-row:first-child { padding-top: 2px; }
+        .game-log-row + .game-log-row { border-top: 1px solid var(--washi-line); }
+
+        .game-log-meta {
+            display: flex;
+            align-items: baseline;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 8px;
+        }
+        .game-log-meta .glm-basho {
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-weight: 700;
+            font-size: 13px;
+            color: var(--sumi);
+        }
+        .game-log-meta .glm-rank {
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 11.5px;
+            color: var(--sumi-faint);
+        }
+        .game-log-meta .glm-record {
+            margin-left: auto;
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--shu);
+        }
+
+        /* 가로 스트립(星取表 요약) - 일차마다 마크(○●휴) + 상대명(세로쓰기)을 한 칸에.
+           칸을 클릭하면 옆에서 상세 패널이 슬라이드로 열림 (아래 .match-panel). */
+        .hoshitori-strip-wrap {
+            overflow-x: auto;
+        }
+        .hoshitori-strip-row {
+            display: flex;
+            gap: 2px;
+        }
+        .strip-day-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            min-width: 32px;
+            padding: 6px 3px 8px;
+            background: none;
+            border: none;
+            border-bottom: 2px solid transparent;
+            font: inherit;
+            color: inherit;
+            cursor: pointer;
+        }
+        .strip-day-btn:hover,
+        .strip-day-btn:focus-visible {
+            border-bottom-color: var(--shu);
+            outline: none;
+        }
+        .strip-day-btn .sd-day {
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 9.5px;
+            color: var(--sumi-faint);
+        }
+        .strip-day-btn .mark { font-size: 16px; line-height: 1; }
+        .strip-day-btn .mark.win { color: var(--shu); }
+        .strip-day-btn .mark.loss { color: var(--sumi-faint); }
+        .strip-day-btn .mark.absent {
+            font-size: 10px;
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            color: var(--sumi-faint);
+        }
+        .strip-day-btn .sd-name {
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            font-family: 'Noto Serif KR', serif;
+            font-size: 11px;
+            letter-spacing: 1px;
+            color: var(--sumi-soft);
+            max-height: 62px;
+            white-space: nowrap;
+        }
+        .strip-day-btn:hover .sd-name { color: var(--shu); }
+        .strip-day-btn.is-absent { cursor: default; }
+        .strip-day-btn.is-absent:hover { border-bottom-color: transparent; }
+        .strip-day-btn.is-absent:hover .sd-name { color: var(--sumi-soft); }
+
+        /* 대전 상세 슬라이드 패널 (클릭한 일차의 대진 정보 - 댓글창은 다음 단계에서 추가 예정) */
+        .match-panel-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(26, 26, 24, 0.4);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+            z-index: 100;
+        }
+        .match-panel-overlay.open { opacity: 1; pointer-events: auto; }
+
+        .match-panel {
+            position: fixed;
+            top: 0;
+            right: 0;
+            height: 100%;
+            width: 440px;
+            max-width: 92vw;
+            background: var(--washi);
+            border-left: 3px double var(--sumi);
+            padding: 24px 22px;
+            box-shadow: -6px 0 24px rgba(26, 26, 24, 0.18);
+            transform: translateX(100%);
+            transition: transform 0.25s ease;
+            z-index: 101;
+            overflow-y: auto;
+        }
+        .match-panel.open { transform: translateX(0); }
+
+        .mp-close {
+            background: none;
+            border: none;
+            font-size: 22px;
+            line-height: 1;
+            color: var(--sumi-faint);
+            cursor: pointer;
+            padding: 0 2px;
+        }
+        .mp-close:hover { color: var(--shu); }
+
+        .mp-basho {
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 12px;
+            letter-spacing: 1px;
+            color: var(--sumi-faint);
+            margin-top: 4px;
+        }
+        .mp-day {
+            font-family: 'Yuji Syuku', serif;
+            font-size: 26px;
+            color: var(--sumi);
+            margin: 4px 0 18px;
+        }
+        .mp-matchup {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 17px;
+            font-weight: 700;
+            margin-bottom: 6px;
+            flex-wrap: wrap;
+        }
+        .mp-matchup .mp-vs {
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 11px;
+            color: var(--sumi-faint);
+            font-weight: 400;
+        }
+        .mp-matchup a { color: var(--sumi); text-decoration: none; }
+        .mp-matchup a:hover { color: var(--shu); }
+        .mp-side-block { display: inline-flex; align-items: baseline; gap: 3px; }
+        .mp-side-tag {
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 10.5px;
+            font-weight: 400;
+            color: var(--shu);
+            border: 1px solid var(--shu);
+            padding: 0 3px;
+            border-radius: 2px;
+        }
+        .mp-opp-rank {
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 11.5px;
+            color: var(--sumi-faint);
+            margin-bottom: 16px;
+        }
+        .mp-result {
+            display: inline-block;
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 13px;
+            color: var(--sumi);
+            border-top: 1px solid var(--washi-line);
+            padding-top: 14px;
+            margin-top: 4px;
+        }
+        .mp-comments-note {
+            margin-top: 28px;
+            padding-top: 16px;
+            border-top: 1px solid var(--washi-line);
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 11.5px;
+            color: var(--sumi-faint);
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 30px;
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 11px;
+            letter-spacing: 2px;
+            color: var(--sumi-faint);
+        }
+    </style>
+</head>
+<body>
+<div class="page">
+
+    <header>
+        <div class="brand-row">
+            <a class="brand-jp" th:href="@{/static}">相撲archive</a>
+            <span class="brand-kr">스모아카이브</span>
+        </div>
+        <div class="breadcrumb">
+            <a th:href="@{/static}">반즈케</a> &gt; <span th:text="${rikishi.shikonaKr}">시코나</span>
+        </div>
+    </header>
+
+    <!-- ===== 기본 정보 ===== -->
+    <div class="profile-card">
+        <div class="profile-inner">
+
+            <div class="profile-info">
+                <span class="status-badge"
+                      th:classappend="${rikishi.isActive} ? '' : 'retired'"
+                      th:text="${rikishi.isActive} ? '現役' : (${rikishi.oyakataNameKr} != null ? '親方' : '引退')">現役</span>
+
+                <div class="shikona-row">
+                    <span class="shikona-main" th:text="${rikishi.shikonaKr}">시코나</span>
+                    <span class="rank-display"
+                          th:if="${rikishi.isActive}"
+                          th:text="${rikishi.sideDisplay} + ' ' + ${rikishi.rankDisplay}">東 前頭10枚目</span>
+                    <span class="rank-display" th:unless="${rikishi.isActive}"
+                          th:text="${rikishi.oyakataNameKr} != null ? (${rikishi.oyakataNameKr} + ' 오야카타') : '은퇴'">은퇴</span>
+                </div>
+                <div class="shikona-kana" th:text="${rikishi.shikonaJp}">四股名</div>
+
+                <!-- 시코나 변경 이력 -->
+                <div class="shikona-history" th:if="${rikishi.shikonaHistory != null and !rikishi.shikonaHistory.isEmpty()}">
+                    <th:block th:each="h, iter : ${rikishi.shikonaHistory}">
+                        <span th:text="${h.shikonaKr}">이전시코나</span>
+                        <span class="period" th:text="'(' + ${#temporals.format(h.validFrom, 'yyyy.MM')} + '~' + (${h.validTo} != null ? ${#temporals.format(h.validTo, 'yyyy.MM')} : '') + ')'">(2015.11~2016.11)</span>
+                        <span class="arrow">→</span>
+                    </th:block>
+                    <span th:text="${rikishi.shikonaKr}">현재시코나</span>
+                    <span class="period">(현재)</span>
+                </div>
+                <div th:unless="${rikishi.shikonaHistory != null and !rikishi.shikonaHistory.isEmpty()}" style="margin-bottom: 18px;"></div>
+
+                <table class="info-table">
+                    <tr>
+                        <th>소속부옥</th>
+                        <td th:text="${rikishi.heyaNameKr} ?: '무소속'">헤야</td>
+                    </tr>
+                    <tr>
+                        <th>본명</th>
+                        <td th:text="${rikishi.name}">본명</td>
+                    </tr>
+                    <tr>
+                        <th>생년월일</th>
+                        <td th:text="${#temporals.format(rikishi.birthdate, 'yyyy.MM.dd')} + ' (' + ${rikishi.age} + '세)'">1994.03.01 (32세)</td>
+                    </tr>
+                    <tr>
+                        <th>출신지</th>
+                        <td th:text="${rikishi.birthplace}">출신지</td>
+                    </tr>
+                    <tr>
+                        <th>국적</th>
+                        <td th:text="${rikishi.nationality}">국적</td>
+                    </tr>
+                    <tr>
+                        <th>신장 / 체중</th>
+                        <td th:text="${rikishi.height} + 'cm / ' + ${rikishi.weight} + 'kg'">188.0cm / 175.0kg</td>
+                    </tr>
+                    <tr>
+                        <th>파이팅스타일</th>
+                        <td th:text="${rikishi.fightingStyle} ?: '미분류'">오시</td>
+                    </tr>
+                    <tr>
+                        <th>데뷔</th>
+                        <td th:text="${rikishi.debutDate} != null ? ${#temporals.format(rikishi.debutDate, 'yyyy.MM')} : '정보 없음'">2016.03</td>
+                    </tr>
+                    <tr>
+                        <th>최고위</th>
+                        <td th:text="${rikishi.highestRank}">Ozeki</td>
+                    </tr>
+                    <tr th:if="${rikishi.retiredDate != null}">
+                        <th>은퇴</th>
+                        <td th:text="${#temporals.format(rikishi.retiredDate, 'yyyy.MM.dd')}">2025.01.13</td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- 사진 자리: photoUrl 있으면 <img>, 없으면 시코나 첫 글자 낙관 플레이스홀더 -->
+            <div class="photo-slot">
+                <img th:if="${rikishi.photoUrl != null}" th:src="${rikishi.photoUrl}" th:alt="${rikishi.shikonaKr}">
+                <span class="photo-placeholder" th:if="${rikishi.photoUrl == null}"
+                      th:text="${#strings.substring(rikishi.shikonaKr, 0, 1)}">朝</span>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ===== 커리어 레코드 / 키마리테 차트 ===== -->
+    <div class="stats-grid">
+
+        <div class="panel">
+            <div class="panel-title">戦歴・受賞歴</div>
+
+            <div class="record-summary">
+                <span th:text="${rikishi.totalWins} + '승 ' + ${rikishi.totalLosses} + '패' + (${rikishi.totalAbsences} > 0 ? ' ' + ${rikishi.totalAbsences} + '휴' : '')">429승 214패 159휴</span>
+                <span class="basho-count" th:text="'통산 ' + ${rikishi.totalBasho} + '바쇼'">통산 62바쇼</span>
+            </div>
+
+            <div class="award-grid">
+                <div class="award-item"><span class="label">마쿠우치 우승</span><span class="count" th:text="${rikishi.yushoMakuuchi} + '회'">1회</span></div>
+                <div class="award-item"><span class="label">주료 우승</span><span class="count" th:text="${rikishi.yushoJuryo} + '회'">1회</span></div>
+                <div class="award-item"><span class="label">슈쿤상</span><span class="count" th:text="${rikishi.sanshoShukun} + '회'">2회</span></div>
+                <div class="award-item"><span class="label">감투상</span><span class="count" th:text="${rikishi.sanshoKanto} + '회'">3회</span></div>
+                <div class="award-item"><span class="label">기능상</span><span class="count" th:text="${rikishi.sanshoGino} + '회'">1회</span></div>
+                <div class="award-item"><span class="label">킨보시</span><span class="count" th:text="${rikishi.kinboshiCount} + '개'">1개</span></div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-title">決まり手の傾向</div>
+
+            <div th:if="${kimariteStats != null and !kimariteStats.isEmpty()}">
+                <div class="chart-wrap">
+                    <canvas id="kimariteChart"></canvas>
+                </div>
+                <div class="kimarite-legend" id="kimariteLegend"></div>
+                <div class="chart-note">※ 등록된 토리쿠미 결과 기준으로 산출됩니다</div>
+            </div>
+            <div class="empty-note" th:if="${kimariteStats == null or kimariteStats.isEmpty()}">
+                아직 등록된 대전 기록이 없습니다.
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ===== 호시토리표(星取表) - 바쇼별 가로 스트립. 칸마다 마크(○●휴)+상대명(세로쓰기) 노출,
+         칸을 클릭하면 옆에서 상세 패널(.match-panel)이 슬라이드로 열림. -->
+    <div class="panel match-history-panel" th:if="${gameLog != null and !gameLog.isEmpty()}">
+        <div class="panel-title">星取表</div>
+
+        <div class="game-log-row" th:each="g, iter : ${gameLog}">
+            <div class="game-log-meta">
+                <span class="glm-basho" th:text="${g.bashoLabel}">2026年07月場所</span>
+                <span class="glm-rank" th:text="${g.rankDisplay}">前頭10枚目</span>
+                <span class="glm-record" th:text="${g.recordSummary}">9勝6敗</span>
+            </div>
+
+            <div class="hoshitori-strip-wrap" th:if="${!g.matches.isEmpty()}">
+                <div class="hoshitori-strip-row">
+                    <button type="button" class="strip-day-btn" th:each="m : ${g.matches}"
+                            th:classappend="${m.torikumiId == null} ? ' is-absent' : ''"
+                            th:attr="data-torikumi-id=${m.torikumiId}">
+                        <span class="sd-day" th:text="${m.day}">1</span>
+                        <th:block th:switch="${m.status.name()}">
+                            <span class="mark win" th:case="'WIN'">○</span>
+                            <span class="mark loss" th:case="'LOSS'">●</span>
+                            <span class="mark absent" th:case="'ABSENT'">휴</span>
+                        </th:block>
+                        <span class="sd-name" th:text="${m.opponentShikonaKr} ?: '휴장'">상대명</span>
+                    </button>
+                </div>
+            </div>
+            <div class="empty-note" th:if="${g.matches.isEmpty()}" style="padding: 6px 0;">
+                등록된 대전 기록이 없습니다.
+            </div>
+        </div>
+    </div>
+    <div class="panel match-history-panel" th:if="${gameLog == null or gameLog.isEmpty()}">
+        <div class="panel-title">星取表</div>
+        <div class="empty-note">아직 등록된 대전 기록이 없습니다.</div>
+    </div>
+
+    <footer>SUMOARCHIVE — 韓国語で見る大相撲情報アーカイブ</footer>
+
+    <!-- ===== 대전 상세 슬라이드 패널 =====
+         호시토리표 칸을 클릭하면 /torikumi/{id}/fragment (전체 페이지 /torikumi/{id} 와 같은 조각)를
+         받아서 #matchPanelBody 에 그대로 끼워 넣는다. 유튜브 임베드/익명 댓글창까지 그 조각 안에 있음. -->
+    <div class="match-panel-overlay" id="matchPanelOverlay"></div>
+    <aside class="match-panel" id="matchPanel" aria-hidden="true">
+        <div class="mp-bar">
+            <a class="mp-full-link" id="matchPanelFull" href="#">전체 페이지로 보기 →</a>
+            <button type="button" class="mp-close" id="matchPanelClose" aria-label="닫기">×</button>
+        </div>
+        <div class="mp-body" id="matchPanelBody"></div>
+    </aside>
+</div>
+
+<script th:src="@{/js/comments.js}"></script>
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    const kimariteData = [
+        /*[# th:each="k : ${kimariteStats}"]*/
+        { name: /*[[${k.kimarite}]]*/ '寄り切り', count: /*[[${k.count}]]*/ 0, percent: /*[[${k.percent}]]*/ 0 },
+        /*[/]*/
+    ];
+    /*]]>*/
+
+    if (kimariteData.length > 0) {
+        // 프로젝트 팔레트(먹색/낙관다홍 계열 + 일본 전통색 톤 4종 추가)로 원형차트 배색.
+        // RikishiDetailService.TOP_KIMARITE_COUNT(10)와 맞춰 10개까지는 색이 겹치지 않음.
+        // "기타"가 실제로 나오는 경우(결정기술이 10종 초과)에만 11번째 색부터 순환됨.
+        const PALETTE = [
+            '#a3272c', '#1a1a18', '#56554e', '#c98a2e', '#7c8a6e', '#86857f',
+            '#3d5a6c', '#b06a3a', '#6b3b4f', '#4f6b6a'
+        ];
+
+        const ctx = document.getElementById('kimariteChart');
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: kimariteData.map(k => k.name),
+                datasets: [{
+                    data: kimariteData.map(k => k.count),
+                    backgroundColor: kimariteData.map((_, i) => PALETTE[i % PALETTE.length]),
+                    borderColor: '#f7f6f3',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false }, tooltip: { enabled: true } }
+            }
+        });
+
+        const legend = document.getElementById('kimariteLegend');
+        kimariteData.forEach((k, i) => {
+            const row = document.createElement('div');
+            row.className = 'kimarite-legend-item';
+            row.innerHTML = `
+                <span class="swatch" style="background:${PALETTE[i % PALETTE.length]}"></span>
+                <span class="kname">${k.name}</span>
+                <span class="kpct">${k.percent}%</span>
+            `;
+            legend.appendChild(row);
+        });
+    }
+
+    // ===== 대전 상세 슬라이드 패널 =====
+    // 호시토리표 칸(.strip-day-btn)을 누르면 /torikumi/{id}/fragment 를 받아 패널 본문에 그대로 삽입.
+    // 조각 안에 대진/키마리테/유튜브/댓글이 모두 들어있고, 댓글 동작은 comments.js가 담당한다.
+    const matchPanel = document.getElementById('matchPanel');
+    const matchPanelOverlay = document.getElementById('matchPanelOverlay');
+    const matchPanelClose = document.getElementById('matchPanelClose');
+    const matchPanelBody = document.getElementById('matchPanelBody');
+    const matchPanelFull = document.getElementById('matchPanelFull');
+
+    function openPanelShell() {
+        matchPanel.classList.add('open');
+        matchPanelOverlay.classList.add('open');
+        matchPanel.setAttribute('aria-hidden', 'false');
+    }
+
+    function closeMatchPanel() {
+        matchPanel.classList.remove('open');
+        matchPanelOverlay.classList.remove('open');
+        matchPanel.setAttribute('aria-hidden', 'true');
+        if (location.hash.indexOf('#match-') === 0) {
+            history.replaceState(null, '', location.pathname + location.search);
+        }
+    }
+
+    function openMatchPanel(torikumiId) {
+        if (!torikumiId) return; // 휴장 칸 등 토리쿠미가 없는 경우
+        matchPanelFull.href = '/torikumi/' + torikumiId;
+        matchPanelBody.innerHTML = '<p class="mp-loading">불러오는 중…</p>';
+        openPanelShell();
+        history.replaceState(null, '', '#match-' + torikumiId);
+
+        fetch('/torikumi/' + torikumiId + '/fragment')
+            .then(res => {
+                if (!res.ok) throw new Error('load failed');
+                return res.text();
+            })
+            .then(html => {
+                matchPanelBody.innerHTML = html;
+                matchPanelBody.scrollTop = 0;
+                if (window.SumoComments) window.SumoComments.bind(matchPanelBody);
+            })
+            .catch(() => {
+                matchPanelBody.innerHTML = '<p class="mp-error">경기 정보를 불러오지 못했습니다.</p>';
+            });
+    }
+
+    document.querySelectorAll('.strip-day-btn').forEach(btn => {
+        btn.addEventListener('click', () => openMatchPanel(btn.dataset.torikumiId));
+    });
+    matchPanelClose.addEventListener('click', closeMatchPanel);
+    matchPanelOverlay.addEventListener('click', closeMatchPanel);
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeMatchPanel();
+    });
+
+    // 딥링크: 진입 시 URL에 #match-123 이 있으면 그 경기 패널을 자동으로 연다.
+    (function () {
+        const m = location.hash.match(/^#match-(\d+)$/);
+        if (m) openMatchPanel(m[1]);
+    })();
+</script>
+</body>
+</html>

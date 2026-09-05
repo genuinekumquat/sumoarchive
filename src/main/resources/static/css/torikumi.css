@@ -1,0 +1,359 @@
+/* =====================================================================
+ * 토리쿠미(경기) 상세 + 익명 댓글 공용 스타일.
+ * 전체 페이지(templates/torikumi/detail.html)와 리키시 프로필의 슬라이드 패널
+ * (templates/rikishi/detail.html #matchPanelBody)이 함께 쓴다.
+ * 색상 토큰(--sumi, --washi, --shu ...)은 두 페이지가 :root에 이미 선언해 둔 값을 사용하고,
+ * 혹시 없을 때를 대비해 var() 폴백을 함께 둔다.
+ * ===================================================================== */
+
+.tk {
+	font-family: 'Noto Serif KR', serif;
+	color: var(--sumi, #1a1a18);
+}
+
+/* ===== 대회 / 일차 ===== */
+.tk-head {
+	border-bottom: 1px solid var(--washi-line, rgba(26, 26, 24, 0.14));
+	padding-bottom: 12px;
+	margin-bottom: 16px;
+}
+.tk-basho {
+	font-family: 'Zen Kaku Gothic New', sans-serif;
+	font-size: 12px;
+	letter-spacing: 1px;
+	color: var(--sumi-faint, #86857f);
+}
+.tk-day {
+	font-family: 'Yuji Syuku', serif;
+	font-size: 24px;
+	margin-top: 2px;
+}
+.tk-day .tk-day-sub {
+	font-family: 'Zen Kaku Gothic New', sans-serif;
+	font-size: 12px;
+	color: var(--sumi-faint, #86857f);
+	letter-spacing: 1px;
+}
+
+/* ===== 대진 ===== */
+.tk-matchup {
+	display: flex;
+	align-items: stretch;
+	gap: 10px;
+	margin-bottom: 14px;
+}
+.tk-side {
+	flex: 1;
+	min-width: 0;
+	border: 1px solid var(--washi-line, rgba(26, 26, 24, 0.14));
+	padding: 12px 12px 14px;
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+	background: rgba(255, 255, 255, 0.35);
+}
+.tk-side.is-winner {
+	border-color: var(--shu, #a3272c);
+	box-shadow: inset 0 0 0 1px var(--shu, #a3272c);
+	background: var(--shu-faint, rgba(163, 39, 44, 0.10));
+}
+.tk-side-tag {
+	align-self: flex-start;
+	font-family: 'Zen Kaku Gothic New', sans-serif;
+	font-size: 10.5px;
+	color: var(--shu, #a3272c);
+	border: 1px solid var(--shu, #a3272c);
+	padding: 0 4px;
+	border-radius: 2px;
+}
+.tk-side-name {
+	font-family: 'Yuji Syuku', serif;
+	font-size: 22px;
+	letter-spacing: 2px;
+	color: var(--sumi, #1a1a18);
+	text-decoration: none;
+	overflow-wrap: anywhere;
+}
+.tk-side-name:hover { color: var(--shu, #a3272c); }
+.tk-side-rank {
+	font-family: 'Zen Kaku Gothic New', sans-serif;
+	font-size: 11.5px;
+	color: var(--sumi-faint, #86857f);
+}
+.tk-side-mark {
+	margin-top: 4px;
+	font-size: 20px;
+	line-height: 1;
+	color: var(--sumi-faint, #86857f);
+}
+.tk-side.is-winner .tk-side-mark { color: var(--shu, #a3272c); }
+.tk-vs {
+	align-self: center;
+	font-family: 'Zen Kaku Gothic New', sans-serif;
+	font-size: 11px;
+	letter-spacing: 2px;
+	color: var(--sumi-faint, #86857f);
+}
+
+/* ===== 결과 / 해설 ===== */
+.tk-result {
+	display: flex;
+	align-items: baseline;
+	gap: 10px;
+	font-family: 'Zen Kaku Gothic New', sans-serif;
+	font-size: 13px;
+	padding: 10px 0;
+	border-top: 1px solid var(--washi-line, rgba(26, 26, 24, 0.14));
+}
+.tk-result-label {
+	font-size: 11px;
+	letter-spacing: 2px;
+	color: var(--sumi-faint, #86857f);
+}
+.tk-result-value { font-weight: 700; }
+.tk-muted { color: var(--sumi-faint, #86857f); font-weight: 400; }
+
+.tk-desc {
+	font-size: 13.5px;
+	line-height: 1.7;
+	color: var(--sumi-soft, #56554e);
+	margin: 4px 0 16px;
+	padding-left: 10px;
+	border-left: 2px solid var(--washi-line, rgba(26, 26, 24, 0.14));
+}
+
+/* ===== 유튜브 ===== */
+.tk-media { margin-bottom: 18px; }
+.tk-media-frame {
+	position: relative;
+	width: 100%;
+	padding-top: 56.25%;
+	background: var(--sumi, #1a1a18);
+	border: 1px solid var(--sumi, #1a1a18);
+}
+.tk-media-frame iframe {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	border: 0;
+}
+.tk-media-link a {
+	font-family: 'Zen Kaku Gothic New', sans-serif;
+	font-size: 13px;
+	color: var(--shu, #a3272c);
+}
+.tk-media-empty {
+	font-family: 'Zen Kaku Gothic New', sans-serif;
+	font-size: 12px;
+	color: var(--sumi-faint, #86857f);
+	padding: 14px;
+	border: 1px dashed var(--washi-line, rgba(26, 26, 24, 0.14));
+	text-align: center;
+}
+
+/* ===== 댓글 ===== */
+.tk-comments {
+	border-top: 3px double var(--sumi, #1a1a18);
+	padding-top: 18px;
+}
+.tk-comments-title {
+	font-family: 'Yuji Syuku', serif;
+	font-size: 18px;
+	margin: 0 0 14px;
+}
+.tk-comments-count {
+	font-family: 'Zen Kaku Gothic New', sans-serif;
+	font-size: 13px;
+	color: var(--shu, #a3272c);
+	margin-left: 4px;
+}
+
+.tk-cform {
+	border: 1px solid var(--washi-line, rgba(26, 26, 24, 0.14));
+	padding: 14px;
+	margin-bottom: 18px;
+	background: rgba(255, 255, 255, 0.4);
+}
+.tk-cform-row {
+	display: flex;
+	gap: 8px;
+	margin-bottom: 8px;
+}
+.tk-cform input,
+.tk-cform textarea {
+	font-family: 'Noto Serif KR', serif;
+	font-size: 14px;
+	border: 1px solid var(--sumi, #1a1a18);
+	background: rgba(255, 255, 255, 0.7);
+	padding: 9px 10px;
+	color: var(--sumi, #1a1a18);
+}
+.tk-cform input:focus,
+.tk-cform textarea:focus {
+	outline: 2px solid var(--shu, #a3272c);
+	outline-offset: -1px;
+}
+.tk-cform-nick { flex: 1; min-width: 0; }
+.tk-cform-pw { width: 130px; }
+.tk-cform-body {
+	width: 100%;
+	resize: vertical;
+	min-height: 68px;
+	display: block;
+}
+.tk-cform-foot {
+	display: flex;
+	align-items: flex-end;
+	gap: 12px;
+	margin-top: 8px;
+}
+.tk-cform-guide {
+	flex: 1;
+	font-family: 'Zen Kaku Gothic New', sans-serif;
+	font-size: 11px;
+	line-height: 1.5;
+	color: var(--sumi-faint, #86857f);
+	margin: 0;
+}
+.tk-cform-submit {
+	flex-shrink: 0;
+	border: 1px solid var(--sumi, #1a1a18);
+	background: var(--sumi, #1a1a18);
+	color: var(--washi, #f7f6f3);
+	font-family: 'Noto Serif KR', serif;
+	font-weight: 600;
+	font-size: 14px;
+	letter-spacing: 2px;
+	padding: 9px 22px;
+	cursor: pointer;
+}
+.tk-cform-submit:hover { background: var(--shu-deep, #7c1d20); border-color: var(--shu-deep, #7c1d20); }
+.tk-cform-submit:disabled { opacity: 0.5; cursor: default; }
+.tk-cform-error {
+	margin: 8px 0 0;
+	font-family: 'Zen Kaku Gothic New', sans-serif;
+	font-size: 12px;
+	color: var(--shu-deep, #7c1d20);
+}
+
+.tk-clist {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+.tk-clist-empty {
+	font-family: 'Zen Kaku Gothic New', sans-serif;
+	font-size: 12.5px;
+	color: var(--sumi-faint, #86857f);
+	padding: 18px 0;
+	text-align: center;
+}
+.tk-comment {
+	padding: 12px 2px;
+	border-bottom: 1px solid var(--washi-line, rgba(26, 26, 24, 0.14));
+}
+.tk-comment-head {
+	display: flex;
+	align-items: baseline;
+	gap: 10px;
+	margin-bottom: 4px;
+}
+.tk-comment-nick {
+	font-weight: 600;
+	font-size: 13.5px;
+}
+.tk-comment-date {
+	font-family: 'Zen Kaku Gothic New', sans-serif;
+	font-size: 11px;
+	color: var(--sumi-faint, #86857f);
+}
+.tk-comment-body {
+	margin: 0;
+	font-size: 14px;
+	line-height: 1.65;
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+}
+.tk-comment.is-deleted .tk-comment-body {
+	color: var(--sumi-faint, #86857f);
+	font-style: italic;
+	font-size: 13px;
+}
+.tk-comment-actions {
+	margin-top: 6px;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+}
+.tk-comment-del,
+.tk-comment-delok,
+.tk-comment-delcancel {
+	font-family: 'Zen Kaku Gothic New', sans-serif;
+	font-size: 11.5px;
+	background: none;
+	border: 1px solid var(--washi-line, rgba(26, 26, 24, 0.14));
+	color: var(--sumi-faint, #86857f);
+	padding: 3px 9px;
+	cursor: pointer;
+}
+.tk-comment-del:hover,
+.tk-comment-delcancel:hover { color: var(--sumi, #1a1a18); border-color: var(--sumi, #1a1a18); }
+.tk-comment-delok {
+	color: var(--shu, #a3272c);
+	border-color: var(--shu, #a3272c);
+}
+.tk-comment-delok:hover { background: var(--shu, #a3272c); color: var(--washi, #f7f6f3); }
+.tk-comment-delbox {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px;
+	width: 100%;
+}
+.tk-comment-delpw {
+	width: 120px;
+	font-family: 'Noto Serif KR', serif;
+	font-size: 13px;
+	border: 1px solid var(--sumi, #1a1a18);
+	background: rgba(255, 255, 255, 0.7);
+	padding: 5px 8px;
+}
+.tk-comment-delerr {
+	font-family: 'Zen Kaku Gothic New', sans-serif;
+	font-size: 11px;
+	color: var(--shu-deep, #7c1d20);
+}
+
+/* ===== 슬라이드 패널 전용 헬퍼 (rikishi/detail.html) ===== */
+.mp-bar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 14px;
+}
+.mp-full-link {
+	font-family: 'Zen Kaku Gothic New', sans-serif;
+	font-size: 12px;
+	color: var(--shu, #a3272c);
+	text-decoration: none;
+	letter-spacing: 0.5px;
+}
+.mp-full-link:hover { text-decoration: underline; }
+.mp-loading,
+.mp-error {
+	font-family: 'Zen Kaku Gothic New', sans-serif;
+	font-size: 12.5px;
+	color: var(--sumi-faint, #86857f);
+	padding: 40px 0;
+	text-align: center;
+}
+.mp-error { color: var(--shu-deep, #7c1d20); }
+
+@media (max-width: 480px) {
+	.tk-matchup { flex-direction: column; }
+	.tk-vs { transform: rotate(90deg); }
+	.tk-cform-row { flex-wrap: wrap; }
+	.tk-cform-pw { width: 100%; }
+}
