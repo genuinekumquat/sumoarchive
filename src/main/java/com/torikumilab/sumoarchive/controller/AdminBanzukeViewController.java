@@ -8,6 +8,7 @@ import com.torikumilab.sumoarchive.domain.entity.constant.Division;
 import com.torikumilab.sumoarchive.domain.entity.constant.RankName;
 import com.torikumilab.sumoarchive.domain.entity.constant.Side;
 import com.torikumilab.sumoarchive.service.BanzukeAdminService;
+import com.torikumilab.sumoarchive.service.BashoImportService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.propertyeditors.CustomNumberEditor;
 import org.springframework.stereotype.Controller;
@@ -28,6 +29,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 public class AdminBanzukeViewController {
 
 	private final BanzukeAdminService banzukeAdminService;
+	private final BashoImportService bashoImportService;
 
 	// 빈 <input type="number">("")를 null로 (요코즈나 등 번호 없는 계급). AdminRikishiViewController와 동일 기법.
 	@InitBinder
@@ -40,7 +42,21 @@ public class AdminBanzukeViewController {
 	@GetMapping("/admin/basho")
 	public String bashoList(Model model) {
 		model.addAttribute("bashos", banzukeAdminService.listBashos());
+		model.addAttribute("thisYear", java.time.LocalDate.now().getYear());
 		return "admin/basho/list";
+	}
+
+	/** sumo-api에서 연도 범위의 바쇼 메타를 가져온다 (본장소 6개월 × 연도). */
+	@PostMapping("/admin/basho/import")
+	public String importBashos(@RequestParam(required = false) Integer fromYear,
+							   @RequestParam(required = false) Integer toYear,
+							   RedirectAttributes redirectAttributes) {
+		try {
+			redirectAttributes.addFlashAttribute("importResult", bashoImportService.importRange(fromYear, toYear));
+		} catch (Exception e) {
+			redirectAttributes.addFlashAttribute("error", "sumo-api 바쇼 임포트 실패: " + e.getMessage());
+		}
+		return "redirect:/admin/basho";
 	}
 
 	@GetMapping("/admin/basho/new")

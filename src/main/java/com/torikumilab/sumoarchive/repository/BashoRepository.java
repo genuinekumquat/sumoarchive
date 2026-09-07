@@ -23,4 +23,9 @@ public interface BashoRepository extends JpaRepository<BashoEntity, Integer> {
 
 	// 관리자 바쇼 생성 시 (연,월) 중복 사전 검사 (uq_basho 제약과 동일 키)
 	boolean existsByBashoYearAndBashoMonth(Integer bashoYear, BashoMonth bashoMonth);
+
+	// sumo-api 바쇼 임포트 매칭용
+	Optional<BashoEntity> findByBashoYearAndBashoMonth(Integer bashoYear, BashoMonth bashoMonth);
+
+	Optional<BashoEntity> findByExternalBashoId(String externalBashoId);
 }

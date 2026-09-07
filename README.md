@@ -127,6 +127,7 @@ application-local.properties            # git 제외 — 실제 DB/관리자 비
 | GET / POST | `/admin/rikishi/{id}/edit` | 리키시 프로필 수정 폼 조회 / 저장 |
 | GET | `/admin/basho` | 관리자 바쇼 목록 (반즈케·토리쿠미 수 포함) |
 | GET / POST | `/admin/basho/new`, `/admin/basho` | 새 바쇼 생성 폼 조회 / 생성 (연·월 중복 차단) |
+| POST | `/admin/basho/import?fromYear=&toYear=` | sumo-api에서 연도 범위 바쇼 메타 임포트 (본장소 6개월, 미개최분 스킵) |
 | GET / POST | `/admin/basho/{bashoId}/edit`, `.../{bashoId}` , `.../{bashoId}/delete` | 바쇼 기간 수정 폼 / 시작일·종료일 수정 / 삭제 (반즈케·토리쿠미가 비어야 삭제) |
 | GET | `/admin/basho/{bashoId}/banzuke?division=` | 바쇼별 반즈케 관리 (디비전 탭 + 행 추가 폼) |
 | POST | `/admin/basho/{bashoId}/banzuke` | 반즈케 행 추가 (리키시·바쇼 중복 차단) |
@@ -196,8 +197,9 @@ application-local.properties            # git 제외 — 실제 DB/관리자 비
   로 로컬 설정을 선택적으로 불러오는 구조입니다.
 - **데이터 소스**: 초기에는 `DataSeeder`(개발용 더미)로 채웠으나, 이제 **sumo-api.com**에서
   실데이터를 가져오는 방향으로 전환 중입니다. `DataSeeder`는 기본 비활성(`app.seed-demo=false`)이고,
-  관리자 `/admin/rikishi`의 "sumo-api에서 로스터 임포트" 버튼이 현역 헤야·리키시를 가져옵니다
-  (바쇼/반즈케/토리쿠미 임포트는 후속 작업). 외부 API 관련 설정: `sumo-api.base-url`, `app.seed-demo`.
+  관리자 `/admin/rikishi`의 "로스터 임포트" 버튼이 현역 헤야·리키시를, `/admin/basho`의
+  "바쇼 임포트" 버튼이 연도 범위의 바쇼 메타를 가져옵니다 (반즈케/토리쿠미 임포트는 후속 작업).
+  외부 API 관련 설정: `sumo-api.base-url`, `app.seed-demo`.
 
 ### 로컬 실행 방법
 
@@ -228,8 +230,8 @@ cp src/main/resources/application-local.properties.example \
 - [x] 관리자 토리쿠미(대전) 입력 UI (`/admin/basho/{id}/torikumi` — 일차·디비전별 대전 CRUD)
 - [ ] 키마리테 상세 설명 백과사전
 - [ ] 반즈케 예측 시뮬레이터
-- [ ] 외부 스모 데이터 API(sumo-api.com) 연동 — *진행 중*: 리키시 로스터 임포트 완료,
-  바쇼/반즈케/토리쿠미 임포트는 진행 예정
+- [ ] 외부 스모 데이터 API(sumo-api.com) 연동 — *진행 중*: 로스터·바쇼 임포트 완료,
+  반즈케/토리쿠미 임포트는 진행 예정
 
 ---
 

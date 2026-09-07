@@ -1,5 +1,6 @@
 package com.torikumilab.sumoarchive.client;
 
+import com.torikumilab.sumoarchive.domain.dto.sumoapi.SumoApiBashoDTO;
 import com.torikumilab.sumoarchive.domain.dto.sumoapi.SumoApiRikishiPageDTO;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
@@ -41,5 +42,15 @@ public class SumoApiClient {
 				.uri("/api/rikishis?limit={limit}&skip={skip}&intai=false", limit, skip)
 				.retrieve()
 				.body(SumoApiRikishiPageDTO.class);
+	}
+
+	/**
+	 * 특정 바쇼({@code YYYYMM}) 조회. 없는 바쇼면 4xx가 오므로 호출부에서 예외를 잡아 스킵한다.
+	 */
+	public SumoApiBashoDTO getBasho(String yyyymm) {
+		return rc.get()
+				.uri("/api/basho/{id}", yyyymm)
+				.retrieve()
+				.body(SumoApiBashoDTO.class);
 	}
 }
