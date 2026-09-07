@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="(${mode} == 'edit' ? '대전 수정' : '새 대전') + ' | 스모아카이브 관리자'">대전 입력</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;900&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --sumi: #1a1a18; --sumi-soft: #56554e; --sumi-faint: #86857f;
+            --washi: #f7f6f3; --washi-line: rgba(26, 26, 24, 0.14);
+            --shu: #a3272c; --shu-faint: rgba(163, 39, 44, 0.10);
+        }
+        * { box-sizing: border-box; }
+        body { margin: 0; min-height: 100vh; background-color: var(--washi); color: var(--sumi); font-family: 'Noto Serif KR', serif; }
+        .page { max-width: 640px; margin: 0 auto; padding: 32px 24px 60px; }
+        a { color: inherit; }
+
+        header { border-bottom: 3px double var(--sumi); padding-bottom: 14px; margin-bottom: 22px; }
+        .header-top { display: flex; align-items: baseline; justify-content: space-between; }
+        h1 { font-size: 19px; margin: 0; letter-spacing: 1px; }
+        .back-link { font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; color: var(--sumi-soft); text-decoration: none; }
+        .back-link:hover { color: var(--shu); }
+
+        .error-msg { border: 1px solid var(--shu); color: var(--shu); font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 13px; padding: 10px 14px; margin-bottom: 18px; }
+
+        fieldset { border: 1px solid var(--washi-line); margin-bottom: 18px; padding: 14px 16px 18px; }
+        legend { font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; letter-spacing: 1px; color: var(--sumi-faint); padding: 0 6px; }
+
+        .field-row { display: flex; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+        .field { flex: 1; min-width: 160px; }
+        .field.full { flex-basis: 100%; }
+        label { display: block; font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 11.5px; color: var(--sumi-soft); margin-bottom: 5px; }
+        input[type="text"], input[type="number"], select, textarea {
+            width: 100%; padding: 8px 10px; border: 1px solid var(--washi-line);
+            background: #fff; font-family: 'Noto Serif KR', serif; font-size: 13.5px; color: var(--sumi);
+        }
+        textarea { min-height: 60px; resize: vertical; }
+        input:focus, select:focus, textarea:focus { outline: none; border-color: var(--shu); box-shadow: inset 0 0 0 1px var(--shu); }
+
+        .checkbox-row { display: flex; align-items: center; gap: 8px; }
+        .checkbox-row label { margin: 0; }
+
+        .hint { font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 11px; color: var(--sumi-faint); margin: 2px 0 0; }
+
+        .actions { display: flex; justify-content: flex-end; }
+        button[type="submit"] {
+            border: 1px solid var(--sumi); background: var(--sumi); color: var(--washi);
+            font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 13px; letter-spacing: 1px;
+            padding: 10px 24px; cursor: pointer;
+        }
+        button[type="submit"]:hover { background: var(--shu); border-color: var(--shu); }
+    </style>
+</head>
+<body>
+<div class="page">
+    <header>
+        <div class="header-top">
+            <h1 th:text="${mode} == 'edit' ? ((${form.bashoLabelKr} ?: '') + ' 대전 수정') : '새 대전 입력'">대전 입력</h1>
+            <a class="back-link"
+               th:href="@{'/admin/basho/' + ${bashoId} + '/torikumi'(day=${form.day}, division=${form.division})}">← 대전 목록</a>
+        </div>
+    </header>
+
+    <p class="error-msg" th:if="${error}" th:text="${error}">오류</p>
+
+    <form th:object="${form}" method="post"
+          th:action="${mode} == 'edit'
+              ? @{'/admin/basho/' + ${bashoId} + '/torikumi/' + ${torikumiId}}
+              : @{'/admin/basho/' + ${bashoId} + '/torikumi'}">
+
+        <fieldset>
+            <legend>경기 정보</legend>
+            <div class="field-row">
+                <div class="field"><label>일차 (1~15)</label><input type="number" min="1" max="15" th:field="*{day}"></div>
+                <div class="field">
+                    <label>디비전</label>
+                    <select th:field="*{division}">
+                        <option th:each="dv : ${divisionOptions}" th:value="${dv}" th:text="${dv}">Makuuchi</option>
+                    </select>
+                </div>
+                <div class="field checkbox-row">
+                    <input type="checkbox" id="extraMatch" th:field="*{extraMatch}">
+                    <label for="extraMatch">결정전(플레이오프)</label>
+                </div>
+            </div>
+        </fieldset>
+
+        <fieldset>
+            <legend>대진</legend>
+            <div class="field-row">
+                <div class="field">
+                    <label>東 (동) 리키시</label>
+                    <select th:field="*{eastRikishiId}">
+                        <option value="">선택</option>
+                        <option th:each="r : ${rikishiOptions}" th:value="${r.id}"
+                                th:text="${r.shikonaKr} + (${r.active} ? '' : ' (은퇴)')">동</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>西 (서) 리키시</label>
+                    <select th:field="*{westRikishiId}">
+                        <option value="">선택</option>
+                        <option th:each="r : ${rikishiOptions}" th:value="${r.id}"
+                                th:text="${r.shikonaKr} + (${r.active} ? '' : ' (은퇴)')">서</option>
+                    </select>
+                </div>
+            </div>
+        </fieldset>
+
+        <fieldset>
+            <legend>결과</legend>
+            <div class="field-row">
+                <div class="field">
+                    <label>승자</label>
+                    <select th:field="*{winnerSide}">
+                        <option value="">미정</option>
+                        <option value="EAST">東 (동)</option>
+                        <option value="WEST">西 (서)</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>결과 유형</label>
+                    <select th:field="*{resultType}">
+                        <option th:each="rt : ${resultTypeOptions}" th:value="${rt}"
+                                th:text="${rt.name() == 'FUZEN'} ? '부전승패' : '정상'">정상</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>결정기술 (키마리테)</label>
+                    <input type="text" list="kimarite-list" th:field="*{kimarite}" placeholder="예: 요리키리">
+                    <datalist id="kimarite-list">
+                        <option th:each="k : ${kimariteSuggestions}" th:value="${k}"></option>
+                    </datalist>
+                    <p class="hint">부전승패면 결정기술은 저장되지 않습니다.</p>
+                </div>
+            </div>
+        </fieldset>
+
+        <fieldset>
+            <legend>부가 정보 (선택)</legend>
+            <div class="field-row">
+                <div class="field full"><label>유튜브 URL</label><input type="text" th:field="*{youtubeUrl}" placeholder="https://youtu.be/..."></div>
+            </div>
+            <div class="field-row">
+                <div class="field full"><label>해설 (한국어)</label><textarea th:field="*{descriptionKr}"></textarea></div>
+            </div>
+            <div class="field-row">
+                <div class="field full"><label>해설 (일본어)</label><textarea th:field="*{descriptionJp}"></textarea></div>
+            </div>
+        </fieldset>
+
+        <div class="actions">
+            <button type="submit">저장</button>
+        </div>
+    </form>
+</div>
+</body>
+</html>

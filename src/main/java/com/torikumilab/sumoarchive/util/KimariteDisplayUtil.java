@@ -1,6 +1,8 @@
 package com.torikumilab.sumoarchive.util;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -49,6 +51,14 @@ public final class KimariteDisplayUtil {
 		put("아비세타오시", "浴びせ倒し");
 		put("켓타오시", "けたぐり");
 		put("우치무소", "内無双");
+	}
+
+	/**
+	 * 관리자 토리쿠미 입력 폼의 결정기술 자동완성(&lt;datalist&gt;)용 한국어 음차 표기 목록.
+	 * 입력 순서(자주 쓰는 기술 위주)를 유지한다. 자유 입력은 그대로 허용되고 이건 제안일 뿐이다.
+	 */
+	public static List<String> krSuggestions() {
+		return new ArrayList<>(KR_TO_JP.keySet());
 	}
 
 	/** 한국어 표기 반환. 입력이 이미 한국어면 그대로, 일본어면 매핑된 한국어, 매핑 없으면 원본. */

@@ -2,6 +2,7 @@ package com.torikumilab.sumoarchive.repository;
 
 import com.torikumilab.sumoarchive.domain.dto.KimariteCountRow;
 import com.torikumilab.sumoarchive.domain.entity.TorikumiEntity;
+import com.torikumilab.sumoarchive.domain.entity.constant.Division;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -57,5 +58,29 @@ public interface TorikumiRepository extends JpaRepository<TorikumiEntity, Intege
     ORDER BY t.day ASC
 """)
 	List<TorikumiEntity> findMatchHistory(@Param("rikishiId") Integer rikishiId, @Param("bashoId") Integer bashoId);
-	
+
+	// ===== 관리자 토리쿠미 관리 =====
+
+	// 바쇼 목록의 대전 수 (디비전 무관)
+	long countByBashoEntityId(Integer bashoId);
+
+	// uq_torikumi(basho_id, day, east_rikishi_id, west_rikishi_id, is_extra_match) 사전 검사
+	boolean existsByBashoEntityIdAndDayAndEastRikishiEntityIdAndWestRikishiEntityIdAndIsExtraMatch(
+			Integer bashoId, Integer day, Integer eastRikishiId, Integer westRikishiId, boolean isExtraMatch);
+
+	// 관리자 대전 목록 - 특정 바쇼/날짜/디비전, 정규 → 결정전 순, id 순
+	@Query("""
+    SELECT t FROM TorikumiEntity t
+    JOIN FETCH t.eastRikishiEntity
+    JOIN FETCH t.westRikishiEntity
+    LEFT JOIN FETCH t.winnerRikishiEntity
+    WHERE t.bashoEntity.id = :bashoId
+      AND t.day = :day
+      AND t.division = :division
+    ORDER BY t.isExtraMatch ASC, t.id ASC
+""")
+	List<TorikumiEntity> findForAdmin(@Param("bashoId") Integer bashoId,
+									  @Param("day") Integer day,
+									  @Param("division") Division division);
+
 }

@@ -13,6 +13,7 @@ import com.torikumilab.sumoarchive.domain.entity.constant.Division;
 import com.torikumilab.sumoarchive.repository.BanzukeRepository;
 import com.torikumilab.sumoarchive.repository.BashoRepository;
 import com.torikumilab.sumoarchive.repository.RikishiRepository;
+import com.torikumilab.sumoarchive.repository.TorikumiRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
@@ -36,6 +37,7 @@ public class BanzukeAdminService {
 	private final BashoRepository bashoRepository;
 	private final BanzukeRepository banzukeRepository;
 	private final RikishiRepository rikishiRepository;
+	private final TorikumiRepository torikumiRepository;
 
 	// ===== 바쇼 =====
 
@@ -49,7 +51,8 @@ public class BanzukeAdminService {
 						b.getBashoMonth().getMonthValue(),
 						b.getStartDate(),
 						b.getEndDate(),
-						banzukeRepository.countByBashoEntityId(b.getId())
+						banzukeRepository.countByBashoEntityId(b.getId()),
+						torikumiRepository.countByBashoEntityId(b.getId())
 				))
 				.toList();
 	}

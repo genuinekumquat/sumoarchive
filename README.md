@@ -52,6 +52,9 @@ MVP(현재 단계) 이후에는 다음과 같은 방향으로 서비스를 확�
 11. *(관리자)* `/admin/basho`에서 새 바쇼를 만들고, 그 바쇼의 반즈케를 리키시 한 명씩
     (디비전/계급/동서/번호) 추가·수정·삭제할 수 있다. 반즈케가 곧 계급의 source of truth라,
     편집 결과는 리키시 상세 페이지·메인 대시보드에 그대로 반영된다.
+12. *(관리자)* `/admin/basho/{id}/torikumi`에서 그 바쇼의 대전을 일차·디비전별로 추가·수정·삭제할
+    수 있다 (동/서 리키시, 승자, 결정기술, 부전승패, 결정전 여부, 유튜브 URL, 한/일 해설).
+    입력한 대전은 토리쿠미 상세 페이지·리키시 호시토리표·키마리테 통계에 그대로 반영된다.
 
 ---
 
@@ -121,11 +124,14 @@ application-local.properties            # git 제외 — 실제 DB/관리자 비
 | GET | `/admin/comments?page=` | 관리자 댓글 관리 대시보드 (`/admin/**`, 세션 `isAdmin` 가드) |
 | GET | `/admin/rikishi?keyword=&page=` | 관리자 리키시 목록/검색 |
 | GET / POST | `/admin/rikishi/{id}/edit` | 리키시 프로필 수정 폼 조회 / 저장 |
-| GET | `/admin/basho` | 관리자 바쇼 목록 (반즈케 등록 수 포함) |
+| GET | `/admin/basho` | 관리자 바쇼 목록 (반즈케·토리쿠미 수 포함) |
 | GET / POST | `/admin/basho/new`, `/admin/basho` | 새 바쇼 생성 폼 조회 / 생성 (연·월 중복 차단) |
 | GET | `/admin/basho/{bashoId}/banzuke?division=` | 바쇼별 반즈케 관리 (디비전 탭 + 행 추가 폼) |
 | POST | `/admin/basho/{bashoId}/banzuke` | 반즈케 행 추가 (리키시·바쇼 중복 차단) |
 | POST | `/admin/basho/{bashoId}/banzuke/{banzukeId}` , `.../delete` | 반즈케 행 수정 / 삭제 |
+| GET | `/admin/basho/{bashoId}/torikumi?day=&division=` | 바쇼별 대전 목록 (일차 링크 + 디비전 필터) |
+| GET / POST | `/admin/basho/{bashoId}/torikumi/new`, `/admin/basho/{bashoId}/torikumi` | 새 대전 폼 조회 / 생성 (같은 날·동서 조합 중복 차단) |
+| GET / POST | `/admin/basho/{bashoId}/torikumi/{id}/edit`, `.../{id}` , `.../{id}/delete` | 대전 편집 폼 / 수정 / 삭제 |
 
 ### API 라우트 — JSON
 
@@ -217,7 +223,7 @@ cp src/main/resources/application-local.properties.example \
 - [x] 즐겨찾기 페이지 (`/bookmark`, LocalStorage 기반, 로그인 불필요, 드래그 정렬)
 - [x] 관리자 리키시 프로필 수정 (`/admin/rikishi` — 목록/검색 + 수정 폼)
 - [x] 관리자 반즈케 데이터 수동 갱신 (`/admin/basho` — 바쇼 생성 + 반즈케 행 CRUD)
-- [ ] 관리자 토리쿠미(대전) 입력 UI
+- [x] 관리자 토리쿠미(대전) 입력 UI (`/admin/basho/{id}/torikumi` — 일차·디비전별 대전 CRUD)
 - [ ] 키마리테 상세 설명 백과사전
 - [ ] 반즈케 예측 시뮬레이터
 - [ ] 외부 스모 데이터 API 연동 (MVP 안정화 이후, `externalApiId` 필드로 동기화 배치 예정)
