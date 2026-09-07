@@ -34,8 +34,9 @@ public class BanzukeApiController {
 	
 	@GetMapping("/api/banzuke")
 	public List<BanzukeDTO> getBanzuke(
-			@RequestParam Division division
+			@RequestParam Division division,
+			@RequestParam(required = false) Integer bashoId
 			) {
-		return banzukeService.getLatestBanzuke(division);
+		return banzukeService.getBanzuke(bashoId, division);
 	}
 }

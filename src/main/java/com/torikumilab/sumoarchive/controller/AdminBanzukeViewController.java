@@ -1,0 +1,124 @@
+package com.torikumilab.sumoarchive.controller;
+
+import com.torikumilab.sumoarchive.domain.dto.BanzukeFormDTO;
+import com.torikumilab.sumoarchive.domain.dto.BashoCreateFormDTO;
+import com.torikumilab.sumoarchive.domain.entity.constant.BashoMonth;
+import com.torikumilab.sumoarchive.domain.entity.constant.Division;
+import com.torikumilab.sumoarchive.domain.entity.constant.RankName;
+import com.torikumilab.sumoarchive.domain.entity.constant.Side;
+import com.torikumilab.sumoarchive.service.BanzukeAdminService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.propertyeditors.CustomNumberEditor;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.WebDataBinder;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+/**
+ * 관리자 "데이터 수동 갱신" 중 반즈케(番付) 관리. /admin/** 경로라 AdminAuthInterceptor(WebConfig)가
+ * 세션 isAdmin 여부를 먼저 검사한다.
+ *
+ * <p>변경(POST)은 성공/검증실패 모두 목록 화면으로 redirect + flash 메시지로 통일한다.
+ * 존재하지 않는 바쇼/행은 EntityNotFoundException을 던져 ViewExceptionHandler가 404로 연결한다.</p>
+ */
+@Controller
+@RequiredArgsConstructor
+public class AdminBanzukeViewController {
+
+	private final BanzukeAdminService banzukeAdminService;
+
+	// 빈 <input type="number">("")를 null로 (요코즈나 등 번호 없는 계급). AdminRikishiViewController와 동일 기법.
+	@InitBinder
+	public void initBinder(WebDataBinder binder) {
+		binder.registerCustomEditor(Integer.class, "rankValue", new CustomNumberEditor(Integer.class, true));
+	}
+
+	// ===== 바쇼 =====
+
+	@GetMapping("/admin/basho")
+	public String bashoList(Model model) {
+		model.addAttribute("bashos", banzukeAdminService.listBashos());
+		return "admin/basho/list";
+	}
+
+	@GetMapping("/admin/basho/new")
+	public String bashoForm(Model model) {
+		if (!model.containsAttribute("form")) {
+			model.addAttribute("form", new BashoCreateFormDTO());
+		}
+		model.addAttribute("monthOptions", BashoMonth.values());
+		return "admin/basho/form";
+	}
+
+	@PostMapping("/admin/basho")
+	public String createBasho(@ModelAttribute("form") BashoCreateFormDTO form,
+							  RedirectAttributes redirectAttributes) {
+		try {
+			banzukeAdminService.createBasho(form);
+			redirectAttributes.addFlashAttribute("saved", true);
+			return "redirect:/admin/basho";
+		} catch (IllegalArgumentException e) {
+			redirectAttributes.addFlashAttribute("error", e.getMessage());
+			redirectAttributes.addFlashAttribute("form", form);
+			return "redirect:/admin/basho/new";
+		}
+	}
+
+	// ===== 반즈케 행 =====
+
+	@GetMapping("/admin/basho/{bashoId}/banzuke")
+	public String banzukeBoard(@PathVariable Integer bashoId,
+							   @RequestParam(defaultValue = "Makuuchi") Division division,
+							   Model model) {
+		model.addAttribute("board", banzukeAdminService.getBoard(bashoId, division));
+		model.addAttribute("rikishiOptions", banzukeAdminService.getRikishiOptions());
+		model.addAttribute("divisionOptions", Division.values());
+		model.addAttribute("rankOptions", RankName.values());
+		model.addAttribute("sideOptions", Side.values());
+		model.addAttribute("division", division);
+		return "admin/basho/banzuke";
+	}
+
+	@PostMapping("/admin/basho/{bashoId}/banzuke")
+	public String addRow(@PathVariable Integer bashoId,
+						 @ModelAttribute BanzukeFormDTO form,
+						 RedirectAttributes redirectAttributes) {
+		try {
+			banzukeAdminService.addRow(bashoId, form);
+			redirectAttributes.addFlashAttribute("saved", true);
+		} catch (IllegalArgumentException e) {
+			redirectAttributes.addFlashAttribute("error", e.getMessage());
+		}
+		return redirectToBoard(bashoId, form.getDivision());
+	}
+
+	@PostMapping("/admin/basho/{bashoId}/banzuke/{banzukeId}")
+	public String updateRow(@PathVariable Integer bashoId,
+							@PathVariable Integer banzukeId,
+							@ModelAttribute BanzukeFormDTO form,
+							RedirectAttributes redirectAttributes) {
+		try {
+			banzukeAdminService.updateRow(bashoId, banzukeId, form);
+			redirectAttributes.addFlashAttribute("saved", true);
+		} catch (IllegalArgumentException e) {
+			redirectAttributes.addFlashAttribute("error", e.getMessage());
+		}
+		return redirectToBoard(bashoId, form.getDivision());
+	}
+
+	@PostMapping("/admin/basho/{bashoId}/banzuke/{banzukeId}/delete")
+	public String deleteRow(@PathVariable Integer bashoId,
+							@PathVariable Integer banzukeId,
+							@RequestParam(defaultValue = "Makuuchi") Division division,
+							RedirectAttributes redirectAttributes) {
+		banzukeAdminService.deleteRow(bashoId, banzukeId);
+		redirectAttributes.addFlashAttribute("saved", true);
+		return redirectToBoard(bashoId, division);
+	}
+
+	private String redirectToBoard(Integer bashoId, Division division) {
+		Division d = (division != null) ? division : Division.Makuuchi;
+		return "redirect:/admin/basho/" + bashoId + "/banzuke?division=" + d.name();
+	}
+}

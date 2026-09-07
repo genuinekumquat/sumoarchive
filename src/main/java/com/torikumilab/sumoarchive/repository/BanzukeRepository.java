@@ -49,5 +49,11 @@ public interface BanzukeRepository extends JpaRepository<BanzukeEntity, Integer>
 	
 	// 호시토리표(대전표) 상대들의 그 바쇼 기준 반즈케를 한 번에 조회 (N+1 방지용 배치 조회)
 	List<BanzukeEntity> findByBashoEntityIdAndRikishiEntityIdIn(Integer bashoId, List<Integer> rikishiIds);
-	
+
+	// 관리자 반즈케 관리: 한 리키시가 그 바쇼에 이미 등록됐는지 (uq_rikishi_basho 제약과 동일 키)
+	boolean existsByBashoEntityIdAndRikishiEntityId(Integer bashoId, Integer rikishiId);
+
+	// 관리자 바쇼 목록의 반즈케 등록 수
+	long countByBashoEntityId(Integer bashoId);
+
 }

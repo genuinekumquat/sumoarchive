@@ -136,33 +136,6 @@
 
         .search-wrap button:hover { background: var(--shu-deep); border-color: var(--shu-deep); }
 
-        /* ===== Division Tabs ===== */
-        .tabs {
-            display: flex;
-            gap: 4px;
-            margin-bottom: -1px;
-            position: relative;
-            z-index: 1;
-        }
-
-        .tab-btn {
-            font-family: 'Noto Serif KR', serif;
-            font-size: 14px;
-            padding: 9px 18px 8px;
-            background: var(--washi-panel);
-            border: 1px solid var(--sumi);
-            border-bottom: none;
-            color: var(--sumi-soft);
-            cursor: pointer;
-            clip-path: polygon(6% 0, 94% 0, 100% 100%, 0% 100%);
-        }
-
-        .tab-btn.active {
-            background: var(--washi);
-            color: var(--sumi);
-            font-weight: 700;
-        }
-
         /* ===== Banzuke Panel ===== */
         .banzuke {
             border: 3px double var(--sumi);
@@ -189,9 +162,39 @@
             font-size: 12px;
             color: var(--sumi-soft);
             letter-spacing: 2px;
-            margin-top: 4px;
-            display: block;
+            margin-top: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            flex-wrap: wrap;
         }
+
+        .banzuke-title .meta .sep { color: var(--sumi-faint); }
+
+        .panel-select {
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 12px;
+            letter-spacing: 1px;
+            color: var(--sumi);
+            background: transparent;
+            border: 1px solid var(--washi-line);
+            border-radius: 0;
+            padding: 4px 22px 4px 9px;
+            cursor: pointer;
+            appearance: none;
+            background-image:
+                linear-gradient(45deg, transparent 50%, var(--sumi-soft) 50%),
+                linear-gradient(135deg, var(--sumi-soft) 50%, transparent 50%);
+            background-position:
+                calc(100% - 12px) center,
+                calc(100% - 8px) center;
+            background-size: 4px 4px, 4px 4px;
+            background-repeat: no-repeat;
+        }
+
+        .panel-select:hover { border-color: var(--sumi); }
+        .panel-select:focus { outline: 1px solid var(--shu); outline-offset: 1px; }
 
         /* ===== 동서 페어 테이블 ===== */
         table.banzuke-table {
@@ -323,20 +326,23 @@
         </div>
     </header>
 
-    <div class="tabs">
-        <button class="tab-btn active" data-division="Makuuchi">마쿠우치</button>
-        <button class="tab-btn" data-division="Juryo">주료</button>
-        <button class="tab-btn" data-division="Makushita">마쿠시타</button>
-        <button class="tab-btn" data-division="Sandanme">산단메</button>
-        <button class="tab-btn" data-division="Jonidan">조니단</button>
-        <button class="tab-btn" data-division="Jonokuchi">조노구치</button>
-    </div>
-
     <div class="banzuke">
         <div class="banzuke-inner">
             <div class="banzuke-title">
                 <span class="jp">番付</span>
-                <span class="meta" id="division-meta">2026年 名古屋場所 · 마쿠우치</span>
+                <span class="meta">
+                    <select class="panel-select" id="year-select" aria-label="연도 선택"></select>
+                    <select class="panel-select" id="basho-select" aria-label="대회 선택"></select>
+                    <span class="sep">·</span>
+                    <select class="panel-select" id="division-select" aria-label="계급 선택">
+                        <option value="Makuuchi">마쿠우치</option>
+                        <option value="Juryo">주료</option>
+                        <option value="Makushita">마쿠시타</option>
+                        <option value="Sandanme">산단메</option>
+                        <option value="Jonidan">조니단</option>
+                        <option value="Jonokuchi">조노구치</option>
+                    </select>
+                </span>
             </div>
 
             <table class="banzuke-table">
@@ -358,14 +364,13 @@
 </div>
 
 <script th:inline="javascript">
-    const tabButtons = document.querySelectorAll('.tab-btn');
-    const tbody = document.getElementById('banzuke-body');
-    const meta = document.getElementById('division-meta');
+    // 서버에서 내려준 바쇼 목록(최신순). 연/대회 드롭다운을 이걸로 구성한다.
+    const BASHO_OPTIONS = /*[[${bashoOptions}]]*/ [];
 
-    const DIVISION_LABEL = {
-        Makuuchi: '마쿠우치', Juryo: '주료', Makushita: '마쿠시타',
-        Sandanme: '산단메', Jonidan: '조니단', Jonokuchi: '조노구치'
-    };
+    const tbody = document.getElementById('banzuke-body');
+    const yearSelect = document.getElementById('year-select');
+    const bashoSelect = document.getElementById('basho-select');
+    const divisionSelect = document.getElementById('division-select');
 
     // 계급 정렬 순서 (숫자가 작을수록 위쪽)
     const RANK_ORDER = {
@@ -380,19 +385,49 @@
         Sandanme: '三段目', Jonidan: '序二段', Jonokuchi: '序ノ口'
     };
 
-    tabButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-            tabButtons.forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
+    // ===== 연 / 대회 드롭다운 구성 =====
+    function uniqueYearsDesc() {
+        return [...new Set(BASHO_OPTIONS.map(b => b.year))].sort((a, b) => b - a);
+    }
 
-            const division = btn.dataset.division;
-            meta.textContent = '2026年 名古屋場所 · ' + DIVISION_LABEL[division];
-            loadDivision(division);
+    function fillYearSelect() {
+        yearSelect.innerHTML = '';
+        uniqueYearsDesc().forEach(y => {
+            const opt = document.createElement('option');
+            opt.value = y;
+            opt.textContent = y + '年';
+            yearSelect.appendChild(opt);
         });
-    });
+    }
 
-    function loadDivision(division) {
-        fetch(`/api/banzuke?division=${division}`)
+    // 선택된 연도의 대회만 (월 내림차순) 대회 드롭다운에 채운다. option value = bashoId
+    function fillBashoSelect(year) {
+        bashoSelect.innerHTML = '';
+        BASHO_OPTIONS
+            .filter(b => b.year === year)
+            .sort((a, b) => b.month - a.month)
+            .forEach(b => {
+                const opt = document.createElement('option');
+                opt.value = b.id;
+                opt.textContent = b.monthLabel;
+                bashoSelect.appendChild(opt);
+            });
+    }
+
+    yearSelect.addEventListener('change', () => {
+        fillBashoSelect(Number(yearSelect.value));
+        loadBanzuke();
+    });
+    bashoSelect.addEventListener('change', loadBanzuke);
+    divisionSelect.addEventListener('change', loadBanzuke);
+
+    function loadBanzuke() {
+        const bashoId = bashoSelect.value;
+        const division = divisionSelect.value;
+        const url = bashoId
+            ? `/api/banzuke?division=${division}&bashoId=${bashoId}`
+            : `/api/banzuke?division=${division}`;
+        fetch(url)
             .then(response => {
                 if (!response.ok) throw new Error('서버 응답 오류: ' + response.status);
                 return response.json();
@@ -487,9 +522,12 @@
         });
     }
 
-    // 최초 진입 시 마쿠우치 로드 (기존에 서버에서 내려주던 초기 렌더링을
-    // 탭 전환과 동일한 로직으로 통일해서 페어링 로직 중복을 없앴습니다)
-    loadDivision('Makuuchi');
+    // 최초 진입: 최신 연도 · 그 연도의 최신 대회 · 마쿠우치
+    fillYearSelect();
+    if (yearSelect.options.length > 0) {
+        fillBashoSelect(Number(yearSelect.value));
+    }
+    loadBanzuke();
 </script>
 </body>
 </html>

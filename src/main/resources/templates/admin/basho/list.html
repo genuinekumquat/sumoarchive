@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>반즈케 관리 | 스모아카이브 관리자</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;900&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --sumi: #1a1a18; --sumi-soft: #56554e; --sumi-faint: #86857f;
+            --washi: #f7f6f3; --washi-line: rgba(26, 26, 24, 0.14);
+            --shu: #a3272c; --shu-faint: rgba(163, 39, 44, 0.10);
+        }
+        * { box-sizing: border-box; }
+        body { margin: 0; min-height: 100vh; background-color: var(--washi); color: var(--sumi); font-family: 'Noto Serif KR', serif; }
+        .page { max-width: 900px; margin: 0 auto; padding: 32px 24px 60px; }
+        a { color: inherit; }
+
+        header { border-bottom: 3px double var(--sumi); padding-bottom: 14px; margin-bottom: 20px; }
+        .header-top { display: flex; align-items: baseline; justify-content: space-between; }
+        h1 { font-size: 20px; margin: 0; letter-spacing: 1px; }
+        .admin-nav { font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; margin-top: 10px; }
+        .admin-nav a { color: var(--sumi-soft); text-decoration: none; margin-right: 14px; }
+        .admin-nav a:hover, .admin-nav a.current { color: var(--shu); }
+        .logout-form button {
+            border: 1px solid var(--washi-line); background: transparent; color: var(--sumi-soft);
+            font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; padding: 6px 14px; cursor: pointer;
+        }
+        .logout-form button:hover { border-color: var(--sumi); color: var(--sumi); }
+
+        .saved-msg { background: var(--shu-faint); color: var(--shu); font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 13px; padding: 10px 14px; margin-bottom: 18px; }
+        .error-msg { border: 1px solid var(--shu); color: var(--shu); font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 13px; padding: 10px 14px; margin-bottom: 18px; }
+
+        .toolbar { display: flex; justify-content: flex-end; margin-bottom: 16px; }
+        .new-link {
+            border: 1px solid var(--sumi); background: var(--sumi); color: var(--washi);
+            font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 13px; padding: 8px 16px; text-decoration: none;
+        }
+        .new-link:hover { background: var(--shu); border-color: var(--shu); }
+
+        table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+        thead th {
+            text-align: left; font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 11px;
+            letter-spacing: 1px; color: var(--sumi-faint); border-bottom: 1px solid var(--sumi); padding: 8px;
+        }
+        tbody td { padding: 9px 8px; border-bottom: 1px solid var(--washi-line); }
+        tbody tr:hover { background: rgba(163, 39, 44, 0.04); }
+        .edit-link { font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; color: var(--shu); text-decoration: none; }
+        .edit-link:hover { text-decoration: underline; }
+        .empty-note { padding: 30px 0; text-align: center; color: var(--sumi-faint); }
+    </style>
+</head>
+<body>
+<div class="page">
+    <header>
+        <div class="header-top">
+            <h1>반즈케 관리</h1>
+            <form class="logout-form" th:action="@{/admin/logout}" method="post">
+                <button type="submit">로그아웃</button>
+            </form>
+        </div>
+        <nav class="admin-nav">
+            <a th:href="@{/admin/comments}">댓글 관리</a>
+            <a th:href="@{/admin/rikishi}">리키시 관리</a>
+            <a th:href="@{/admin/basho}" class="current">반즈케 관리</a>
+        </nav>
+    </header>
+
+    <p class="saved-msg" th:if="${saved}">저장했습니다.</p>
+    <p class="error-msg" th:if="${error}" th:text="${error}">오류</p>
+
+    <div class="toolbar">
+        <a class="new-link" th:href="@{/admin/basho/new}">+ 새 바쇼</a>
+    </div>
+
+    <table th:if="${!bashos.isEmpty()}">
+        <thead>
+        <tr>
+            <th style="width: 10%">ID</th>
+            <th style="width: 28%">바쇼</th>
+            <th style="width: 30%">기간</th>
+            <th style="width: 16%">반즈케 등록</th>
+            <th style="width: 16%">조치</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="b : ${bashos}">
+            <td th:text="${b.id}">1</td>
+            <td th:text="${b.year} + '년 ' + ${b.month} + '월 ' + ${b.monthLabelKr}">2026년 7월 나고야바쇼</td>
+            <td th:text="${b.startDate} + ' ~ ' + ${b.endDate}">2026-07-12 ~ 2026-07-26</td>
+            <td th:text="${b.entryCount} + '명'">36명</td>
+            <td><a class="edit-link" th:href="@{'/admin/basho/' + ${b.id} + '/banzuke'}">반즈케 편집 →</a></td>
+        </tr>
+        </tbody>
+    </table>
+    <div class="empty-note" th:if="${bashos.isEmpty()}">등록된 바쇼가 없습니다.</div>
+</div>
+</body>
+</html>

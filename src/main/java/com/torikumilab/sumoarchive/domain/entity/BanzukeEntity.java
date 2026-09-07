@@ -70,4 +70,16 @@ public class BanzukeEntity {
 		this.rankValue = rankValue;
 		this.rankScore = rankScore;
 	}
+
+	/**
+	 * 관리자 반즈케 관리 화면(/admin/basho/{id}/banzuke)에서 한 행의 계급 배치를 수정할 때 호출.
+	 * 리키시/바쇼는 행의 정체성이라 바꾸지 않는다(바꿔야 하면 삭제 후 재등록).
+	 * rankScore는 시더에서도 항상 null이고 읽는 곳이 없어 대상에서 제외한다.
+	 */
+	public void updatePlacement(Division division, RankName rankName, Side side, Integer rankValue) {
+		this.division = division;
+		this.rankName = rankName;
+		this.side = side;
+		this.rankValue = rankValue;
+	}
 }

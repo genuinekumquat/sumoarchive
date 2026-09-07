@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${board.bashoLabelKr} + ' 반즈케 | 스모아카이브 관리자'">반즈케 편집</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;900&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --sumi: #1a1a18; --sumi-soft: #56554e; --sumi-faint: #86857f;
+            --washi: #f7f6f3; --washi-line: rgba(26, 26, 24, 0.14);
+            --shu: #a3272c; --shu-faint: rgba(163, 39, 44, 0.10);
+        }
+        * { box-sizing: border-box; }
+        body { margin: 0; min-height: 100vh; background-color: var(--washi); color: var(--sumi); font-family: 'Noto Serif KR', serif; }
+        .page { max-width: 940px; margin: 0 auto; padding: 32px 24px 60px; }
+        a { color: inherit; }
+
+        header { border-bottom: 3px double var(--sumi); padding-bottom: 14px; margin-bottom: 18px; }
+        .header-top { display: flex; align-items: baseline; justify-content: space-between; }
+        h1 { font-size: 19px; margin: 0; letter-spacing: 1px; }
+        .back-link { font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; color: var(--sumi-soft); text-decoration: none; }
+        .back-link:hover { color: var(--shu); }
+        .admin-nav { font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; margin-top: 10px; }
+        .admin-nav a { color: var(--sumi-soft); text-decoration: none; margin-right: 14px; }
+        .admin-nav a:hover, .admin-nav a.current { color: var(--shu); }
+
+        .saved-msg { background: var(--shu-faint); color: var(--shu); font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 13px; padding: 10px 14px; margin-bottom: 18px; }
+        .error-msg { border: 1px solid var(--shu); color: var(--shu); font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 13px; padding: 10px 14px; margin-bottom: 18px; }
+
+        .divisions { font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12.5px; margin-bottom: 18px; display: flex; gap: 6px; flex-wrap: wrap; }
+        .divisions a {
+            padding: 6px 12px; border: 1px solid var(--washi-line); color: var(--sumi-soft); text-decoration: none;
+        }
+        .divisions a.current { border-color: var(--sumi); background: var(--sumi); color: var(--washi); }
+        .divisions a:hover:not(.current) { border-color: var(--sumi); }
+
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        thead th {
+            text-align: left; font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 11px;
+            letter-spacing: 1px; color: var(--sumi-faint); border-bottom: 1px solid var(--sumi); padding: 8px 6px;
+        }
+        tbody td { padding: 7px 6px; border-bottom: 1px solid var(--washi-line); vertical-align: middle; }
+        .shikona-jp { color: var(--sumi-faint); font-size: 11.5px; }
+        select, input[type="number"] {
+            padding: 6px 8px; border: 1px solid var(--washi-line); background: #fff;
+            font-family: 'Noto Serif KR', serif; font-size: 12.5px; color: var(--sumi);
+        }
+        select:focus, input:focus { outline: none; border-color: var(--shu); box-shadow: inset 0 0 0 1px var(--shu); }
+        input.rank-value { width: 62px; }
+        .row-form { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+        .btn {
+            font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; padding: 6px 12px; cursor: pointer;
+            border: 1px solid var(--sumi); background: var(--sumi); color: var(--washi);
+        }
+        .btn:hover { background: var(--shu); border-color: var(--shu); }
+        .btn.ghost { background: transparent; color: var(--sumi-soft); border-color: var(--washi-line); }
+        .btn.ghost:hover { border-color: var(--shu); color: var(--shu); background: transparent; }
+        .empty-note { padding: 24px 0; text-align: center; color: var(--sumi-faint); }
+
+        .add-box { margin-top: 26px; border: 1px solid var(--washi-line); padding: 16px; background: #fff; }
+        .add-box h2 { font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 13px; letter-spacing: 1px; margin: 0 0 12px; color: var(--sumi-soft); }
+        .add-box label { display: block; font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 11px; color: var(--sumi-faint); margin-bottom: 4px; }
+        .add-grid { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+        .add-grid .cell select, .add-grid .cell input { width: 100%; }
+        .add-grid .cell.rikishi { flex: 2; min-width: 200px; }
+        .add-grid .cell { flex: 1; min-width: 110px; }
+    </style>
+</head>
+<body>
+<div class="page">
+    <header>
+        <div class="header-top">
+            <h1 th:text="${board.bashoLabelKr} + ' 반즈케'">2026년 7월 나고야바쇼 반즈케</h1>
+            <a class="back-link" th:href="@{/admin/basho}">← 바쇼 목록</a>
+        </div>
+        <nav class="admin-nav">
+            <a th:href="@{/admin/comments}">댓글 관리</a>
+            <a th:href="@{/admin/rikishi}">리키시 관리</a>
+            <a th:href="@{/admin/basho}" class="current">반즈케 관리</a>
+        </nav>
+    </header>
+
+    <p class="saved-msg" th:if="${saved}">저장했습니다.</p>
+    <p class="error-msg" th:if="${error}" th:text="${error}">오류</p>
+
+    <div class="divisions">
+        <a th:each="d : ${divisionOptions}"
+           th:href="@{'/admin/basho/' + ${board.bashoId} + '/banzuke'(division=${d})}"
+           th:text="${d}"
+           th:classappend="${d == division} ? 'current' : ''">Makuuchi</a>
+    </div>
+
+    <table th:if="${!board.rows.isEmpty()}">
+        <thead>
+        <tr>
+            <th style="width: 24%">시코나</th>
+            <th style="width: 58%">계급 배치 (디비전 · 계급 · 동서 · 번호)</th>
+            <th style="width: 18%">삭제</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="row : ${board.rows}">
+            <td>
+                <div th:text="${row.shikonaKr}">아사노야마 히로키</div>
+                <div class="shikona-jp" th:text="${row.shikonaJp}">朝乃山 広暉</div>
+            </td>
+            <td>
+                <form class="row-form" th:action="@{'/admin/basho/' + ${board.bashoId} + '/banzuke/' + ${row.id}}" method="post">
+                    <select name="division">
+                        <option th:each="d : ${divisionOptions}" th:value="${d}" th:text="${d}"
+                                th:selected="${d == division}">Makuuchi</option>
+                    </select>
+                    <select name="rankName">
+                        <option th:each="rn : ${rankOptions}" th:value="${rn}" th:text="${rn}"
+                                th:selected="${rn == row.rankName}">Maegashira</option>
+                    </select>
+                    <select name="side">
+                        <option th:each="s : ${sideOptions}" th:value="${s}" th:text="${s}"
+                                th:selected="${s == row.side}">EAST</option>
+                    </select>
+                    <input class="rank-value" type="number" name="rankValue" th:value="${row.rankValue}" placeholder="—">
+                    <button class="btn" type="submit">저장</button>
+                </form>
+            </td>
+            <td>
+                <form th:action="@{'/admin/basho/' + ${board.bashoId} + '/banzuke/' + ${row.id} + '/delete'}" method="post">
+                    <input type="hidden" name="division" th:value="${division}">
+                    <button class="btn ghost" type="submit"
+                            onclick="return confirm('이 반즈케 행을 삭제할까요?');">삭제</button>
+                </form>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+    <div class="empty-note" th:if="${board.rows.isEmpty()}">이 디비전에 등록된 반즈케가 없습니다.</div>
+
+    <div class="add-box">
+        <h2>행 추가</h2>
+        <form class="add-grid" th:action="@{'/admin/basho/' + ${board.bashoId} + '/banzuke'}" method="post">
+            <div class="cell rikishi">
+                <label>리키시</label>
+                <select name="rikishiId">
+                    <option value="">선택</option>
+                    <option th:each="r : ${rikishiOptions}" th:value="${r.id}"
+                            th:text="${r.shikonaKr} + (${r.active} ? '' : ' (은퇴)')">아사노야마 히로키</option>
+                </select>
+            </div>
+            <div class="cell">
+                <label>디비전</label>
+                <select name="division">
+                    <option th:each="d : ${divisionOptions}" th:value="${d}" th:text="${d}"
+                            th:selected="${d == division}">Makuuchi</option>
+                </select>
+            </div>
+            <div class="cell">
+                <label>계급</label>
+                <select name="rankName">
+                    <option th:each="rn : ${rankOptions}" th:value="${rn}" th:text="${rn}">Maegashira</option>
+                </select>
+            </div>
+            <div class="cell">
+                <label>동서</label>
+                <select name="side">
+                    <option th:each="s : ${sideOptions}" th:value="${s}" th:text="${s}">EAST</option>
+                </select>
+            </div>
+            <div class="cell">
+                <label>번호 (없으면 비움)</label>
+                <input class="rank-value" type="number" name="rankValue" placeholder="—" style="width: 100%;">
+            </div>
+            <div class="cell" style="flex: 0 0 auto; min-width: 0;">
+                <button class="btn" type="submit">추가</button>
+            </div>
+        </form>
+    </div>
+</div>
+</body>
+</html>
