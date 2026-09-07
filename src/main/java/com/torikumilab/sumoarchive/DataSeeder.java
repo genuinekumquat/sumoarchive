@@ -51,10 +51,17 @@ public class DataSeeder implements CommandLineRunner {
 	
 	// 더미데이터 재현성을 위해 고정 시드 사용 (앱 재기동 시에도 같은 결과)
 	private final Random random = new Random(20260712L);
-	
+
+	// sumo-api 임포트로 전환한 뒤로는 기본 꺼둔다. 옛 더미 월드가 필요하면 app.seed-demo=true.
+	@org.springframework.beans.factory.annotation.Value("${app.seed-demo:false}")
+	private boolean seedDemo;
+
 	@Override
 	@Transactional
 	public void run(String... args) throws Exception {
+		if (!seedDemo) {
+			return;
+		}
 		if (heyaRepository.count() > 0) {
 			return;
 		}

@@ -86,7 +86,9 @@ public class RikishiDetailService {
 		
 		return RikishiDetailDTO.builder()
 				.id(r.getId())
-				.shikonaKr(r.getShikonaKr())
+				// sumo-api 임포트 직후엔 한국어 시코나가 아직 없어서 일본어/로마자로 대체 (관리자가 채우기 전까지)
+				.shikonaKr(r.getShikonaKr() != null ? r.getShikonaKr()
+						: (r.getShikonaJp() != null ? r.getShikonaJp() : r.getShikonaEn()))
 				.shikonaJp(r.getShikonaJp())
 				.name(r.getName())
 				.birthdate(r.getBirthdate())

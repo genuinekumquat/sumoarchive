@@ -57,6 +57,21 @@
         .edit-link:hover { text-decoration: underline; }
         .empty-note { padding: 30px 0; text-align: center; color: var(--sumi-faint); }
 
+        .import-bar {
+            display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+            border: 1px solid var(--washi-line); padding: 12px 14px; margin-bottom: 16px; background: #fff;
+        }
+        .import-bar .desc { font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 11.5px; color: var(--sumi-faint); flex: 1; min-width: 200px; }
+        .import-bar button {
+            border: 1px solid var(--sumi); background: var(--sumi); color: var(--washi);
+            font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; padding: 8px 14px; cursor: pointer; white-space: nowrap;
+        }
+        .import-bar button:hover { background: var(--shu); border-color: var(--shu); }
+        .saved-msg { background: var(--shu-faint); color: var(--shu); font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 13px; padding: 10px 14px; margin-bottom: 14px; }
+        .error-msg { border: 1px solid var(--shu); color: var(--shu); font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 13px; padding: 10px 14px; margin-bottom: 14px; }
+        .warn-list { margin: 8px 0 0; padding-left: 18px; font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 11.5px; color: var(--sumi-soft); }
+        .warn-list li { margin: 2px 0; }
+
         .pager { display: flex; justify-content: center; gap: 10px; margin-top: 24px; }
         .pager a, .pager span {
             font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; padding: 6px 12px;
@@ -82,8 +97,24 @@
         </nav>
     </header>
 
+    <div class="saved-msg" th:if="${importResult}">
+        <span th:text="'sumo-api 임포트 완료 — 헤야 ' + ${importResult.heyaCreated} + '개 · 리키시 ' + ${importResult.rikishiImported} + '명'">완료</span>
+        <ul class="warn-list" th:if="${!importResult.warnings.isEmpty()}">
+            <li th:each="w : ${importResult.warnings}" th:text="${w}">경고</li>
+        </ul>
+    </div>
+    <p class="error-msg" th:if="${error}" th:text="${error}">오류</p>
+
+    <div class="import-bar">
+        <span class="desc">현재 리키시·헤야·반즈케·토리쿠미를 전부 지우고 sumo-api.com에서 현역 로스터를 새로 가져옵니다.</span>
+        <form th:action="@{/admin/rikishi/import}" method="post"
+              onsubmit="return confirm('기존 리키시·헤야·반즈케·토리쿠미를 전부 삭제하고 sumo-api에서 새로 가져옵니다. 계속할까요?');">
+            <button type="submit">sumo-api에서 로스터 임포트</button>
+        </form>
+    </div>
+
     <form class="search-row" th:action="@{/admin/rikishi}" method="get">
-        <input type="text" name="keyword" th:value="${keyword}" placeholder="시코나(한/일)로 검색">
+        <input type="text" name="keyword" th:value="${keyword}" placeholder="시코나(한/일/로마자)로 검색">
         <button type="submit">검색</button>
     </form>
 
@@ -101,7 +132,10 @@
         <tbody>
         <tr th:each="r : ${result.content}">
             <td th:text="${r.id}">1</td>
-            <td th:text="${r.shikonaKr}">시코나</td>
+            <td>
+                <span th:text="${r.shikonaKr} ?: ${r.shikonaJp}">시코나</span>
+                <span th:if="${r.shikonaKr == null}" style="color: var(--sumi-faint); font-size: 11px;">(한국어 미입력)</span>
+            </td>
             <td th:text="${r.heyaName} ?: '무소속'">헤야</td>
             <td th:text="${r.highestRank} ?: '-'">최고위</td>
             <td><span class="badge" th:text="${r.statusLabel}">현역</span></td>

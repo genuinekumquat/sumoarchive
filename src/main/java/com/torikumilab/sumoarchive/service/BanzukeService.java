@@ -29,11 +29,17 @@ public class BanzukeService {
 	 * (메인 화면에서 바쇼 선택 드롭다운으로 이전 바쇼를 조회할 때 bashoId를 넘긴다.)
 	 */
 	public List<BanzukeDTO> getBanzuke(Integer bashoId, Division division) {
-		BashoEntity basho = (bashoId != null)
-				? bashoRepository.findById(bashoId)
-						.orElseThrow(() -> new EntityNotFoundException("바쇼를 찾을 수 없습니다. id=" + bashoId))
-				: bashoRepository.findTopByOrderByStartDateDesc()
-						.orElseThrow(() -> new IllegalStateException("등록된 바쇼가 없습니다."));
+		BashoEntity basho;
+		if (bashoId != null) {
+			basho = bashoRepository.findById(bashoId)
+					.orElseThrow(() -> new EntityNotFoundException("바쇼를 찾을 수 없습니다. id=" + bashoId));
+		} else {
+			// 바쇼가 하나도 없으면(예: sumo-api 임포트 직후, 바쇼 임포트 전) 빈 목록으로 곱게 처리
+			basho = bashoRepository.findTopByOrderByStartDateDesc().orElse(null);
+			if (basho == null) {
+				return List.of();
+			}
+		}
 
 		return banzukeRepository.findByBashoAndDivisionOrdered(basho.getId(), division)
 				.stream()

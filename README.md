@@ -93,7 +93,8 @@ sumoarchive/
     ├── repository/            # Spring Data JPA 리포지토리 (+ QueryDSL 없이 커스텀 구현체)
     ├── service/               # 비즈니스 로직 (+ exception 하위 도메인 예외)
     ├── util/                  # RankDisplayUtil, KimariteDisplayUtil, YoutubeUrlUtil 등
-    └── DataSeeder.java        # 개발용 더미데이터 시더 (CommandLineRunner, 최초 1회만 실행)
+    ├── client/                # SumoApiClient (sumo-api.com 호출 래퍼)
+    └── DataSeeder.java        # 개발용 더미데이터 시더 (기본 비활성 — app.seed-demo=true일 때만)
 ```
 
 `src/main/resources/`
@@ -193,10 +194,10 @@ application-local.properties            # git 제외 — 실제 DB/관리자 비
   spring.config.import=optional:classpath:application-local.properties
   ```
   로 로컬 설정을 선택적으로 불러오는 구조입니다.
-- **더미데이터**: `DataSeeder`가 앱 최초 기동 시(헤야 테이블이 비어 있을 때만) 2026년 7월
-  나고야바쇼 마쿠우치 36명 반즈케를 기준으로 시드 데이터를 생성합니다. 실명 정보는 최대한
-  반영했으나 일부 마에가시라의 세부 정보(본명/신장/체중/생년월일)는 추정치이므로, 실제 서비스
-  전 재확인이 필요합니다 (자세한 내용은 `DataSeeder.java` 상단 주석 참고).
+- **데이터 소스**: 초기에는 `DataSeeder`(개발용 더미)로 채웠으나, 이제 **sumo-api.com**에서
+  실데이터를 가져오는 방향으로 전환 중입니다. `DataSeeder`는 기본 비활성(`app.seed-demo=false`)이고,
+  관리자 `/admin/rikishi`의 "sumo-api에서 로스터 임포트" 버튼이 현역 헤야·리키시를 가져옵니다
+  (바쇼/반즈케/토리쿠미 임포트는 후속 작업). 외부 API 관련 설정: `sumo-api.base-url`, `app.seed-demo`.
 
 ### 로컬 실행 방법
 
@@ -227,7 +228,8 @@ cp src/main/resources/application-local.properties.example \
 - [x] 관리자 토리쿠미(대전) 입력 UI (`/admin/basho/{id}/torikumi` — 일차·디비전별 대전 CRUD)
 - [ ] 키마리테 상세 설명 백과사전
 - [ ] 반즈케 예측 시뮬레이터
-- [ ] 외부 스모 데이터 API 연동 (MVP 안정화 이후, `externalApiId` 필드로 동기화 배치 예정)
+- [ ] 외부 스모 데이터 API(sumo-api.com) 연동 — *진행 중*: 리키시 로스터 임포트 완료,
+  바쇼/반즈케/토리쿠미 임포트는 진행 예정
 
 ---
 

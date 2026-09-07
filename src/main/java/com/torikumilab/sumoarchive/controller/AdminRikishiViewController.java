@@ -4,6 +4,7 @@ import com.torikumilab.sumoarchive.domain.dto.RikishiAdminRowDTO;
 import com.torikumilab.sumoarchive.domain.dto.RikishiEditFormDTO;
 import com.torikumilab.sumoarchive.domain.entity.constant.RankName;
 import com.torikumilab.sumoarchive.service.RikishiAdminService;
+import com.torikumilab.sumoarchive.service.RosterImportService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.propertyeditors.CustomNumberEditor;
 import org.springframework.data.domain.Page;
@@ -26,6 +27,7 @@ public class AdminRikishiViewController {
 	private static final int PAGE_SIZE = 30;
 
 	private final RikishiAdminService rikishiAdminService;
+	private final RosterImportService rosterImportService;
 
 	// 소속 헤야 select의 "무소속"(빈 문자열) 옵션을 null로 변환.
 	@InitBinder
@@ -59,5 +61,19 @@ public class AdminRikishiViewController {
 		rikishiAdminService.updateProfile(id, form);
 		redirectAttributes.addFlashAttribute("saved", true);
 		return "redirect:/admin/rikishi/" + id + "/edit";
+	}
+
+	/**
+	 * sumo-api에서 로스터(헤야 + 현역 리키시)를 통째로 가져와 재구성한다.
+	 * 기존 리키시·헤야·하위 데이터는 전부 삭제되므로 화면에서 confirm을 받는다.
+	 */
+	@PostMapping("/admin/rikishi/import")
+	public String importRoster(RedirectAttributes redirectAttributes) {
+		try {
+			redirectAttributes.addFlashAttribute("importResult", rosterImportService.importRoster());
+		} catch (Exception e) {
+			redirectAttributes.addFlashAttribute("error", "sumo-api 임포트 실패: " + e.getMessage());
+		}
+		return "redirect:/admin/rikishi";
 	}
 }

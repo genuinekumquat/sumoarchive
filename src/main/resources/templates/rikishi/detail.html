@@ -536,7 +536,7 @@
                 <div class="shikona-row">
                     <span class="shikona-main" th:text="${rikishi.shikonaKr}">시코나</span>
                     <span class="rank-display"
-                          th:if="${rikishi.isActive}"
+                          th:if="${rikishi.isActive and rikishi.rankDisplay != null}"
                           th:text="${rikishi.sideDisplay} + ' ' + ${rikishi.rankDisplay}">東 前頭10枚目</span>
                     <span class="rank-display" th:unless="${rikishi.isActive}"
                           th:text="${rikishi.oyakataNameKr} != null ? (${rikishi.oyakataNameKr} + ' 오야카타') : '은퇴'">은퇴</span>

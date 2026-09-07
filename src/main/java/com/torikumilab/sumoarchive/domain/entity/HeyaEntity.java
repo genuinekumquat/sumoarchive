@@ -21,9 +21,13 @@ public class HeyaEntity {
 	
 	@Column(name = "name_kr", nullable = false, length = 100)
 	private String nameKr;
-	
+
 	@Column(name = "name_jp", nullable = false, length = 100)
 	private String nameJp;
+
+	// sumo-api의 로마자 헤야명 (예: "Takasago"). 임포트 매칭 키. 한/일명은 후속 슬라이스에서 보강.
+	@Column(name = "name_en", length = 100)
+	private String nameEn;
 	
 	@Column(name = "ichimon_kr", length = 100)
 	private String ichimonKr;
@@ -46,9 +50,10 @@ public class HeyaEntity {
 	
 	// 최초 DB 데이터 적재 등을 위한 깔끔한 빌더 생성자 제공
 	@Builder
-	private HeyaEntity(String nameKr, String nameJp, String ichimonKr, String ichimonJp, RikishiEntity masterRikishiEntity) {
+	private HeyaEntity(String nameKr, String nameJp, String nameEn, String ichimonKr, String ichimonJp, RikishiEntity masterRikishiEntity) {
 		this.nameKr = nameKr;
 		this.nameJp = nameJp;
+		this.nameEn = nameEn;
 		this.ichimonKr = ichimonKr;
 		this.ichimonJp = ichimonJp;
 		this.masterRikishiEntity = masterRikishiEntity;

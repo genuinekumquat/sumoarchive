@@ -23,9 +23,13 @@ public class RikishiEntity {
 	
 	@Column(name = "shikona_kr", length = 100)
 	private String shikonaKr;
-	
+
 	@Column(name = "shikona_jp", length = 100)
 	private String shikonaJp;
+
+	// sumo-api의 로마자 시코나 (예: "Asanoyama"). 임포트 매칭·로마자 검색용. 한국어 시코나는 별도로 채운다.
+	@Column(name = "shikona_en", length = 100)
+	private String shikonaEn;
 	
 	@Column(name = "name", length = 100)
 	private String name;
@@ -85,6 +89,7 @@ public class RikishiEntity {
 			Integer externalApiId,
 			String shikonaKr,
 			String shikonaJp,
+			String shikonaEn,
 			String name,
 			LocalDate birthdate,
 			String birthplace,
@@ -105,6 +110,7 @@ public class RikishiEntity {
 		this.externalApiId = externalApiId;
 		this.shikonaKr = shikonaKr;
 		this.shikonaJp = shikonaJp;
+		this.shikonaEn = shikonaEn;
 		this.name = name;
 		this.birthdate = birthdate;
 		this.birthplace = birthplace;

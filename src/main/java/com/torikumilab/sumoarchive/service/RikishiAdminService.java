@@ -31,9 +31,13 @@ public class RikishiAdminService {
 
 	@Transactional(readOnly = true)
 	public Page<RikishiAdminRowDTO> list(String keyword, Pageable pageable) {
-		Page<RikishiEntity> page = (keyword == null || keyword.isBlank())
-				? rikishiRepository.findAll(pageable)
-				: rikishiRepository.findByShikonaKrContainingOrShikonaJpContaining(keyword.strip(), keyword.strip(), pageable);
+		Page<RikishiEntity> page;
+		if (keyword == null || keyword.isBlank()) {
+			page = rikishiRepository.findAll(pageable);
+		} else {
+			String k = keyword.strip();
+			page = rikishiRepository.findByShikonaKrContainingOrShikonaJpContainingOrShikonaEnContaining(k, k, k, pageable);
+		}
 		return page.map(RikishiAdminService::toRowDto);
 	}
 
