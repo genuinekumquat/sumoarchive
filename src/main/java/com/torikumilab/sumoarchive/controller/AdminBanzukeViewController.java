@@ -2,6 +2,7 @@ package com.torikumilab.sumoarchive.controller;
 
 import com.torikumilab.sumoarchive.domain.dto.BanzukeFormDTO;
 import com.torikumilab.sumoarchive.domain.dto.BashoCreateFormDTO;
+import com.torikumilab.sumoarchive.domain.dto.BashoEditFormDTO;
 import com.torikumilab.sumoarchive.domain.entity.constant.BashoMonth;
 import com.torikumilab.sumoarchive.domain.entity.constant.Division;
 import com.torikumilab.sumoarchive.domain.entity.constant.RankName;
@@ -62,6 +63,42 @@ public class AdminBanzukeViewController {
 			redirectAttributes.addFlashAttribute("error", e.getMessage());
 			redirectAttributes.addFlashAttribute("form", form);
 			return "redirect:/admin/basho/new";
+		}
+	}
+
+	@GetMapping("/admin/basho/{bashoId}/edit")
+	public String bashoEditForm(@PathVariable Integer bashoId, Model model) {
+		if (!model.containsAttribute("form")) {
+			model.addAttribute("form", banzukeAdminService.getBashoEditForm(bashoId));
+		}
+		return "admin/basho/edit";
+	}
+
+	@PostMapping("/admin/basho/{bashoId}")
+	public String updateBasho(@PathVariable Integer bashoId,
+							  @ModelAttribute("form") BashoEditFormDTO form,
+							  RedirectAttributes redirectAttributes) {
+		try {
+			banzukeAdminService.updateBasho(bashoId, form);
+			redirectAttributes.addFlashAttribute("saved", true);
+			return "redirect:/admin/basho";
+		} catch (IllegalArgumentException e) {
+			// 폼은 다시 DB에서 로드한다(연/월/라벨은 화면 표시 전용이라 POST에 실려오지 않음).
+			// 날짜 2칸만 다시 입력하면 되므로 입력값 유지를 위한 별도 처리는 생략.
+			redirectAttributes.addFlashAttribute("error", e.getMessage());
+			return "redirect:/admin/basho/" + bashoId + "/edit";
+		}
+	}
+
+	@PostMapping("/admin/basho/{bashoId}/delete")
+	public String deleteBasho(@PathVariable Integer bashoId, RedirectAttributes redirectAttributes) {
+		try {
+			banzukeAdminService.deleteBasho(bashoId);
+			redirectAttributes.addFlashAttribute("saved", true);
+			return "redirect:/admin/basho";
+		} catch (IllegalArgumentException e) {
+			redirectAttributes.addFlashAttribute("error", e.getMessage());
+			return "redirect:/admin/basho/" + bashoId + "/edit";
 		}
 	}
 

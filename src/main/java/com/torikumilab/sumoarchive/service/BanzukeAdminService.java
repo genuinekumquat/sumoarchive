@@ -5,6 +5,7 @@ import com.torikumilab.sumoarchive.domain.dto.BanzukeFormDTO;
 import com.torikumilab.sumoarchive.domain.dto.BanzukeRowDTO;
 import com.torikumilab.sumoarchive.domain.dto.BashoAdminRowDTO;
 import com.torikumilab.sumoarchive.domain.dto.BashoCreateFormDTO;
+import com.torikumilab.sumoarchive.domain.dto.BashoEditFormDTO;
 import com.torikumilab.sumoarchive.domain.dto.RikishiOptionDTO;
 import com.torikumilab.sumoarchive.domain.entity.BanzukeEntity;
 import com.torikumilab.sumoarchive.domain.entity.BashoEntity;
@@ -77,6 +78,43 @@ public class BanzukeAdminService {
 				.startDate(form.getStartDate())
 				.endDate(form.getEndDate())
 				.build());
+	}
+
+	@Transactional(readOnly = true)
+	public BashoEditFormDTO getBashoEditForm(Integer bashoId) {
+		BashoEntity b = findBasho(bashoId);
+		BashoEditFormDTO form = new BashoEditFormDTO();
+		form.setId(b.getId());
+		form.setYear(b.getBashoYear());
+		form.setMonth(b.getBashoMonth().getMonthValue());
+		form.setMonthLabelKr(b.getBashoMonth().getDisplayNameKr());
+		form.setStartDate(b.getStartDate());
+		form.setEndDate(b.getEndDate());
+		return form;
+	}
+
+	@Transactional
+	public void updateBasho(Integer bashoId, BashoEditFormDTO form) {
+		BashoEntity b = findBasho(bashoId);
+		if (form.getStartDate() == null || form.getEndDate() == null) {
+			throw new IllegalArgumentException("시작일과 종료일은 필수입니다.");
+		}
+		if (form.getEndDate().isBefore(form.getStartDate())) {
+			throw new IllegalArgumentException("종료일이 시작일보다 앞설 수 없습니다.");
+		}
+		b.updateSchedule(form.getStartDate(), form.getEndDate());
+	}
+
+	@Transactional
+	public void deleteBasho(Integer bashoId) {
+		BashoEntity b = findBasho(bashoId);
+		long bz = banzukeRepository.countByBashoEntityId(bashoId);
+		long tk = torikumiRepository.countByBashoEntityId(bashoId);
+		if (bz > 0 || tk > 0) {
+			throw new IllegalArgumentException(
+					"반즈케 " + bz + "개 · 토리쿠미 " + tk + "개가 등록돼 있어 삭제할 수 없습니다. 먼저 비워주세요.");
+		}
+		bashoRepository.delete(b);
 	}
 
 	// ===== 반즈케 행 =====

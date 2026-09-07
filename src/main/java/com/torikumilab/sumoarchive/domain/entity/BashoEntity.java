@@ -45,6 +45,15 @@ public class BashoEntity {
 		this.startDate = startDate;
 		this.endDate = endDate;
 	}
+
+	/**
+	 * 관리자 바쇼 수정 화면에서 기간(시작일·종료일)만 갱신한다.
+	 * 연도·월은 바쇼의 정체성(uq_basho 키)이라 여기서 바꾸지 않는다 — 잘못 넣었으면 삭제 후 재생성.
+	 */
+	public void updateSchedule(LocalDate startDate, LocalDate endDate) {
+		this.startDate = startDate;
+		this.endDate = endDate;
+	}
 }
 
 

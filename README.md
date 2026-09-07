@@ -126,6 +126,7 @@ application-local.properties            # git 제외 — 실제 DB/관리자 비
 | GET / POST | `/admin/rikishi/{id}/edit` | 리키시 프로필 수정 폼 조회 / 저장 |
 | GET | `/admin/basho` | 관리자 바쇼 목록 (반즈케·토리쿠미 수 포함) |
 | GET / POST | `/admin/basho/new`, `/admin/basho` | 새 바쇼 생성 폼 조회 / 생성 (연·월 중복 차단) |
+| GET / POST | `/admin/basho/{bashoId}/edit`, `.../{bashoId}` , `.../{bashoId}/delete` | 바쇼 기간 수정 폼 / 시작일·종료일 수정 / 삭제 (반즈케·토리쿠미가 비어야 삭제) |
 | GET | `/admin/basho/{bashoId}/banzuke?division=` | 바쇼별 반즈케 관리 (디비전 탭 + 행 추가 폼) |
 | POST | `/admin/basho/{bashoId}/banzuke` | 반즈케 행 추가 (리키시·바쇼 중복 차단) |
 | POST | `/admin/basho/{bashoId}/banzuke/{banzukeId}` , `.../delete` | 반즈케 행 수정 / 삭제 |
@@ -222,7 +223,7 @@ cp src/main/resources/application-local.properties.example \
 - [x] 관리자 댓글 관리 대시보드 (`/admin/comments` — 전체 댓글 조회 + 블라인드)
 - [x] 즐겨찾기 페이지 (`/bookmark`, LocalStorage 기반, 로그인 불필요, 드래그 정렬)
 - [x] 관리자 리키시 프로필 수정 (`/admin/rikishi` — 목록/검색 + 수정 폼)
-- [x] 관리자 반즈케 데이터 수동 갱신 (`/admin/basho` — 바쇼 생성 + 반즈케 행 CRUD)
+- [x] 관리자 반즈케 데이터 수동 갱신 (`/admin/basho` — 바쇼 생성·기간수정·삭제 + 반즈케 행 CRUD)
 - [x] 관리자 토리쿠미(대전) 입력 UI (`/admin/basho/{id}/torikumi` — 일차·디비전별 대전 CRUD)
 - [ ] 키마리테 상세 설명 백과사전
 - [ ] 반즈케 예측 시뮬레이터

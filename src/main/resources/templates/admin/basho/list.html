@@ -95,7 +95,8 @@
             <td th:text="${b.torikumiCount} + '경기'">0경기</td>
             <td>
                 <a class="edit-link" th:href="@{'/admin/basho/' + ${b.id} + '/banzuke'}">반즈케 편집 →</a><br>
-                <a class="edit-link" th:href="@{'/admin/basho/' + ${b.id} + '/torikumi'}">토리쿠미 편집 →</a>
+                <a class="edit-link" th:href="@{'/admin/basho/' + ${b.id} + '/torikumi'}">토리쿠미 편집 →</a><br>
+                <a class="edit-link" th:href="@{'/admin/basho/' + ${b.id} + '/edit'}">기간 수정 · 삭제 →</a>
             </td>
         </tr>
         </tbody>
