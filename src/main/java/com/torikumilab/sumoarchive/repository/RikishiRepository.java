@@ -6,6 +6,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -19,4 +20,9 @@ public interface RikishiRepository extends JpaRepository<RikishiEntity, Integer>
 
 	// sumo-api 매칭/재임포트용
 	Optional<RikishiEntity> findByExternalApiId(Integer externalApiId);
+
+	// 슬라이스 5 한국어 시코나 자동 채우기 대상 (아직 한국어 시코나가 없는 리키시)
+	List<RikishiEntity> findByShikonaKrIsNull();
+
+	long countByShikonaKrIsNull();
 }

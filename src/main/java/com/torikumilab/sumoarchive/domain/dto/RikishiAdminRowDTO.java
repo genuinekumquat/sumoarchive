@@ -7,6 +7,7 @@ public record RikishiAdminRowDTO(
 		Integer id,
 		String shikonaKr,
 		String shikonaJp,
+		boolean shikonaKrAuto,
 		String heyaName,
 		String highestRank,
 		String statusLabel

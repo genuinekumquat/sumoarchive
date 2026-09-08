@@ -17,6 +17,7 @@ public class RikishiEditFormDTO {
 
 	private Integer id;
 	private String shikonaKr;
+	private boolean shikonaKrAuto; // 현재 한국어 시코나가 자동 음차값인지(검수 필요) — 화면 힌트 전용
 	private String shikonaJp;
 	private String name;
 

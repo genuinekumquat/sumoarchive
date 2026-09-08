@@ -79,7 +79,12 @@
         <fieldset>
             <legend>기본 정보</legend>
             <div class="field-row">
-                <div class="field"><label>시코나 (한국어)</label><input type="text" th:field="*{shikonaKr}"></div>
+                <div class="field">
+                    <label>시코나 (한국어)
+                        <span th:if="${form.shikonaKrAuto}" style="color:#a3272c;font-size:11px;">(자동 음차 — 검수 필요)</span>
+                    </label>
+                    <input type="text" th:field="*{shikonaKr}">
+                </div>
                 <div class="field"><label>시코나 (일본어)</label><input type="text" th:field="*{shikonaJp}"></div>
             </div>
             <div class="field-row">

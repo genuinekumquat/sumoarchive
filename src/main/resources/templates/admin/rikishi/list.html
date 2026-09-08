@@ -103,6 +103,13 @@
             <li th:each="w : ${importResult.warnings}" th:text="${w}">경고</li>
         </ul>
     </div>
+    <div class="saved-msg" th:if="${autofillResult}">
+        <span th:text="'한국어 시코나 자동 채우기 — ' + ${autofillResult.filled} + '명 채움'
+            + (${autofillResult.failed.isEmpty()} ? '' : (' · 실패 ' + ${autofillResult.failed.size()}))">완료</span>
+        <ul class="warn-list" th:if="${!autofillResult.samples.isEmpty()}">
+            <li th:each="s : ${autofillResult.samples}" th:text="${s}">Asanoyama → 아사노야마</li>
+        </ul>
+    </div>
     <p class="error-msg" th:if="${error}" th:text="${error}">오류</p>
 
     <div class="import-bar">
@@ -110,6 +117,17 @@
         <form th:action="@{/admin/rikishi/import}" method="post"
               onsubmit="return confirm('기존 리키시·헤야·반즈케·토리쿠미를 전부 삭제하고 sumo-api에서 새로 가져옵니다. 계속할까요?');">
             <button type="submit">sumo-api에서 로스터 임포트</button>
+        </form>
+    </div>
+
+    <div class="import-bar" th:if="${missingKrCount > 0}">
+        <span class="desc">
+            한국어 시코나가 없는 리키시 <strong th:text="${missingKrCount}">0</strong>명 —
+            로마자 음차로 1차값을 채웁니다. 채운 값엔 "(자동)" 표시가 붙고, 목록에서 다듬을 수 있습니다.
+        </span>
+        <form th:action="@{/admin/rikishi/shikona/autofill}" method="post"
+              onsubmit="return confirm('한국어 시코나가 없는 리키시에 로마자 음차 자동값을 채웁니다. 계속할까요?');">
+            <button type="submit">한국어 시코나 자동 채우기</button>
         </form>
     </div>
 
@@ -135,6 +153,7 @@
             <td>
                 <span th:text="${r.shikonaKr} ?: ${r.shikonaJp}">시코나</span>
                 <span th:if="${r.shikonaKr == null}" style="color: var(--sumi-faint); font-size: 11px;">(한국어 미입력)</span>
+                <span th:if="${r.shikonaKrAuto}" style="color: var(--shu); font-size: 11px;">(자동)</span>
             </td>
             <td th:text="${r.heyaName} ?: '무소속'">헤야</td>
             <td th:text="${r.highestRank} ?: '-'">최고위</td>

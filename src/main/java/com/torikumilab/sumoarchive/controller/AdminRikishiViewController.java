@@ -43,7 +43,20 @@ public class AdminRikishiViewController {
 				keyword, PageRequest.of(page, PAGE_SIZE, Sort.by("id")));
 		model.addAttribute("result", result);
 		model.addAttribute("keyword", keyword);
+		model.addAttribute("missingKrCount", rikishiAdminService.countMissingKoreanShikona());
 		return "admin/rikishi/list";
+	}
+
+	/** 한국어 시코나가 없는 리키시에 로마자 음차로 1차값을 채운다 ("자동" 표시 켠 채). */
+	@PostMapping("/admin/rikishi/shikona/autofill")
+	public String autofillShikona(RedirectAttributes redirectAttributes) {
+		try {
+			redirectAttributes.addFlashAttribute("autofillResult",
+					rikishiAdminService.autofillKoreanShikona());
+		} catch (Exception e) {
+			redirectAttributes.addFlashAttribute("error", "한국어 시코나 자동 채우기 실패: " + e.getMessage());
+		}
+		return "redirect:/admin/rikishi";
 	}
 
 	@GetMapping("/admin/rikishi/{id}/edit")

@@ -3,10 +3,12 @@ package com.torikumilab.sumoarchive.service;
 import com.torikumilab.sumoarchive.domain.dto.HeyaOptionDTO;
 import com.torikumilab.sumoarchive.domain.dto.RikishiAdminRowDTO;
 import com.torikumilab.sumoarchive.domain.dto.RikishiEditFormDTO;
+import com.torikumilab.sumoarchive.domain.dto.ShikonaAutofillResultDTO;
 import com.torikumilab.sumoarchive.domain.entity.HeyaEntity;
 import com.torikumilab.sumoarchive.domain.entity.RikishiEntity;
 import com.torikumilab.sumoarchive.repository.HeyaRepository;
 import com.torikumilab.sumoarchive.repository.RikishiRepository;
+import com.torikumilab.sumoarchive.util.ShikonaKrTransliterator;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -15,6 +17,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -49,6 +52,7 @@ public class RikishiAdminService {
 		RikishiEditFormDTO form = new RikishiEditFormDTO();
 		form.setId(r.getId());
 		form.setShikonaKr(r.getShikonaKr());
+		form.setShikonaKrAuto(r.isShikonaKrAuto());
 		form.setShikonaJp(r.getShikonaJp());
 		form.setName(r.getName());
 		form.setBirthdate(r.getBirthdate());
@@ -99,6 +103,38 @@ public class RikishiAdminService {
 		);
 	}
 
+	/** 아직 한국어 시코나가 없는 리키시 수 (목록 화면 자동 채우기 바에 표시). */
+	@Transactional(readOnly = true)
+	public long countMissingKoreanShikona() {
+		return rikishiRepository.countByShikonaKrIsNull();
+	}
+
+	/**
+	 * 한국어 시코나가 없는 리키시 전부에 대해 로마자({@code shikonaEn}) 음차로 1차값을 채운다.
+	 * 채운 값은 "자동" 표시가 켜진 채라 관리자가 목록에서 뱃지를 보고 다듬을 수 있다(하이브리드).
+	 */
+	@Transactional
+	public ShikonaAutofillResultDTO autofillKoreanShikona() {
+		List<RikishiEntity> targets = rikishiRepository.findByShikonaKrIsNull();
+		int filled = 0;
+		List<String> samples = new ArrayList<>();
+		List<String> failed = new ArrayList<>();
+		for (RikishiEntity r : targets) {
+			String kr = ShikonaKrTransliterator.fromRomaji(r.getShikonaEn());
+			if (kr == null || kr.isBlank()) {
+				failed.add(r.getShikonaEn() != null && !r.getShikonaEn().isBlank()
+						? r.getShikonaEn() : ("id=" + r.getId()));
+				continue;
+			}
+			r.applyAutoShikonaKr(kr);
+			filled++;
+			if (samples.size() < 15) {
+				samples.add(r.getShikonaEn() + " → " + kr);
+			}
+		}
+		return new ShikonaAutofillResultDTO(filled, samples, failed);
+	}
+
 	@Transactional(readOnly = true)
 	public List<HeyaOptionDTO> getHeyaOptions() {
 		return heyaRepository.findAll(Sort.by("nameKr")).stream()
@@ -115,6 +151,7 @@ public class RikishiAdminService {
 				r.getId(),
 				r.getShikonaKr(),
 				r.getShikonaJp(),
+				r.isShikonaKrAuto(),
 				r.getHeyaEntity() != null ? r.getHeyaEntity().getNameKr() : null,
 				r.getHighestRank(),
 				statusLabel(r)

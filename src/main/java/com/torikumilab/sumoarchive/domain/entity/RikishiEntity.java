@@ -24,6 +24,11 @@ public class RikishiEntity {
 	@Column(name = "shikona_kr", length = 100)
 	private String shikonaKr;
 
+	// 한국어 시코나가 음차 자동 생성값인지(관리자 검수 전) 여부. 관리자가 프로필에서 저장하면 false.
+	// null = 자동 아님(수동 입력 또는 미입력). 슬라이스 5.
+	@Column(name = "shikona_kr_auto")
+	private Boolean shikonaKrAuto;
+
 	@Column(name = "shikona_jp", length = 100)
 	private String shikonaJp;
 
@@ -154,6 +159,7 @@ public class RikishiEntity {
 			String photoUrl
 	) {
 		this.shikonaKr = shikonaKr;
+		this.shikonaKrAuto = false; // 관리자가 저장한 이상 검수된 값으로 본다
 		this.shikonaJp = shikonaJp;
 		this.name = name;
 		this.birthdate = birthdate;
@@ -170,6 +176,20 @@ public class RikishiEntity {
 		this.oyakataNameKr = oyakataNameKr;
 		this.oyakataNameJp = oyakataNameJp;
 		this.photoUrl = photoUrl;
+	}
+
+	/** {@code isShikonaKrAuto()} — null(수동/미입력)도 false로. */
+	public boolean isShikonaKrAuto() {
+		return Boolean.TRUE.equals(shikonaKrAuto);
+	}
+
+	/**
+	 * 슬라이스 5 자동 채우기: 로마자 음차로 만든 한국어 시코나를 넣고 "자동" 표시를 켠다.
+	 * 관리자가 프로필 수정에서 저장하면(updateProfile) 표시가 꺼진다.
+	 */
+	public void applyAutoShikonaKr(String shikonaKr) {
+		this.shikonaKr = shikonaKr;
+		this.shikonaKrAuto = true;
 	}
 }
 
