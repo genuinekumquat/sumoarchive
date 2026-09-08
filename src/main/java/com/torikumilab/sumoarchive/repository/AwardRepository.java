@@ -16,4 +16,8 @@ public interface AwardRepository extends JpaRepository<AwardEntity, Integer> {
 
 	// 특정 선수의 산쇼(수훈상/감투상/기능상) 횟수 - 디비전 구분 없이 전체 합산
 	long countByRikishiEntityIdAndAwardType(Integer rikishiId, AwardType awardType);
+
+	// 임포트 upsert 사전 검사 (uq_award: rikishi_id + basho_id + division + award_type)
+	boolean existsByRikishiEntityIdAndBashoEntityIdAndDivisionAndAwardType(
+			Integer rikishiId, Integer bashoId, Division division, AwardType awardType);
 }

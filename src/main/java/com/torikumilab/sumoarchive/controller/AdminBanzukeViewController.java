@@ -6,6 +6,7 @@ import com.torikumilab.sumoarchive.domain.dto.BashoEditFormDTO;
 import com.torikumilab.sumoarchive.domain.entity.constant.BashoMonth;
 import com.torikumilab.sumoarchive.domain.entity.constant.Division;
 import com.torikumilab.sumoarchive.domain.entity.constant.Side;
+import com.torikumilab.sumoarchive.service.AwardImportService;
 import com.torikumilab.sumoarchive.service.BanzukeAdminService;
 import com.torikumilab.sumoarchive.service.BanzukeImportService;
 import com.torikumilab.sumoarchive.service.BashoImportService;
@@ -32,6 +33,7 @@ public class AdminBanzukeViewController {
 	private final BanzukeAdminService banzukeAdminService;
 	private final BashoImportService bashoImportService;
 	private final BanzukeImportService banzukeImportService;
+	private final AwardImportService awardImportService;
 
 	// 빈 <input type="number">("")를 null로 (요코즈나 등 번호 없는 계급). AdminRikishiViewController와 동일 기법.
 	@InitBinder
@@ -57,6 +59,17 @@ public class AdminBanzukeViewController {
 			redirectAttributes.addFlashAttribute("importResult", bashoImportService.importRange(fromYear, toYear));
 		} catch (Exception e) {
 			redirectAttributes.addFlashAttribute("error", "sumo-api 바쇼 임포트 실패: " + e.getMessage());
+		}
+		return "redirect:/admin/basho";
+	}
+
+	/** 한 바쇼의 우승·삼상(sumo-api) + 킨보시(반즈케·토리쿠미 파생)를 채운다. 재실행 가능(빠진 것만 추가). */
+	@PostMapping("/admin/basho/{bashoId}/awards/import")
+	public String importAwards(@PathVariable Integer bashoId, RedirectAttributes redirectAttributes) {
+		try {
+			redirectAttributes.addFlashAttribute("awardResult", awardImportService.importForBasho(bashoId));
+		} catch (Exception e) {
+			redirectAttributes.addFlashAttribute("error", "우승·삼상·킨보시 갱신 실패: " + e.getMessage());
 		}
 		return "redirect:/admin/basho";
 	}

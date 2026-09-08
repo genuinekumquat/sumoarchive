@@ -96,6 +96,15 @@
         </ul>
     </div>
 
+    <div class="saved-msg" th:if="${awardResult}">
+        <span th:text="${awardResult.bashoLabel} + ' 우승·삼상·킨보시 갱신 — 우승 ' + ${awardResult.yushoCreated}
+            + ' · 삼상 ' + ${awardResult.sanshoCreated} + ' · 킨보시 ' + ${awardResult.kinboshiCreated}
+            + ' 신규 (없던 것만 추가)' + (${awardResult.skipped.isEmpty()} ? '' : (' · 스킵 ' + ${awardResult.skipped.size()}))">완료</span>
+        <ul class="skip-list" th:if="${!awardResult.skipped.isEmpty()}">
+            <li th:each="s : ${awardResult.skipped}" th:text="${s}">스킵</li>
+        </ul>
+    </div>
+
     <div class="import-bar">
         <span class="desc">sumo-api.com에서 바쇼 메타를 가져옵니다 (본장소 1·3·5·7·9·11월).</span>
         <form th:action="@{/admin/basho/import}" method="post" style="display: flex; gap: 8px; align-items: center;"
@@ -132,7 +141,12 @@
             <td>
                 <a class="edit-link" th:href="@{'/admin/basho/' + ${b.id} + '/banzuke'}">반즈케 편집 →</a><br>
                 <a class="edit-link" th:href="@{'/admin/basho/' + ${b.id} + '/torikumi'}">토리쿠미 편집 →</a><br>
-                <a class="edit-link" th:href="@{'/admin/basho/' + ${b.id} + '/edit'}">기간 수정 · 삭제 →</a>
+                <a class="edit-link" th:href="@{'/admin/basho/' + ${b.id} + '/edit'}">기간 수정 · 삭제 →</a><br>
+                <form th:action="@{'/admin/basho/' + ${b.id} + '/awards/import'}" method="post" style="display:inline"
+                      onsubmit="return confirm('이 바쇼의 우승·삼상을 sumo-api에서, 킨보시를 반즈케·토리쿠미에서 채웁니다(없던 것만 추가). 계속할까요?');">
+                    <button type="submit" class="edit-link"
+                            style="background:none;border:none;padding:0;cursor:pointer;font:inherit">우승·삼상·킨보시 갱신 →</button>
+                </form>
             </td>
         </tr>
         </tbody>

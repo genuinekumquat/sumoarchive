@@ -60,4 +60,12 @@ public interface BanzukeRepository extends JpaRepository<BanzukeEntity, Integer>
 	// 관리자 바쇼 목록의 반즈케 등록 수
 	long countByBashoEntityId(Integer bashoId);
 
+	// 킨보시 파생용 - 그 바쇼 전체 반즈케(디비전 무관), 리키시 fetch.
+	@Query("""
+    SELECT b FROM BanzukeEntity b
+    JOIN FETCH b.rikishiEntity
+    WHERE b.bashoEntity.id = :bashoId
+""")
+	List<BanzukeEntity> findByBashoEntityIdFetchRikishi(@Param("bashoId") Integer bashoId);
+
 }

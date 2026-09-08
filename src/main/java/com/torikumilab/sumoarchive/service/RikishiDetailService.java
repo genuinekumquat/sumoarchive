@@ -72,10 +72,12 @@ public class RikishiDetailService {
 		long losses = torikumiRepository.countByLoserRikishiEntityIdAndIsExtraMatchFalse(rikishiId);
 		long bashoCount = banzukeRepository.countByRikishiId(rikishiId);
 		
-		long yushoMakuuchi = awardRepository.countByRikishiEntityIdAndDivisionAndAwardType(
-				rikishiId, Division.Makuuchi, AwardType.YUSHO);
-		long yushoJuryo = awardRepository.countByRikishiEntityIdAndDivisionAndAwardType(
-				rikishiId, Division.Juryo, AwardType.YUSHO);
+		long yushoMakuuchi = countYusho(rikishiId, Division.Makuuchi);
+		long yushoJuryo = countYusho(rikishiId, Division.Juryo);
+		long yushoMakushita = countYusho(rikishiId, Division.Makushita);
+		long yushoSandanme = countYusho(rikishiId, Division.Sandanme);
+		long yushoJonidan = countYusho(rikishiId, Division.Jonidan);
+		long yushoJonokuchi = countYusho(rikishiId, Division.Jonokuchi);
 		long sanshoShukun = awardRepository.countByRikishiEntityIdAndAwardType(rikishiId, AwardType.SANSHO_SHUKUN);
 		long sanshoKanto = awardRepository.countByRikishiEntityIdAndAwardType(rikishiId, AwardType.SANSHO_KANTO);
 		long sanshoGino = awardRepository.countByRikishiEntityIdAndAwardType(rikishiId, AwardType.SANSHO_GINO);
@@ -119,11 +121,20 @@ public class RikishiDetailService {
 				.totalBasho(bashoCount)
 				.yushoMakuuchi(yushoMakuuchi)
 				.yushoJuryo(yushoJuryo)
+				.yushoMakushita(yushoMakushita)
+				.yushoSandanme(yushoSandanme)
+				.yushoJonidan(yushoJonidan)
+				.yushoJonokuchi(yushoJonokuchi)
 				.sanshoShukun(sanshoShukun)
 				.sanshoKanto(sanshoKanto)
 				.sanshoGino(sanshoGino)
 				.kinboshiCount(kinboshiCount)
 				.build();
+	}
+
+	private long countYusho(Integer rikishiId, Division division) {
+		return awardRepository.countByRikishiEntityIdAndDivisionAndAwardType(
+				rikishiId, division, AwardType.YUSHO);
 	}
 	
 	/**

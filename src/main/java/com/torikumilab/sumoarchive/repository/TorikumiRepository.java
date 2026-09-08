@@ -59,6 +59,16 @@ public interface TorikumiRepository extends JpaRepository<TorikumiEntity, Intege
 """)
 	List<TorikumiEntity> findMatchHistory(@Param("rikishiId") Integer rikishiId, @Param("bashoId") Integer bashoId);
 
+	// 킨보시 파생용 - 특정 바쇼의 정규 대전 전부, 승자/패자 fetch.
+	@Query("""
+    SELECT t FROM TorikumiEntity t
+    LEFT JOIN FETCH t.winnerRikishiEntity
+    LEFT JOIN FETCH t.loserRikishiEntity
+    WHERE t.bashoEntity.id = :bashoId
+      AND t.isExtraMatch = false
+""")
+	List<TorikumiEntity> findRegularByBasho(@Param("bashoId") Integer bashoId);
+
 	// ===== 관리자 토리쿠미 관리 =====
 
 	// 바쇼 목록의 대전 수 (디비전 무관)

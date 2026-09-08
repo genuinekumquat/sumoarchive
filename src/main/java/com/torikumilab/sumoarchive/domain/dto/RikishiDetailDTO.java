@@ -59,6 +59,10 @@ public class RikishiDetailDTO {
 
 	private long yushoMakuuchi;
 	private long yushoJuryo;
+	private long yushoMakushita;
+	private long yushoSandanme;
+	private long yushoJonidan;
+	private long yushoJonokuchi;
 	private long sanshoShukun; // 殊勲賞
 	private long sanshoKanto;  // 敢闘賞
 	private long sanshoGino;   // 技能賞

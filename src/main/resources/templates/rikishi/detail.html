@@ -623,7 +623,11 @@
             <div class="award-grid">
                 <div class="award-item"><span class="label">마쿠우치 우승</span><span class="count" th:text="${rikishi.yushoMakuuchi} + '회'">1회</span></div>
                 <div class="award-item"><span class="label">주료 우승</span><span class="count" th:text="${rikishi.yushoJuryo} + '회'">1회</span></div>
-                <div class="award-item"><span class="label">슈쿤상</span><span class="count" th:text="${rikishi.sanshoShukun} + '회'">2회</span></div>
+                <div class="award-item" th:if="${rikishi.yushoMakushita > 0}"><span class="label">마쿠시타 우승</span><span class="count" th:text="${rikishi.yushoMakushita} + '회'">1회</span></div>
+                <div class="award-item" th:if="${rikishi.yushoSandanme > 0}"><span class="label">산단메 우승</span><span class="count" th:text="${rikishi.yushoSandanme} + '회'">1회</span></div>
+                <div class="award-item" th:if="${rikishi.yushoJonidan > 0}"><span class="label">조니단 우승</span><span class="count" th:text="${rikishi.yushoJonidan} + '회'">1회</span></div>
+                <div class="award-item" th:if="${rikishi.yushoJonokuchi > 0}"><span class="label">조노구치 우승</span><span class="count" th:text="${rikishi.yushoJonokuchi} + '회'">1회</span></div>
+                <div class="award-item"><span class="label">수훈상</span><span class="count" th:text="${rikishi.sanshoShukun} + '회'">2회</span></div>
                 <div class="award-item"><span class="label">감투상</span><span class="count" th:text="${rikishi.sanshoKanto} + '회'">3회</span></div>
                 <div class="award-item"><span class="label">기능상</span><span class="count" th:text="${rikishi.sanshoGino} + '회'">1회</span></div>
                 <div class="award-item"><span class="label">킨보시</span><span class="count" th:text="${rikishi.kinboshiCount} + '개'">1개</span></div>
