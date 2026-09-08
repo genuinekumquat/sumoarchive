@@ -111,7 +111,8 @@
             sumo-api.com에서 이 바쇼의 <strong th:text="${division}">Makuuchi</strong> 반즈케를 가져옵니다.
             리키시는 API id로 매칭하며, 우리 DB에 없는 리키시(과거 바쇼면 주로 은퇴자)는 건너뜁니다.
         </span>
-        <form th:action="@{'/admin/basho/' + ${board.bashoId} + '/banzuke/import'}" method="post">
+        <form th:action="@{'/admin/basho/' + ${board.bashoId} + '/banzuke/import'}" method="post"
+              onsubmit="return confirm('이 디비전 반즈케를 sumo-api에서 가져옵니다. 이미 있는 행은 계급·방위·번호가 API 값으로 덮어써집니다(수동 검수 값 포함). 계속할까요?');">
             <input type="hidden" name="division" th:value="${division}">
             <button type="submit">이 디비전 임포트</button>
         </form>

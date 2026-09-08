@@ -97,7 +97,8 @@
 
     <div class="import-bar">
         <span class="desc">sumo-api.com에서 바쇼 메타를 가져옵니다 (본장소 1·3·5·7·9·11월).</span>
-        <form th:action="@{/admin/basho/import}" method="post" style="display: flex; gap: 8px; align-items: center;">
+        <form th:action="@{/admin/basho/import}" method="post" style="display: flex; gap: 8px; align-items: center;"
+              onsubmit="return confirm('선택 연도 범위의 바쇼를 sumo-api에서 가져옵니다. 이미 있는 바쇼는 시작·종료일이 API 값으로 덮어써집니다. 계속할까요?');">
             <input type="number" name="fromYear" th:value="${thisYear - 1}" aria-label="시작 연도">
             <span>~</span>
             <input type="number" name="toYear" th:value="${thisYear}" aria-label="끝 연도">
