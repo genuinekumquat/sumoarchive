@@ -32,6 +32,14 @@ public class RikishiEntity {
 	@Column(name = "shikona_jp", length = 100)
 	private String shikonaJp;
 
+	// 시코나 뒷이름(給名). shikona_kr/shikona_jp는 링네임만 담고, 뒷이름은 여기 따로 둔다(슬라이스 6).
+	// given_name_jp는 로스터 임포트가 shikonaJp 전각공백 뒷토큰에서 자동 채움. given_name_kr은 관리자 수동.
+	@Column(name = "given_name_kr", length = 50)
+	private String givenNameKr;
+
+	@Column(name = "given_name_jp", length = 50)
+	private String givenNameJp;
+
 	// sumo-api의 로마자 시코나 (예: "Asanoyama"). 임포트 매칭·로마자 검색용. 한국어 시코나는 별도로 채운다.
 	@Column(name = "shikona_en", length = 100)
 	private String shikonaEn;
@@ -95,6 +103,8 @@ public class RikishiEntity {
 			String shikonaKr,
 			String shikonaJp,
 			String shikonaEn,
+			String givenNameKr,
+			String givenNameJp,
 			String name,
 			LocalDate birthdate,
 			String birthplace,
@@ -116,6 +126,8 @@ public class RikishiEntity {
 		this.shikonaKr = shikonaKr;
 		this.shikonaJp = shikonaJp;
 		this.shikonaEn = shikonaEn;
+		this.givenNameKr = givenNameKr;
+		this.givenNameJp = givenNameJp;
 		this.name = name;
 		this.birthdate = birthdate;
 		this.birthplace = birthplace;
@@ -142,6 +154,8 @@ public class RikishiEntity {
 	public void updateProfile(
 			String shikonaKr,
 			String shikonaJp,
+			String givenNameKr,
+			String givenNameJp,
 			String name,
 			LocalDate birthdate,
 			String birthplace,
@@ -161,6 +175,8 @@ public class RikishiEntity {
 		this.shikonaKr = shikonaKr;
 		this.shikonaKrAuto = false; // 관리자가 저장한 이상 검수된 값으로 본다
 		this.shikonaJp = shikonaJp;
+		this.givenNameKr = givenNameKr;
+		this.givenNameJp = givenNameJp;
 		this.name = name;
 		this.birthdate = birthdate;
 		this.birthplace = birthplace;

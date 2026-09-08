@@ -88,6 +88,20 @@
                 <div class="field"><label>시코나 (일본어)</label><input type="text" th:field="*{shikonaJp}"></div>
             </div>
             <div class="field-row">
+                <div class="field">
+                    <label>시코나 뒷이름 (한국어)
+                        <span style="color:var(--sumi-faint);font-size:11px;">예: 히로키</span>
+                    </label>
+                    <input type="text" th:field="*{givenNameKr}">
+                </div>
+                <div class="field">
+                    <label>시코나 뒷이름 (한자)
+                        <span style="color:var(--sumi-faint);font-size:11px;">임포트 자동</span>
+                    </label>
+                    <input type="text" th:field="*{givenNameJp}">
+                </div>
+            </div>
+            <div class="field-row">
                 <div class="field full"><label>본명</label><input type="text" th:field="*{name}"></div>
             </div>
             <div class="field-row">

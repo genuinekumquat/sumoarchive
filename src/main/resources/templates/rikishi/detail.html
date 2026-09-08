@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title th:text="${rikishi.shikonaKr} + ' | 스모아카이브'">스모아카이브 | 리키시</title>
+    <title th:text="${rikishi.shikonaFullKr} + ' | 스모아카이브'">스모아카이브 | 리키시</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Yuji+Syuku&family=Noto+Serif+KR:wght@400;600;900&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
@@ -517,7 +517,7 @@
             <span class="brand-kr">스모아카이브</span>
         </div>
         <div class="breadcrumb">
-            <a th:href="@{/}">반즈케</a> &gt; <span th:text="${rikishi.shikonaKr}">시코나</span>
+            <a th:href="@{/}">반즈케</a> &gt; <span th:text="${rikishi.shikonaFullKr}">시코나</span>
         </div>
     </header>
 
@@ -534,14 +534,14 @@
                       th:text="${rikishi.isActive} ? '現役' : (${rikishi.oyakataNameKr} != null ? '親方' : '引退')">現役</span>
 
                 <div class="shikona-row">
-                    <span class="shikona-main" th:text="${rikishi.shikonaKr}">시코나</span>
+                    <span class="shikona-main" th:text="${rikishi.shikonaFullKr}">시코나</span>
                     <span class="rank-display"
                           th:if="${rikishi.isActive and rikishi.rankDisplay != null}"
                           th:text="${rikishi.sideDisplay} + ' ' + ${rikishi.rankDisplay}">東 前頭10枚目</span>
                     <span class="rank-display" th:unless="${rikishi.isActive}"
                           th:text="${rikishi.oyakataNameKr} != null ? (${rikishi.oyakataNameKr} + ' 오야카타') : '은퇴'">은퇴</span>
                 </div>
-                <div class="shikona-kana" th:text="${rikishi.shikonaJp}">四股名</div>
+                <div class="shikona-kana" th:text="${rikishi.shikonaFullJp}">四股名</div>
 
                 <!-- 시코나 변경 이력 -->
                 <div class="shikona-history" th:if="${rikishi.shikonaHistory != null and !rikishi.shikonaHistory.isEmpty()}">

@@ -19,6 +19,8 @@ public class RikishiEditFormDTO {
 	private String shikonaKr;
 	private boolean shikonaKrAuto; // 현재 한국어 시코나가 자동 음차값인지(검수 필요) — 화면 힌트 전용
 	private String shikonaJp;
+	private String givenNameKr; // 시코나 뒷이름(한국어). 예: "히로키"
+	private String givenNameJp; // 시코나 뒷이름(한자). 로스터 임포트가 자동 채움. 예: "広暉"
 	private String name;
 
 	// <input type="date">는 반드시 ISO(yyyy-MM-dd) 형식만 인식한다.

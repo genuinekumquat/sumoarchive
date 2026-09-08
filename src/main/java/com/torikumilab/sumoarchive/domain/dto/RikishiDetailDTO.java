@@ -17,8 +17,10 @@ public class RikishiDetailDTO {
 
 	private Integer id;
 
-	private String shikonaKr;
-	private String shikonaJp;
+	private String shikonaKr; // 링네임만
+	private String shikonaJp; // 링네임만
+	private String shikonaFullKr; // 링네임 + 뒷이름(있으면). 예: "아사노야마 히로키"
+	private String shikonaFullJp; // 링네임 + 뒷이름(있으면). 예: "朝乃山 広暉"
 	private String name; // 본명
 
 	private LocalDate birthdate;

@@ -85,12 +85,16 @@ public class RikishiDetailService {
 				? Period.between(r.getBirthdate(), LocalDate.now()).getYears()
 				: null;
 		
+		// sumo-api 임포트 직후엔 한국어 시코나가 아직 없어서 일본어/로마자로 대체 (관리자가 채우기 전까지)
+		String shikonaKr = r.getShikonaKr() != null ? r.getShikonaKr()
+				: (r.getShikonaJp() != null ? r.getShikonaJp() : r.getShikonaEn());
+
 		return RikishiDetailDTO.builder()
 				.id(r.getId())
-				// sumo-api 임포트 직후엔 한국어 시코나가 아직 없어서 일본어/로마자로 대체 (관리자가 채우기 전까지)
-				.shikonaKr(r.getShikonaKr() != null ? r.getShikonaKr()
-						: (r.getShikonaJp() != null ? r.getShikonaJp() : r.getShikonaEn()))
+				.shikonaKr(shikonaKr)
 				.shikonaJp(r.getShikonaJp())
+				.shikonaFullKr(withGivenName(shikonaKr, r.getGivenNameKr()))
+				.shikonaFullJp(withGivenName(r.getShikonaJp(), r.getGivenNameJp()))
 				.name(r.getName())
 				.birthdate(r.getBirthdate())
 				.age(age)
@@ -280,6 +284,14 @@ public class RikishiDetailService {
 		}
 		int idx = value.indexOf(' ');
 		return idx > 0 ? value.substring(0, idx) : value;
+	}
+
+	/** 링네임 + 뒷이름(있으면 공백으로). 뒷이름이 없으면 링네임 그대로. */
+	private static String withGivenName(String ringName, String givenName) {
+		if (ringName == null) {
+			return null;
+		}
+		return (givenName == null || givenName.isBlank()) ? ringName : ringName + " " + givenName.strip();
 	}
 
 	// 호시토리표 상대 이름. sumo-api 임포트 직후엔 한국어 시코나가 비어 있어 한자 → 로마자로 폴백.

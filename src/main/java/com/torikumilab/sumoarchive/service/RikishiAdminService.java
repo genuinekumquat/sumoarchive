@@ -54,6 +54,8 @@ public class RikishiAdminService {
 		form.setShikonaKr(r.getShikonaKr());
 		form.setShikonaKrAuto(r.isShikonaKrAuto());
 		form.setShikonaJp(r.getShikonaJp());
+		form.setGivenNameKr(r.getGivenNameKr());
+		form.setGivenNameJp(r.getGivenNameJp());
 		form.setName(r.getName());
 		form.setBirthdate(r.getBirthdate());
 		form.setBirthplace(r.getBirthplace());
@@ -85,6 +87,8 @@ public class RikishiAdminService {
 		r.updateProfile(
 				blankToNull(form.getShikonaKr()),
 				blankToNull(form.getShikonaJp()),
+				blankToNull(form.getGivenNameKr()),
+				blankToNull(form.getGivenNameJp()),
 				blankToNull(form.getName()),
 				form.getBirthdate(),
 				blankToNull(form.getBirthplace()),

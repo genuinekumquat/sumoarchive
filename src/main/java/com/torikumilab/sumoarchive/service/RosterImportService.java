@@ -128,6 +128,7 @@ public class RosterImportService {
 		return RikishiEntity.builder()
 				.externalApiId((int) api.id())
 				.shikonaJp(firstToken(api.shikonaJp()))
+				.givenNameJp(secondToken(api.shikonaJp())) // "朝乃山　広暉" → 뒷토큰 "広暉" (없으면 null)
 				.shikonaEn(api.shikonaEn())
 				.shikonaKr(null) // 한국어 시코나는 별도 작업(관리자 입력/음차)
 				.birthdate(parseIsoDate(api.birthDate(), api, "birthDate", warnings))
@@ -151,6 +152,15 @@ public class RosterImportService {
 		}
 		String stripped = s.strip();
 		return stripped.isEmpty() ? null : stripped.split("[\\s\\u3000]+", 2)[0];
+	}
+
+	/** "朝乃山　広暉" → 뒷토큰 "広暉" (뒷이름). 토큰이 하나뿐이면 null. */
+	private static String secondToken(String s) {
+		if (s == null) {
+			return null;
+		}
+		String[] parts = s.strip().split("[\\s\\u3000]+", 2);
+		return parts.length < 2 || parts[1].isBlank() ? null : parts[1].strip();
 	}
 
 	private static BigDecimal toBigDecimal(Integer v) {
