@@ -1,7 +1,9 @@
 package com.torikumilab.sumoarchive.client;
 
+import com.torikumilab.sumoarchive.domain.dto.sumoapi.SumoApiBanzukeDTO;
 import com.torikumilab.sumoarchive.domain.dto.sumoapi.SumoApiBashoDTO;
 import com.torikumilab.sumoarchive.domain.dto.sumoapi.SumoApiRikishiPageDTO;
+import com.torikumilab.sumoarchive.domain.entity.constant.Division;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
@@ -52,5 +54,16 @@ public class SumoApiClient {
 				.uri("/api/basho/{id}", yyyymm)
 				.retrieve()
 				.body(SumoApiBashoDTO.class);
+	}
+
+	/**
+	 * 특정 바쇼({@code YYYYMM})의 디비전 반즈케 조회. {@code east[]}/{@code west[]}로 나뉘어 온다.
+	 * 디비전 이름은 우리 {@link Division} enum과 철자가 완전히 일치한다.
+	 */
+	public SumoApiBanzukeDTO getBanzuke(String yyyymm, Division division) {
+		return rc.get()
+				.uri("/api/basho/{id}/banzuke/{division}", yyyymm, division.name())
+				.retrieve()
+				.body(SumoApiBanzukeDTO.class);
 	}
 }

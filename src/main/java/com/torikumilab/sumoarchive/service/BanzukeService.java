@@ -46,6 +46,8 @@ public class BanzukeService {
 				.map(b -> new BanzukeDTO(
 						b.getRikishiEntity().getId(),
 						b.getRikishiEntity().getShikonaKr(),
+						b.getRikishiEntity().getShikonaJp(),
+						b.getRikishiEntity().getShikonaEn(),
 						b.getRankName().name(),
 						b.getSide().name(),
 						b.getRankValue(),

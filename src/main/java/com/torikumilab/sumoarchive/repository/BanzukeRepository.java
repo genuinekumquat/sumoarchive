@@ -8,6 +8,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface BanzukeRepository extends JpaRepository<BanzukeEntity, Integer> {
@@ -52,6 +53,9 @@ public interface BanzukeRepository extends JpaRepository<BanzukeEntity, Integer>
 
 	// 관리자 반즈케 관리: 한 리키시가 그 바쇼에 이미 등록됐는지 (uq_rikishi_basho 제약과 동일 키)
 	boolean existsByBashoEntityIdAndRikishiEntityId(Integer bashoId, Integer rikishiId);
+
+	// sumo-api 반즈케 임포트 upsert용 (uq_rikishi_basho 제약과 동일 키 — 리키시는 바쇼당 1행)
+	Optional<BanzukeEntity> findByBashoEntityIdAndRikishiEntityId(Integer bashoId, Integer rikishiId);
 
 	// 관리자 바쇼 목록의 반즈케 등록 수
 	long countByBashoEntityId(Integer bashoId);

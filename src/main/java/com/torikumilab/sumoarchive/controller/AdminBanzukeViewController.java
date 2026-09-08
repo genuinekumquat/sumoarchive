@@ -8,6 +8,7 @@ import com.torikumilab.sumoarchive.domain.entity.constant.Division;
 import com.torikumilab.sumoarchive.domain.entity.constant.RankName;
 import com.torikumilab.sumoarchive.domain.entity.constant.Side;
 import com.torikumilab.sumoarchive.service.BanzukeAdminService;
+import com.torikumilab.sumoarchive.service.BanzukeImportService;
 import com.torikumilab.sumoarchive.service.BashoImportService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.propertyeditors.CustomNumberEditor;
@@ -30,6 +31,7 @@ public class AdminBanzukeViewController {
 
 	private final BanzukeAdminService banzukeAdminService;
 	private final BashoImportService bashoImportService;
+	private final BanzukeImportService banzukeImportService;
 
 	// 빈 <input type="number">("")를 null로 (요코즈나 등 번호 없는 계급). AdminRikishiViewController와 동일 기법.
 	@InitBinder
@@ -131,6 +133,20 @@ public class AdminBanzukeViewController {
 		model.addAttribute("sideOptions", Side.values());
 		model.addAttribute("division", division);
 		return "admin/basho/banzuke";
+	}
+
+	/** sumo-api에서 이 바쇼·디비전의 반즈케를 가져온다 (externalApiId로 리키시 매칭, 미매칭은 스킵). */
+	@PostMapping("/admin/basho/{bashoId}/banzuke/import")
+	public String importBanzuke(@PathVariable Integer bashoId,
+								@RequestParam(defaultValue = "Makuuchi") Division division,
+								RedirectAttributes redirectAttributes) {
+		try {
+			redirectAttributes.addFlashAttribute("importResult",
+					banzukeImportService.importDivision(bashoId, division));
+		} catch (Exception e) {
+			redirectAttributes.addFlashAttribute("error", "sumo-api 반즈케 임포트 실패: " + e.getMessage());
+		}
+		return redirectToBoard(bashoId, division);
 	}
 
 	@PostMapping("/admin/basho/{bashoId}/banzuke")

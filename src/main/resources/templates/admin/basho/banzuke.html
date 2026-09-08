@@ -67,6 +67,19 @@
         .add-grid .cell select, .add-grid .cell input { width: 100%; }
         .add-grid .cell.rikishi { flex: 2; min-width: 200px; }
         .add-grid .cell { flex: 1; min-width: 110px; }
+
+        .import-bar {
+            display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+            border: 1px solid var(--washi-line); padding: 12px 14px; margin-bottom: 18px; background: #fff;
+            font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px;
+        }
+        .import-bar .desc { color: var(--sumi-faint); flex: 1; min-width: 200px; }
+        .import-bar button {
+            border: 1px solid var(--sumi); background: var(--sumi); color: var(--washi);
+            font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; padding: 7px 14px; cursor: pointer; white-space: nowrap;
+        }
+        .import-bar button:hover { background: var(--shu); border-color: var(--shu); }
+        .skip-list { margin: 6px 0 0; padding-left: 18px; font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 11px; color: var(--sumi-soft); }
     </style>
 </head>
 <body>
@@ -85,6 +98,24 @@
 
     <p class="saved-msg" th:if="${saved}">저장했습니다.</p>
     <p class="error-msg" th:if="${error}" th:text="${error}">오류</p>
+
+    <div class="saved-msg" th:if="${importResult}">
+        <span th:text="'sumo-api 반즈케 임포트 · ' + ${importResult.division} + ' — 신규 ' + ${importResult.created} + ' · 갱신 ' + ${importResult.updated} + ' · 미매칭 ' + ${importResult.unmatched.size()}">완료</span>
+        <ul class="skip-list" th:if="${!importResult.unmatched.isEmpty()}">
+            <li th:each="u : ${importResult.unmatched}" th:text="${u}">미매칭 리키시</li>
+        </ul>
+    </div>
+
+    <div class="import-bar">
+        <span class="desc">
+            sumo-api.com에서 이 바쇼의 <strong th:text="${division}">Makuuchi</strong> 반즈케를 가져옵니다.
+            리키시는 API id로 매칭하며, 우리 DB에 없는 리키시(과거 바쇼면 주로 은퇴자)는 건너뜁니다.
+        </span>
+        <form th:action="@{'/admin/basho/' + ${board.bashoId} + '/banzuke/import'}" method="post">
+            <input type="hidden" name="division" th:value="${division}">
+            <button type="submit">이 디비전 임포트</button>
+        </form>
+    </div>
 
     <div class="divisions">
         <a th:each="d : ${divisionOptions}"
