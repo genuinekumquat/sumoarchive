@@ -105,7 +105,7 @@ public class RikishiDetailService {
 				.weight(r.getWeight())
 				.fightingStyle(r.getFightingStyle())
 				.debutDate(r.getDebutDate())
-				.highestRank(r.getHighestRank())
+				.highestRank(RankDisplayUtil.toKorean(r.getHighestRank()))
 				.isActive(r.isActive())
 				.retiredDate(r.getRetiredDate())
 				.oyakataNameKr(r.getOyakataNameKr())

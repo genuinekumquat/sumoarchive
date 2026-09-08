@@ -132,7 +132,7 @@
                     <label>최고 계급</label>
                     <select th:field="*{highestRank}">
                         <option value="">(미지정)</option>
-                        <option th:each="rn : ${rankOptions}" th:value="${rn}" th:text="${rn}">Ozeki</option>
+                        <option th:each="rn : ${rankOptions}" th:value="${rn.key}" th:text="${rn.value}">오제키</option>
                     </select>
                 </div>
             </div>

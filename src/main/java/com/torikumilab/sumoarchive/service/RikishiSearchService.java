@@ -3,6 +3,7 @@ package com.torikumilab.sumoarchive.service;
 import com.torikumilab.sumoarchive.domain.dto.search.RikishiSearchResultDTO;
 import com.torikumilab.sumoarchive.domain.dto.search.RikishiSearchRow;
 import com.torikumilab.sumoarchive.repository.RikishiRepository;
+import com.torikumilab.sumoarchive.util.RankDisplayUtil;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -38,7 +39,7 @@ public class RikishiSearchService {
 				row.shikonaKr(),
 				row.shikonaJp(),
 				row.heyaName(),
-				row.highestRank(),
+				RankDisplayUtil.toKorean(row.highestRank()),
 				formatPeriod(row.debutYear(), row.retirementYear()),
 				determineStatus(row),
 				row.oyakataNameKr()

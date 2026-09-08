@@ -146,8 +146,8 @@
                                 th:selected="${d == division}">Makuuchi</option>
                     </select>
                     <select name="rankName">
-                        <option th:each="rn : ${rankOptions}" th:value="${rn}" th:text="${rn}"
-                                th:selected="${rn == row.rankName}">Maegashira</option>
+                        <option th:each="rn : ${rankOptions}" th:value="${rn.key}" th:text="${rn.value}"
+                                th:selected="${rn.key == row.rankName?.name()}">마에가시라</option>
                     </select>
                     <select name="side">
                         <option th:each="s : ${sideOptions}" th:value="${s}" th:text="${s}"
@@ -190,7 +190,7 @@
             <div class="cell">
                 <label>계급</label>
                 <select name="rankName">
-                    <option th:each="rn : ${rankOptions}" th:value="${rn}" th:text="${rn}">Maegashira</option>
+                    <option th:each="rn : ${rankOptions}" th:value="${rn.key}" th:text="${rn.value}">마에가시라</option>
                 </select>
             </div>
             <div class="cell">

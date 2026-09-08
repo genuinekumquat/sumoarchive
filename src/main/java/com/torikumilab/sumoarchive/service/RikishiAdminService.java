@@ -8,6 +8,7 @@ import com.torikumilab.sumoarchive.domain.entity.HeyaEntity;
 import com.torikumilab.sumoarchive.domain.entity.RikishiEntity;
 import com.torikumilab.sumoarchive.repository.HeyaRepository;
 import com.torikumilab.sumoarchive.repository.RikishiRepository;
+import com.torikumilab.sumoarchive.util.RankDisplayUtil;
 import com.torikumilab.sumoarchive.util.ShikonaKrTransliterator;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -158,7 +159,7 @@ public class RikishiAdminService {
 				r.getShikonaJp(),
 				r.isShikonaKrAuto(),
 				r.getHeyaEntity() != null ? r.getHeyaEntity().getNameKr() : null,
-				r.getHighestRank(),
+				RankDisplayUtil.toKorean(r.getHighestRank()),
 				statusLabel(r)
 		);
 	}

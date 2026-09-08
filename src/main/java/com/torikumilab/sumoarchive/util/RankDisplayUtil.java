@@ -4,6 +4,7 @@ import com.torikumilab.sumoarchive.domain.entity.constant.RankName;
 import com.torikumilab.sumoarchive.domain.entity.constant.Side;
 
 import java.util.EnumMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -58,5 +59,45 @@ public final class RankDisplayUtil {
 			return null;
 		}
 		return side == Side.EAST ? "東" : "西";
+	}
+
+	// ===== 자유 문자열 계급값(highest_rank 등) → 한국어 음차 =====
+
+	/** index.html의 RANK_LABEL과 같은 한국어 음차. 계급 이름(영문 enum 철자) → 표기. */
+	private static final Map<String, String> KR_LABEL = new LinkedHashMap<>();
+
+	static {
+		KR_LABEL.put("Yokozuna", "요코즈나");
+		KR_LABEL.put("Ozeki", "오제키");
+		KR_LABEL.put("Sekiwake", "세키와케");
+		KR_LABEL.put("Komusubi", "코무스비");
+		KR_LABEL.put("Maegashira", "마에가시라");
+		KR_LABEL.put("Juryo", "주료");
+		KR_LABEL.put("Makushita", "마쿠시타");
+		KR_LABEL.put("Sandanme", "산단메");
+		KR_LABEL.put("Jonidan", "조니단");
+		KR_LABEL.put("Jonokuchi", "조노구치");
+	}
+
+	/**
+	 * 자유 문자열로 저장된 계급값(예: {@code "Ozeki"}, {@code "Maegashira 1"})을 한국어 음차 표기로.
+	 * 첫 토큰만 매핑하고 뒤에 숫자 등이 붙어 있으면 그대로 이어 붙인다. 매핑에 없으면
+	 * (이미 한글이거나 "오야카타" 등) 원문을 그대로 돌려준다. null/공백도 그대로.
+	 */
+	public static String toKorean(String stored) {
+		if (stored == null || stored.isBlank()) {
+			return stored;
+		}
+		String[] parts = stored.strip().split("\\s+", 2);
+		String kr = KR_LABEL.get(parts[0]);
+		if (kr == null) {
+			return stored;
+		}
+		return parts.length > 1 ? kr + " " + parts[1] : kr;
+	}
+
+	/** 관리자 계급 select용: enum 이름(저장값) → 한국어 라벨. 순서 보존. */
+	public static Map<String, String> koreanLabelOptions() {
+		return new LinkedHashMap<>(KR_LABEL);
 	}
 }

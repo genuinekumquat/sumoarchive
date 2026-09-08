@@ -2,9 +2,9 @@ package com.torikumilab.sumoarchive.controller;
 
 import com.torikumilab.sumoarchive.domain.dto.RikishiAdminRowDTO;
 import com.torikumilab.sumoarchive.domain.dto.RikishiEditFormDTO;
-import com.torikumilab.sumoarchive.domain.entity.constant.RankName;
 import com.torikumilab.sumoarchive.service.RikishiAdminService;
 import com.torikumilab.sumoarchive.service.RosterImportService;
+import com.torikumilab.sumoarchive.util.RankDisplayUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.propertyeditors.CustomNumberEditor;
 import org.springframework.data.domain.Page;
@@ -63,7 +63,7 @@ public class AdminRikishiViewController {
 	public String editForm(@PathVariable Integer id, Model model) {
 		model.addAttribute("form", rikishiAdminService.getEditForm(id));
 		model.addAttribute("heyaOptions", rikishiAdminService.getHeyaOptions());
-		model.addAttribute("rankOptions", RankName.values());
+		model.addAttribute("rankOptions", RankDisplayUtil.koreanLabelOptions());
 		return "admin/rikishi/edit";
 	}
 

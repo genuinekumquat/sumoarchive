@@ -3,6 +3,7 @@ package com.torikumilab.sumoarchive.service;
 import com.torikumilab.sumoarchive.domain.dto.RikishiBookmarkCardDTO;
 import com.torikumilab.sumoarchive.domain.entity.RikishiEntity;
 import com.torikumilab.sumoarchive.repository.RikishiRepository;
+import com.torikumilab.sumoarchive.util.RankDisplayUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,7 +44,7 @@ public class RikishiBookmarkService {
 				r.getShikonaKr(),
 				r.getShikonaJp(),
 				r.getHeyaEntity() != null ? r.getHeyaEntity().getNameKr() : null,
-				r.getHighestRank(),
+				RankDisplayUtil.toKorean(r.getHighestRank()),
 				formatPeriod(r.getDebutDate(), r.getRetiredDate()),
 				statusLabel(r),
 				r.getPhotoUrl()
