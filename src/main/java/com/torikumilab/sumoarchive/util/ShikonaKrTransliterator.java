@@ -10,8 +10,8 @@ import java.util.Map;
  *
  * <p>규칙(헵번식 로마자 기준):</p>
  * <ul>
- *   <li>모라 단위 최장 일치. か·た행은 <b>어두에서만</b> 평음(가/다…), 어중에선 격음(카/타…).
- *       ぱ행·ち·つ는 위치와 무관하게 파/치/츠.</li>
+ *   <li>모라 단위 최장 일치. か·た행은 위치와 무관하게 격음(카키쿠케코 / 타테토) —
+ *       국립국어원 표기법의 어두 평음보다 한국 스모 팬들의 실사용 표기("타카야스", "키리시마")를 따른다.</li>
  *   <li>っ(촉음, 자음 중첩)은 앞 음절에 받침 'ㅅ', ん(n)은 받침 'ㄴ'으로 붙인다.</li>
  *   <li>매핑에 없는 조각은 건너뛴다. 결과가 비면 {@code null}(→ 호출부에서 실패 처리).</li>
  * </ul>
@@ -27,10 +27,8 @@ public final class ShikonaKrTransliterator {
 	private static final int JONG_N = 4;   // ㄴ
 	private static final int JONG_S = 19;  // ㅅ
 
-	/** 위치 무관 모라 → 한글. 키는 소문자, 최장 3글자. */
+	/** 모라 → 한글. 키는 소문자, 최장 3글자. */
 	private static final Map<String, String> MORA = new LinkedHashMap<>();
-	/** 어두에서만 쓰는 평음 변형 (か·た행). */
-	private static final Map<String, String> MORA_INITIAL = new LinkedHashMap<>();
 
 	static {
 		// 요음(3글자) 먼저 — 최장 일치라 순서 자체는 상관없지만 가독성 위해 묶음
@@ -65,12 +63,6 @@ public final class ShikonaKrTransliterator {
 		put("wa", "와"); put("wo", "오"); put("wi", "위"); put("we", "웨");
 		put("fa", "파"); put("fi", "피"); put("fe", "페"); put("fo", "포");
 		put("va", "바"); put("vi", "비"); put("vu", "부"); put("ve", "베"); put("vo", "보");
-
-		// 어두 평음 (か·た행). ち·つ·ぱ행은 제외 — 한국 스모 표기 관례가 치/츠/파.
-		MORA_INITIAL.put("ka", "가"); MORA_INITIAL.put("ki", "기"); MORA_INITIAL.put("ku", "구");
-		MORA_INITIAL.put("ke", "게"); MORA_INITIAL.put("ko", "고");
-		MORA_INITIAL.put("kya", "갸"); MORA_INITIAL.put("kyu", "규"); MORA_INITIAL.put("kyo", "교");
-		MORA_INITIAL.put("ta", "다"); MORA_INITIAL.put("te", "데"); MORA_INITIAL.put("to", "도");
 	}
 
 	private static void put(String romaji, String hangul) {
@@ -88,7 +80,6 @@ public final class ShikonaKrTransliterator {
 
 		StringBuilder out = new StringBuilder();
 		int i = 0;
-		boolean atWordStart = true;
 		while (i < s.length()) {
 			// 촉음(っ): 자음 중첩(k/s/t/p) 또는 "tc"(っち/っちゃ)
 			char c = s.charAt(i);
@@ -105,16 +96,14 @@ public final class ShikonaKrTransliterator {
 
 			String key = matchMora(s, i);
 			if (key != null) {
-				out.append(hangulFor(key, atWordStart));
+				out.append(MORA.get(key));
 				i += key.length();
-				atWordStart = false;
 				continue;
 			}
 
 			if (c == 'n') {
 				appendJong(out, JONG_N);
 				i++;
-				atWordStart = false;
 				continue;
 			}
 
@@ -134,13 +123,6 @@ public final class ShikonaKrTransliterator {
 			}
 		}
 		return null;
-	}
-
-	private static String hangulFor(String key, boolean atWordStart) {
-		if (atWordStart && MORA_INITIAL.containsKey(key)) {
-			return MORA_INITIAL.get(key);
-		}
-		return MORA.get(key);
 	}
 
 	/** out 마지막 음절에 종성을 합성한다. 합성 불가하면 아무것도 안 한다. */

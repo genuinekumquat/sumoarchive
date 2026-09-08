@@ -103,19 +103,20 @@ public class RikishiAdminService {
 		);
 	}
 
-	/** 아직 한국어 시코나가 없는 리키시 수 (목록 화면 자동 채우기 바에 표시). */
+	/** 한국어 시코나가 없거나 자동 음차값인(검수 전) 리키시 수 (목록 화면 자동 채우기 바에 표시). */
 	@Transactional(readOnly = true)
 	public long countMissingKoreanShikona() {
-		return rikishiRepository.countByShikonaKrIsNull();
+		return rikishiRepository.countKoreanShikonaAutofillTargets();
 	}
 
 	/**
-	 * 한국어 시코나가 없는 리키시 전부에 대해 로마자({@code shikonaEn}) 음차로 1차값을 채운다.
-	 * 채운 값은 "자동" 표시가 켜진 채라 관리자가 목록에서 뱃지를 보고 다듬을 수 있다(하이브리드).
+	 * 한국어 시코나가 없거나 자동 음차값인 리키시에 대해 로마자({@code shikonaEn}) 음차로 1차값을
+	 * (재)생성한다. 관리자가 저장해 검수된(shikonaKrAuto=false) 행은 건드리지 않는다.
+	 * 채운 값은 "자동" 표시가 켜진 채라 목록에서 뱃지를 보고 다듬을 수 있다(하이브리드).
 	 */
 	@Transactional
 	public ShikonaAutofillResultDTO autofillKoreanShikona() {
-		List<RikishiEntity> targets = rikishiRepository.findByShikonaKrIsNull();
+		List<RikishiEntity> targets = rikishiRepository.findKoreanShikonaAutofillTargets();
 		int filled = 0;
 		List<String> samples = new ArrayList<>();
 		List<String> failed = new ArrayList<>();

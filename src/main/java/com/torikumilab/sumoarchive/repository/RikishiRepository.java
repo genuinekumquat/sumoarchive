@@ -4,6 +4,7 @@ import com.torikumilab.sumoarchive.domain.entity.RikishiEntity;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -21,8 +22,12 @@ public interface RikishiRepository extends JpaRepository<RikishiEntity, Integer>
 	// sumo-api 매칭/재임포트용
 	Optional<RikishiEntity> findByExternalApiId(Integer externalApiId);
 
-	// 슬라이스 5 한국어 시코나 자동 채우기 대상 (아직 한국어 시코나가 없는 리키시)
-	List<RikishiEntity> findByShikonaKrIsNull();
+	// 슬라이스 5 한국어 시코나 자동 채우기/재생성 대상:
+	// 아직 한국어 시코나가 없거나(미입력) 자동 음차값인(관리자 검수 전) 리키시.
+	// 관리자가 저장해 shikonaKrAuto=false가 된 행은 제외한다.
+	@Query("SELECT r FROM RikishiEntity r WHERE r.shikonaKr IS NULL OR r.shikonaKrAuto = true")
+	List<RikishiEntity> findKoreanShikonaAutofillTargets();
 
-	long countByShikonaKrIsNull();
+	@Query("SELECT COUNT(r) FROM RikishiEntity r WHERE r.shikonaKr IS NULL OR r.shikonaKrAuto = true")
+	long countKoreanShikonaAutofillTargets();
 }

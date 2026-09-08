@@ -122,12 +122,12 @@
 
     <div class="import-bar" th:if="${missingKrCount > 0}">
         <span class="desc">
-            한국어 시코나가 없는 리키시 <strong th:text="${missingKrCount}">0</strong>명 —
-            로마자 음차로 1차값을 채웁니다. 채운 값엔 "(자동)" 표시가 붙고, 목록에서 다듬을 수 있습니다.
+            한국어 시코나가 없거나 자동 음차값인(검수 전) 리키시 <strong th:text="${missingKrCount}">0</strong>명 —
+            로마자 음차로 (재)생성합니다. 채운 값엔 "(자동)" 표시가 붙고, 관리자가 저장해 다듬은 값은 건드리지 않습니다.
         </span>
         <form th:action="@{/admin/rikishi/shikona/autofill}" method="post"
-              onsubmit="return confirm('한국어 시코나가 없는 리키시에 로마자 음차 자동값을 채웁니다. 계속할까요?');">
-            <button type="submit">한국어 시코나 자동 채우기</button>
+              onsubmit="return confirm('한국어 시코나가 없거나 자동값인 리키시에 로마자 음차값을 (재)생성합니다. 검수된 값은 유지됩니다. 계속할까요?');">
+            <button type="submit">한국어 시코나 (재)생성</button>
         </form>
     </div>
 

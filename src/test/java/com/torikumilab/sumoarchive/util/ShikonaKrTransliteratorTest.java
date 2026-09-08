@@ -7,25 +7,25 @@ import static org.assertj.core.api.Assertions.assertThat;
 class ShikonaKrTransliteratorTest {
 
 	@Test
-	void 어두_평음_어중_격음() {
-		// か·た행: 어두는 가/다, 어중은 카/타
-		assertThat(ShikonaKrTransliterator.fromRomaji("Kotozakura")).isEqualTo("고토자쿠라");
-		assertThat(ShikonaKrTransliterator.fromRomaji("Terunofuji")).isEqualTo("데루노후지");
-		assertThat(ShikonaKrTransliterator.fromRomaji("Takayasu")).isEqualTo("다카야스");
-		assertThat(ShikonaKrTransliterator.fromRomaji("Kirishima")).isEqualTo("기리시마");
+	void か_た행은_위치_무관_격음() {
+		// 한국 스모 팬 실사용 표기: 어두에서도 카/타 (국어원 어두 평음 미적용)
+		assertThat(ShikonaKrTransliterator.fromRomaji("Kotozakura")).isEqualTo("코토자쿠라");
+		assertThat(ShikonaKrTransliterator.fromRomaji("Terunofuji")).isEqualTo("테루노후지");
+		assertThat(ShikonaKrTransliterator.fromRomaji("Takayasu")).isEqualTo("타카야스");
+		assertThat(ShikonaKrTransliterator.fromRomaji("Kirishima")).isEqualTo("키리시마");
 	}
 
 	@Test
 	void 요음과_장음() {
 		assertThat(ShikonaKrTransliterator.fromRomaji("Hoshoryu")).isEqualTo("호쇼류");
-		assertThat(ShikonaKrTransliterator.fromRomaji("Takanosho")).isEqualTo("다카노쇼");
+		assertThat(ShikonaKrTransliterator.fromRomaji("Takanosho")).isEqualTo("타카노쇼");
 		assertThat(ShikonaKrTransliterator.fromRomaji("Onosato")).isEqualTo("오노사토");
 	}
 
 	@Test
 	void ん은_받침_ㄴ() {
 		assertThat(ShikonaKrTransliterator.fromRomaji("Endo")).isEqualTo("엔도");
-		assertThat(ShikonaKrTransliterator.fromRomaji("Kinbozan")).isEqualTo("긴보잔");
+		assertThat(ShikonaKrTransliterator.fromRomaji("Kinbozan")).isEqualTo("킨보잔");
 		assertThat(ShikonaKrTransliterator.fromRomaji("Shonannoumi")).isEqualTo("쇼난노우미");
 	}
 
