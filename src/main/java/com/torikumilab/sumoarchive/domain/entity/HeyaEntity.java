@@ -22,6 +22,11 @@ public class HeyaEntity {
 	@Column(name = "name_kr", nullable = false, length = 100)
 	private String nameKr;
 
+	// 한국어 헤야명이 로마자 음차 자동값(검수 전)인지. null/true = 자동, false = 관리자가 저장해 검수됨.
+	// RikishiEntity.shikonaKrAuto와 같은 하이브리드 규칙(자동 채우기 + 관리자 검수).
+	@Column(name = "name_kr_auto")
+	private Boolean nameKrAuto;
+
 	@Column(name = "name_jp", nullable = false, length = 100)
 	private String nameJp;
 
@@ -61,5 +66,23 @@ public class HeyaEntity {
 	
 	public void updateMasterRikishi(RikishiEntity masterRikishiEntity) {
 		this.masterRikishiEntity = masterRikishiEntity;
+	}
+
+	/** {@code isNameKrAuto()} — null(임포트 직후, 미검수)도 자동으로 본다. */
+	public boolean isNameKrAuto() {
+		return !Boolean.FALSE.equals(nameKrAuto);
+	}
+
+	/** 자동 채우기: 로마자 음차로 만든 한국어 헤야명을 넣고 "자동" 표시를 켠다. */
+	public void applyAutoNameKr(String nameKr) {
+		this.nameKr = nameKr;
+		this.nameKrAuto = true;
+	}
+
+	/** 관리자 검수: 한/일명을 저장하고 "자동" 표시를 끈다. */
+	public void updateNames(String nameKr, String nameJp) {
+		this.nameKr = nameKr;
+		this.nameJp = nameJp;
+		this.nameKrAuto = false;
 	}
 }

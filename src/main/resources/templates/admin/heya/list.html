@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>헤야 관리 | 스모아카이브 관리자</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;900&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --sumi: #1a1a18; --sumi-soft: #56554e; --sumi-faint: #86857f;
+            --washi: #f7f6f3; --washi-line: rgba(26, 26, 24, 0.14);
+            --shu: #a3272c; --shu-faint: rgba(163, 39, 44, 0.10);
+        }
+        * { box-sizing: border-box; }
+        body { margin: 0; min-height: 100vh; background-color: var(--washi); color: var(--sumi); font-family: 'Noto Serif KR', serif; }
+        .page { max-width: 900px; margin: 0 auto; padding: 32px 24px 60px; }
+        a { color: inherit; }
+
+        header { border-bottom: 3px double var(--sumi); padding-bottom: 14px; margin-bottom: 20px; }
+        .header-top { display: flex; align-items: baseline; justify-content: space-between; }
+        h1 { font-size: 20px; margin: 0; letter-spacing: 1px; }
+        .admin-nav { font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; margin-top: 10px; }
+        .admin-nav a { color: var(--sumi-soft); text-decoration: none; margin-right: 14px; }
+        .admin-nav a:hover, .admin-nav a.current { color: var(--shu); }
+        .logout-form button {
+            border: 1px solid var(--washi-line); background: transparent; color: var(--sumi-soft);
+            font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; padding: 6px 14px; cursor: pointer;
+        }
+        .logout-form button:hover { border-color: var(--sumi); color: var(--sumi); }
+
+        table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+        thead th {
+            text-align: left; font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 11px;
+            letter-spacing: 1px; color: var(--sumi-faint); border-bottom: 1px solid var(--sumi); padding: 8px;
+        }
+        tbody td { padding: 9px 8px; border-bottom: 1px solid var(--washi-line); vertical-align: middle; }
+        tbody tr:hover { background: rgba(163, 39, 44, 0.04); }
+        .romaji { font-family: 'Zen Kaku Gothic New', sans-serif; color: var(--sumi-faint); font-size: 12px; }
+        .badge-auto { color: var(--shu); font-size: 11px; font-family: 'Zen Kaku Gothic New', sans-serif; }
+        .row-form { display: flex; gap: 6px; align-items: center; }
+        .row-form input {
+            border: 1px solid var(--washi-line); padding: 6px 9px; background: #fff; color: var(--sumi);
+            font-family: 'Noto Serif KR', serif; font-size: 13px; width: 130px;
+        }
+        .row-form button {
+            border: 1px solid var(--sumi); background: var(--sumi); color: var(--washi);
+            font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; padding: 6px 12px; cursor: pointer;
+        }
+        .row-form button:hover { background: var(--shu); border-color: var(--shu); }
+        .empty-note { padding: 30px 0; text-align: center; color: var(--sumi-faint); }
+
+        .import-bar {
+            display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+            border: 1px solid var(--washi-line); padding: 12px 14px; margin-bottom: 16px; background: #fff;
+        }
+        .import-bar .desc { font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 11.5px; color: var(--sumi-faint); flex: 1; min-width: 200px; }
+        .import-bar button {
+            border: 1px solid var(--sumi); background: var(--sumi); color: var(--washi);
+            font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; padding: 8px 14px; cursor: pointer; white-space: nowrap;
+        }
+        .import-bar button:hover { background: var(--shu); border-color: var(--shu); }
+        .saved-msg { background: var(--shu-faint); color: var(--shu); font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 13px; padding: 10px 14px; margin-bottom: 14px; }
+        .error-msg { border: 1px solid var(--shu); color: var(--shu); font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 13px; padding: 10px 14px; margin-bottom: 14px; }
+        .warn-list { margin: 8px 0 0; padding-left: 18px; font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 11.5px; color: var(--sumi-soft); }
+        .warn-list li { margin: 2px 0; }
+    </style>
+</head>
+<body>
+<div class="page">
+    <header>
+        <div class="header-top">
+            <h1>헤야 관리</h1>
+            <form class="logout-form" th:action="@{/admin/logout}" method="post">
+                <button type="submit">로그아웃</button>
+            </form>
+        </div>
+        <nav class="admin-nav">
+            <a th:href="@{/admin/comments}">댓글 관리</a>
+            <a th:href="@{/admin/rikishi}">리키시 관리</a>
+            <a th:href="@{/admin/heya}" class="current">헤야 관리</a>
+            <a th:href="@{/admin/basho}">반즈케 관리</a>
+        </nav>
+    </header>
+
+    <div class="saved-msg" th:if="${saved}">헤야명을 저장했습니다.</div>
+    <div class="saved-msg" th:if="${autofillResult}">
+        <span th:text="'한국어 헤야명 자동 채우기 — ' + ${autofillResult.filled} + '개 채움'
+            + (${autofillResult.failed.isEmpty()} ? '' : (' · 실패 ' + ${autofillResult.failed.size()}))">완료</span>
+        <ul class="warn-list" th:if="${!autofillResult.samples.isEmpty()}">
+            <li th:each="s : ${autofillResult.samples}" th:text="${s}">Takasago → 타카사고</li>
+        </ul>
+    </div>
+    <p class="error-msg" th:if="${error}" th:text="${error}">오류</p>
+
+    <div class="import-bar" th:if="${missingKrCount > 0}">
+        <span class="desc">
+            한국어명이 없거나 자동 음차값인(검수 전) 헤야 <strong th:text="${missingKrCount}">0</strong>개 —
+            로마자 음차로 (재)생성합니다. 채운 값엔 "(자동)" 표시가 붙고, 관리자가 저장해 다듬은 값은 건드리지 않습니다.
+            일본어명(한자)은 음차로 만들 수 없어 수동 입력해야 합니다.
+        </span>
+        <form th:action="@{/admin/heya/autofill}" method="post"
+              onsubmit="return confirm('한국어명이 없거나 자동값인 헤야에 로마자 음차값을 (재)생성합니다. 검수된 값은 유지됩니다. 계속할까요?');">
+            <button type="submit">한국어 헤야명 (재)생성</button>
+        </form>
+    </div>
+
+    <table th:if="${!rows.isEmpty()}">
+        <thead>
+        <tr>
+            <th style="width: 8%">ID</th>
+            <th style="width: 20%">로마자 (sumo-api)</th>
+            <th style="width: 72%">한국어명 · 일본어명</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="h : ${rows}">
+            <td th:text="${h.id}">1</td>
+            <td>
+                <span class="romaji" th:text="${h.nameEn}">Takasago</span>
+                <span th:if="${h.nameKrAuto}" class="badge-auto">(자동)</span>
+            </td>
+            <td>
+                <form class="row-form" th:action="@{'/admin/heya/' + ${h.id}}" method="post">
+                    <input type="text" name="nameKr" th:value="${h.nameKr}" placeholder="한국어명" required>
+                    <input type="text" name="nameJp" th:value="${h.nameJp}" placeholder="일본어명(한자)" required>
+                    <button type="submit">저장</button>
+                </form>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+    <div class="empty-note" th:if="${rows.isEmpty()}">등록된 헤야가 없습니다. 먼저 리키시 관리에서 로스터 임포트를 실행하세요.</div>
+</div>
+</body>
+</html>
