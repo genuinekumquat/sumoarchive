@@ -62,7 +62,7 @@ public class TorikumiAdminService {
 		form.setWestRikishiId(t.getWestRikishiEntity().getId());
 		form.setWinnerSide(winnerSideOf(t) != null ? winnerSideOf(t).name() : "");
 		form.setResultType(t.getResultType());
-		form.setKimarite(t.getKimarite());
+		form.setKimarite(KimariteDisplayUtil.toKr(t.getKimarite()));
 		form.setExtraMatch(t.isExtraMatch());
 		form.setYoutubeUrl(t.getYoutubeUrl());
 		form.setDescriptionKr(t.getDescriptionKr());
@@ -210,7 +210,7 @@ public class TorikumiAdminService {
 				t.getWestRikishiEntity().getShikonaKr(),
 				winnerSideOf(t),
 				t.getResultType(),
-				t.getKimarite(),
+				KimariteDisplayUtil.toKr(t.getKimarite()),
 				t.isExtraMatch(),
 				t.getYoutubeUrl() != null && !t.getYoutubeUrl().isBlank()
 		);

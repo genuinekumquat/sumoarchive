@@ -72,6 +72,20 @@
         .btn:hover { border-color: var(--shu); color: var(--shu); }
         .btn.del:hover { background: var(--shu); color: var(--washi); border-color: var(--shu); }
         .empty-note { padding: 26px 0; text-align: center; color: var(--sumi-faint); }
+
+        .import-bar {
+            display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+            border: 1px solid var(--washi-line); padding: 12px 14px; margin-bottom: 18px; background: #fff;
+            font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px;
+        }
+        .import-bar .desc { color: var(--sumi-faint); flex: 1; min-width: 200px; }
+        .import-bar button {
+            border: 1px solid var(--sumi); background: var(--sumi); color: var(--washi);
+            font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; padding: 7px 14px; cursor: pointer; white-space: nowrap;
+        }
+        .import-bar button:hover { background: var(--shu); border-color: var(--shu); }
+        .skip-list { margin: 6px 0 0; padding-left: 18px; font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 11px; color: var(--sumi-soft); }
+        .skip-list.more { list-style: none; padding-left: 0; color: var(--sumi-faint); }
     </style>
 </head>
 <body>
@@ -90,6 +104,30 @@
 
     <p class="saved-msg" th:if="${saved}">저장했습니다.</p>
     <p class="error-msg" th:if="${error}" th:text="${error}">오류</p>
+
+    <div class="saved-msg" th:if="${importResult}">
+        <span th:text="'sumo-api 토리쿠미 임포트 · ' + ${importResult.division}
+            + ' — 신규 ' + ${importResult.created} + ' · 갱신 ' + ${importResult.updated}
+            + ' · 데이터 일차 ' + ${importResult.daysWithData} + '/15'
+            + ' · 스킵 ' + ${importResult.skipped.size()}">완료</span>
+        <ul class="skip-list" th:if="${!importResult.skipped.isEmpty()}">
+            <li th:each="s,it : ${importResult.skipped}" th:if="${it.index < 15}" th:text="${s}">스킵</li>
+            <li class="more" th:if="${importResult.skipped.size() > 15}"
+                th:text="'…외 ' + (${importResult.skipped.size()} - 15) + '건'">…</li>
+        </ul>
+    </div>
+
+    <div class="import-bar">
+        <span class="desc">
+            sumo-api.com에서 이 바쇼의 <strong th:text="${division}">Makuuchi</strong> 15일치 대전을 가져옵니다
+            (일차별로 호출, 약간의 딜레이). 우리 DB에 없는 리키시가 낀 경기는 건너뜁니다.
+        </span>
+        <form th:action="@{'/admin/basho/' + ${board.bashoId} + '/torikumi/import'}" method="post">
+            <input type="hidden" name="day" th:value="${day}">
+            <input type="hidden" name="division" th:value="${division}">
+            <button type="submit">이 디비전 임포트 (15일)</button>
+        </form>
+    </div>
 
     <div class="filters">
         <div class="days">

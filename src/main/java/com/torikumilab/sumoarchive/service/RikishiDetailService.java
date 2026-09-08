@@ -20,6 +20,7 @@ import com.torikumilab.sumoarchive.repository.KinboshiRepository;
 import com.torikumilab.sumoarchive.repository.RikishiRepository;
 import com.torikumilab.sumoarchive.repository.RikishiShikonaHistoryRepository;
 import com.torikumilab.sumoarchive.repository.TorikumiRepository;
+import com.torikumilab.sumoarchive.util.KimariteDisplayUtil;
 import com.torikumilab.sumoarchive.util.RankDisplayUtil;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -144,7 +145,7 @@ public class RikishiDetailService {
 		
 		List<KimariteStatDTO> result = new ArrayList<>();
 		for (KimariteCountRow row : top) {
-			result.add(new KimariteStatDTO(row.getKimarite(), row.getCnt(), round1(row.getCnt() * 100.0 / total)));
+			result.add(new KimariteStatDTO(KimariteDisplayUtil.toKr(row.getKimarite()), row.getCnt(), round1(row.getCnt() * 100.0 / total)));
 		}
 		if (etcCount > 0) {
 			result.add(new KimariteStatDTO("기타", etcCount, round1(etcCount * 100.0 / total)));
@@ -247,14 +248,14 @@ public class RikishiDetailService {
 		if (t.getResultType() == ResultType.FUZEN) {
 			resultDisplay = win ? "不戦勝" : "不戦敗";
 		} else {
-			resultDisplay = t.getKimarite() != null ? t.getKimarite() : "-";
+			resultDisplay = t.getKimarite() != null ? KimariteDisplayUtil.toJp(t.getKimarite()) : "-";
 		}
 		
 		return new MatchHistoryItemDTO(
 				t.getDay(),
 				t.getId(),
 				opponent.getId(),
-				firstToken(opponent.getShikonaKr()),
+				opponentDisplayName(opponent),
 				opponentBanzuke != null
 						? RankDisplayUtil.rankDisplay(opponentBanzuke.getRankName(), opponentBanzuke.getRankValue())
 						: null,
@@ -279,5 +280,17 @@ public class RikishiDetailService {
 		}
 		int idx = value.indexOf(' ');
 		return idx > 0 ? value.substring(0, idx) : value;
+	}
+
+	// 호시토리표 상대 이름. sumo-api 임포트 직후엔 한국어 시코나가 비어 있어 한자 → 로마자로 폴백.
+	private String opponentDisplayName(RikishiEntity opponent) {
+		String kr = firstToken(opponent.getShikonaKr());
+		if (kr != null && !kr.isBlank()) {
+			return kr;
+		}
+		if (opponent.getShikonaJp() != null && !opponent.getShikonaJp().isBlank()) {
+			return opponent.getShikonaJp();
+		}
+		return opponent.getShikonaEn();
 	}
 }

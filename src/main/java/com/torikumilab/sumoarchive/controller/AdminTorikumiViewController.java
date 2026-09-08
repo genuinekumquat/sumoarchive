@@ -5,6 +5,7 @@ import com.torikumilab.sumoarchive.domain.entity.constant.Division;
 import com.torikumilab.sumoarchive.domain.entity.constant.ResultType;
 import com.torikumilab.sumoarchive.domain.entity.constant.Side;
 import com.torikumilab.sumoarchive.service.TorikumiAdminService;
+import com.torikumilab.sumoarchive.service.TorikumiImportService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.propertyeditors.CustomNumberEditor;
 import org.springframework.stereotype.Controller;
@@ -26,6 +27,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 public class AdminTorikumiViewController {
 
 	private final TorikumiAdminService torikumiAdminService;
+	private final TorikumiImportService torikumiImportService;
 
 	// <select>/<input type=number>의 빈 값("")을 null로 (day, eastRikishiId, westRikishiId 공용).
 	@InitBinder
@@ -44,6 +46,20 @@ public class AdminTorikumiViewController {
 		model.addAttribute("divisionOptions", Division.values());
 		model.addAttribute("days", java.util.stream.IntStream.rangeClosed(1, 15).boxed().toList());
 		return "admin/basho/torikumi-list";
+	}
+
+	/** sumo-api에서 이 바쇼·디비전의 15일치 대전을 가져온다 (externalId upsert, 미매칭 리키시는 스킵). */
+	@PostMapping("/admin/basho/{bashoId}/torikumi/import")
+	public String importTorikumi(@PathVariable Integer bashoId,
+								 @RequestParam(defaultValue = "1") int day,
+								 @RequestParam(defaultValue = "Makuuchi") Division division,
+								 RedirectAttributes ra) {
+		try {
+			ra.addFlashAttribute("importResult", torikumiImportService.importDivision(bashoId, division));
+		} catch (Exception e) {
+			ra.addFlashAttribute("error", "sumo-api 토리쿠미 임포트 실패: " + e.getMessage());
+		}
+		return redirectToBoard(bashoId, day, division);
 	}
 
 	@GetMapping("/admin/basho/{bashoId}/torikumi/new")

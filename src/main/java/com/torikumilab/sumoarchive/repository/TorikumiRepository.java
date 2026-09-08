@@ -64,6 +64,9 @@ public interface TorikumiRepository extends JpaRepository<TorikumiEntity, Intege
 	// 바쇼 목록의 대전 수 (디비전 무관)
 	long countByBashoEntityId(Integer bashoId);
 
+	// sumo-api 토리쿠미 임포트 upsert용 (external_id UNIQUE)
+	Optional<TorikumiEntity> findByExternalId(String externalId);
+
 	// uq_torikumi(basho_id, day, east_rikishi_id, west_rikishi_id, is_extra_match) 사전 검사
 	boolean existsByBashoEntityIdAndDayAndEastRikishiEntityIdAndWestRikishiEntityIdAndIsExtraMatch(
 			Integer bashoId, Integer day, Integer eastRikishiId, Integer westRikishiId, boolean isExtraMatch);

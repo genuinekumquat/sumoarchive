@@ -65,13 +65,13 @@ public class TorikumiDetailService {
 				divisionLabel(t.getDivision()),
 
 				east.getId(),
-				firstToken(east.getShikonaKr()),
+				displayName(east),
 				east.getShikonaJp(),
 				rankDisplayOf(banzukeByRikishiId.get(east.getId())),
 				decided && winnerId.equals(east.getId()),
 
 				west.getId(),
-				firstToken(west.getShikonaKr()),
+				displayName(west),
 				west.getShikonaJp(),
 				rankDisplayOf(banzukeByRikishiId.get(west.getId())),
 				decided && winnerId.equals(west.getId()),
@@ -125,5 +125,20 @@ public class TorikumiDetailService {
 		}
 		int idx = value.indexOf(' ');
 		return idx > 0 ? value.substring(0, idx) : value;
+	}
+
+	/**
+	 * 화면 주 표기용 시코나. sumo-api 임포트 직후엔 한국어 시코나가 비어 있어
+	 * 한국어 → 일본어(한자) → 로마자 순으로 폴백한다. (RikishiDetailService / 메인 대시보드와 동일 규칙)
+	 */
+	private static String displayName(RikishiEntity r) {
+		String kr = firstToken(r.getShikonaKr());
+		if (kr != null && !kr.isBlank()) {
+			return kr;
+		}
+		if (r.getShikonaJp() != null && !r.getShikonaJp().isBlank()) {
+			return r.getShikonaJp();
+		}
+		return r.getShikonaEn();
 	}
 }

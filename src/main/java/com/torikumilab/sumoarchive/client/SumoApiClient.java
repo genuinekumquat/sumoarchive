@@ -3,6 +3,7 @@ package com.torikumilab.sumoarchive.client;
 import com.torikumilab.sumoarchive.domain.dto.sumoapi.SumoApiBanzukeDTO;
 import com.torikumilab.sumoarchive.domain.dto.sumoapi.SumoApiBashoDTO;
 import com.torikumilab.sumoarchive.domain.dto.sumoapi.SumoApiRikishiPageDTO;
+import com.torikumilab.sumoarchive.domain.dto.sumoapi.SumoApiTorikumiDayDTO;
 import com.torikumilab.sumoarchive.domain.entity.constant.Division;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
@@ -65,5 +66,16 @@ public class SumoApiClient {
 				.uri("/api/basho/{id}/banzuke/{division}", yyyymm, division.name())
 				.retrieve()
 				.body(SumoApiBanzukeDTO.class);
+	}
+
+	/**
+	 * 특정 바쇼({@code YYYYMM})·디비전·일차의 대전 조회. 아직 안 치러진 일차는 {@code torikumi}가
+	 * null인 응답이 온다(4xx 아님).
+	 */
+	public SumoApiTorikumiDayDTO getTorikumi(String yyyymm, Division division, int day) {
+		return rc.get()
+				.uri("/api/basho/{id}/torikumi/{division}/{day}", yyyymm, division.name(), day)
+				.retrieve()
+				.body(SumoApiTorikumiDayDTO.class);
 	}
 }
