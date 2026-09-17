@@ -1,7 +1,7 @@
 package com.torikumilab.sumoarchive.controller;
 
 import com.torikumilab.sumoarchive.domain.dto.BashoGameLogDTO;
-import com.torikumilab.sumoarchive.domain.dto.HeadToHeadDTO;
+import com.torikumilab.sumoarchive.domain.dto.HeadToHeadGroupDTO;
 import com.torikumilab.sumoarchive.domain.dto.KimariteStatDTO;
 import com.torikumilab.sumoarchive.domain.dto.RikishiDetailDTO;
 import com.torikumilab.sumoarchive.service.RikishiDetailService;
@@ -27,12 +27,12 @@ public class RikishiDetailController {
 		RikishiDetailDTO rikishi = rikishiDetailService.getRikishiDetail(id);
 		List<KimariteStatDTO> kimariteStats = rikishiDetailService.getKimariteStats(id);
 		List<BashoGameLogDTO> gameLog = rikishiDetailService.getGameLog(id);
-		List<HeadToHeadDTO> headToHead = rikishiDetailService.getHeadToHead(id);
+		List<HeadToHeadGroupDTO> headToHeadGroups = rikishiDetailService.getHeadToHeadGrouped(id);
 
 		model.addAttribute("rikishi", rikishi);
 		model.addAttribute("kimariteStats", kimariteStats);
 		model.addAttribute("gameLog", gameLog);
-		model.addAttribute("headToHead", headToHead);
+		model.addAttribute("headToHeadGroups", headToHeadGroups);
 		return "rikishi/detail";
 	}
 }

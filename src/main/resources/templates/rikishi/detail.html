@@ -498,9 +498,68 @@
             color: var(--sumi-faint);
         }
 
-        /* ===== 対戦成績(상대전적) - 나무위키식 접이식 목록. 상대별 한 줄(summary)을 누르면
-           그 상대와의 개별 대전 목록이 펼쳐짐. 네이티브 <details>/<summary> 사용(JS 불필요). */
+        /* ===== 対戦成績(상대전적) - ㄱㄴㄷ 인덱스로 접은 목록. 상대가 많아지면 쭉 펼쳐놓기보다
+           초성별로 묶어서(h2h-group) 훑어보기 쉽게 하고, 그 안에서 상대별 한 줄(summary)을 누르면
+           개별 대전 목록이 펼쳐짐. 3단 전부 네이티브 <details>/<summary>(JS 불필요). */
         .h2h-panel { margin-bottom: 28px; padding: 16px 20px 18px; }
+
+        /* 상단 초성 바로가기 - 실제로 데이터가 있는 초성만 링크로 노출 */
+        .h2h-index {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            padding-bottom: 14px;
+            margin-bottom: 4px;
+            border-bottom: 1px solid var(--washi-line);
+        }
+        .h2h-index a {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 24px;
+            height: 24px;
+            padding: 0 4px;
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--sumi-soft);
+            border: 1px solid var(--washi-line);
+            text-decoration: none;
+        }
+        .h2h-index a:hover { border-color: var(--shu); color: var(--shu); }
+
+        .h2h-group { scroll-margin-top: 14px; }
+        .h2h-group + .h2h-group { border-top: 1px solid var(--sumi); }
+
+        .h2h-group-summary {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            padding: 12px 4px;
+            cursor: pointer;
+            list-style: none;
+            font-family: 'Yuji Syuku', serif;
+            font-size: 20px;
+            color: var(--shu);
+        }
+        .h2h-group-summary::-webkit-details-marker { display: none; }
+        .h2h-group-summary::before {
+            content: '▸';
+            font-family: initial;
+            font-size: 12px;
+            color: var(--sumi-faint);
+            transition: transform 0.15s ease;
+        }
+        .h2h-group[open] > .h2h-group-summary::before { transform: rotate(90deg); color: var(--shu); }
+
+        .h2h-group-count {
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 11px;
+            font-weight: 400;
+            color: var(--sumi-faint);
+        }
+
+        .h2h-group-body { padding-left: 4px; margin-bottom: 8px; }
 
         .h2h-row + .h2h-row { border-top: 1px solid var(--washi-line); }
 
@@ -753,27 +812,40 @@
         <div class="empty-note">아직 등록된 대전 기록이 없습니다.</div>
     </div>
 
-    <!-- ===== 対戦成績(상대전적) - 상대 선수별 통산 승패를 접이식(details/summary)으로 나열.
-         summary 줄을 누르면 그 상대와의 개별 대전 목록이 펼쳐진다(나무위키 문서 접이식 문단과 동일한 패턴). -->
-    <div class="panel h2h-panel" th:if="${headToHead != null and !headToHead.isEmpty()}">
+    <!-- ===== 対戦成績(상대전적) - ㄱㄴㄷ 초성 인덱스로 접어서 나열.
+         상단 인덱스를 누르면 해당 초성 그룹으로 이동하고, 그룹(h2h-group)과 상대별 줄(h2h-row) 모두
+         details/summary라 접었다 펼 수 있다. 상대별 줄을 펼치면 그 상대와의 개별 대전 목록이 나온다. -->
+    <div class="panel h2h-panel" th:if="${headToHeadGroups != null and !headToHeadGroups.isEmpty()}">
         <div class="panel-title">対戦成績</div>
 
-        <details class="h2h-row" th:each="h : ${headToHead}">
-            <summary class="h2h-summary">
-                <a class="h2h-opponent" th:if="${h.opponentId != null}" th:href="@{/rikishi/{id}(id=${h.opponentId})}" th:text="${h.opponentShikonaKr}">상대명</a>
-                <span class="h2h-opponent" th:if="${h.opponentId == null}" th:text="${h.opponentShikonaKr}">상대명</span>
-                <span class="h2h-record"><span class="win" th:text="${h.wins} + '승'">0승</span> <span th:text="${h.losses} + '패'">0패</span></span>
+        <nav class="h2h-index">
+            <a th:each="g : ${headToHeadGroups}" th:href="'#h2h-grp-' + ${g.initial}" th:text="${g.initial}">ㄱ</a>
+        </nav>
+
+        <details class="h2h-group" th:each="g : ${headToHeadGroups}" th:id="'h2h-grp-' + ${g.initial}">
+            <summary class="h2h-group-summary">
+                <span th:text="${g.initial}">ㄱ</span>
+                <span class="h2h-group-count" th:text="'(' + ${g.opponents.size()} + ')'">(3)</span>
             </summary>
-            <ul class="h2h-bouts">
-                <li class="h2h-bout-item" th:each="b : ${h.bouts}">
-                    <span class="h2h-bout-basho" th:text="${b.bashoLabel} + ' ' + ${b.day} + '日目'">2026年07月場所 8日目</span>
-                    <span class="h2h-bout-mark" th:classappend="${b.win} ? 'win' : 'loss'" th:text="${b.win} ? '○' : '●'">○</span>
-                    <span class="h2h-bout-kimarite" th:text="${b.kimarite}">寄り切り</span>
-                </li>
-            </ul>
+            <div class="h2h-group-body">
+                <details class="h2h-row" th:each="h : ${g.opponents}">
+                    <summary class="h2h-summary">
+                        <a class="h2h-opponent" th:if="${h.opponentId != null}" th:href="@{/rikishi/{id}(id=${h.opponentId})}" th:text="${h.opponentShikonaKr}">상대명</a>
+                        <span class="h2h-opponent" th:if="${h.opponentId == null}" th:text="${h.opponentShikonaKr}">상대명</span>
+                        <span class="h2h-record"><span class="win" th:text="${h.wins} + '승'">0승</span> <span th:text="${h.losses} + '패'">0패</span></span>
+                    </summary>
+                    <ul class="h2h-bouts">
+                        <li class="h2h-bout-item" th:each="b : ${h.bouts}">
+                            <span class="h2h-bout-basho" th:text="${b.bashoLabel} + ' ' + ${b.day} + '日目'">2026年07月場所 8日目</span>
+                            <span class="h2h-bout-mark" th:classappend="${b.win} ? 'win' : 'loss'" th:text="${b.win} ? '○' : '●'">○</span>
+                            <span class="h2h-bout-kimarite" th:text="${b.kimarite}">寄り切り</span>
+                        </li>
+                    </ul>
+                </details>
+            </div>
         </details>
     </div>
-    <div class="panel h2h-panel" th:if="${headToHead == null or headToHead.isEmpty()}">
+    <div class="panel h2h-panel" th:if="${headToHeadGroups == null or headToHeadGroups.isEmpty()}">
         <div class="panel-title">対戦成績</div>
         <div class="empty-note">아직 집계된 상대전적이 없습니다.</div>
     </div>
@@ -821,6 +893,21 @@
             render();
         });
         render();
+    })();
+
+    // ===== 상대전적 ㄱㄴㄷ 인덱스 =====
+    // <details>는 클릭하면 자기 자신은 열리지만 상단 인덱스 링크(#h2h-grp-ㄱ)로 점프해 들어왔을 때는
+    // 네이티브 동작만으론 안 열려서, 인덱스 클릭/딥링크 진입 시 JS로 open을 켜준다.
+    (function () {
+        function openGroup(hash) {
+            if (!hash || hash.indexOf('#h2h-grp-') !== 0) return;
+            const el = document.getElementById(hash.slice(1));
+            if (el) el.open = true;
+        }
+        document.querySelectorAll('.h2h-index a').forEach(a => {
+            a.addEventListener('click', () => openGroup(a.getAttribute('href')));
+        });
+        if (location.hash) openGroup(location.hash);
     })();
 
     if (kimariteData.length > 0) {
