@@ -319,7 +319,7 @@
 
         <div class="search-wrap">
             <form th:action="@{/search}" method="get" style="display: flex; gap: 10px; flex: 1;">
-                <input type="text" name="keyword" placeholder="시코나 검색 (예: 코토자쿠라)">
+                <input type="text" name="keyword" placeholder="시코나 검색">
                 <button type="submit">검색</button>
             </form>
             <a th:href="@{/bookmark}" style="white-space: nowrap; align-self: center; font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; color: var(--sumi-soft); text-decoration: none;">★ 즐겨찾기</a>
@@ -348,9 +348,9 @@
             <table class="banzuke-table">
                 <thead>
                 <tr>
-                    <th class="col-east">동 EAST</th>
+                    <th class="col-east">동</th>
                     <th class="col-rank">반즈케</th>
-                    <th class="col-west">서 WEST</th>
+                    <th class="col-west">서</th>
                 </tr>
                 </thead>
                 <tbody id="banzuke-body">
