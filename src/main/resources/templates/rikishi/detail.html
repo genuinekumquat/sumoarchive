@@ -808,7 +808,7 @@
     <div class="stats-grid">
 
         <div class="panel">
-            <div class="panel-title">戦歴・受賞歴</div>
+            <div class="panel-title" th:text="${#locale.language == 'ja'} ? '戦歴・受賞歴' : #{rikishi.panel.record}">戦歴・受賞歴</div>
 
             <div class="record-summary" th:if="${#locale.language == 'ja'}">
                 <span th:text="${rikishi.totalWins} + '勝' + ${rikishi.totalLosses} + '敗' + (${rikishi.totalAbsences} > 0 ? ${rikishi.totalAbsences} + '休' : '')">429勝214敗159休</span>
@@ -846,7 +846,7 @@
         </div>
 
         <div class="panel">
-            <div class="panel-title">決まり手の傾向</div>
+            <div class="panel-title" th:text="${#locale.language == 'ja'} ? '決まり手の傾向' : #{rikishi.panel.kimarite}">決まり手の傾向</div>
 
             <!-- 기간 필터 - 바쇼 2개 이상 뛴 경우에만 의미가 있어서 그때만 노출.
                  기본 선택값: from=가장 오래된 바쇼, to=가장 최신 바쇼(=필터 없는 상태와 동일한 통산 범위)라
@@ -883,7 +883,7 @@
     <!-- ===== 호시토리표(星取表) - 바쇼별 가로 스트립. 칸마다 마크(○●휴)+상대명(세로쓰기) 노출,
          칸을 클릭하면 옆에서 상세 패널(.match-panel)이 슬라이드로 열림. -->
     <div class="panel match-history-panel" th:if="${gameLog != null and !gameLog.isEmpty()}">
-        <div class="panel-title">星取表</div>
+        <div class="panel-title" th:text="${#locale.language == 'ja'} ? '星取表' : #{rikishi.panel.hoshitori}">星取表</div>
 
         <div class="game-log-row" th:each="g, iter : ${gameLog}">
             <div class="game-log-meta">
@@ -914,7 +914,7 @@
         </div>
     </div>
     <div class="panel match-history-panel" th:if="${gameLog == null or gameLog.isEmpty()}">
-        <div class="panel-title">星取表</div>
+        <div class="panel-title" th:text="${#locale.language == 'ja'} ? '星取表' : #{rikishi.panel.hoshitori}">星取表</div>
         <div class="empty-note" th:text="#{rikishi.empty.match}">아직 등록된 대전 기록이 없습니다.</div>
     </div>
 
@@ -923,7 +923,7 @@
          상단 인덱스를 누르면 해당 초성 그룹으로 이동하고, 그룹(h2h-group)과 상대별 줄(h2h-row) 모두
          details/summary라 접었다 펼 수 있다. 상대별 줄을 펼치면 그 상대와의 개별 대전 목록이 나온다. -->
     <div class="panel h2h-panel" th:if="${headToHeadGroups != null and !headToHeadGroups.isEmpty() and #locale.language == 'ja'}">
-        <div class="panel-title">対戦成績</div>
+        <div class="panel-title" th:text="${#locale.language == 'ja'} ? '対戦成績' : #{rikishi.panel.h2h}">対戦成績</div>
 
         <th:block th:each="g : ${headToHeadGroups}">
             <details class="h2h-row" th:each="h : ${g.opponents}">
@@ -943,7 +943,7 @@
         </th:block>
     </div>
     <div class="panel h2h-panel" th:if="${headToHeadGroups != null and !headToHeadGroups.isEmpty() and #locale.language != 'ja'}">
-        <div class="panel-title">対戦成績</div>
+        <div class="panel-title" th:text="${#locale.language == 'ja'} ? '対戦成績' : #{rikishi.panel.h2h}">対戦成績</div>
 
         <nav class="h2h-index">
             <a th:each="g : ${headToHeadGroups}" th:href="'#h2h-grp-' + ${g.initial}" th:text="${g.initial}">ㄱ</a>
@@ -973,7 +973,7 @@
         </details>
     </div>
     <div class="panel h2h-panel" th:if="${headToHeadGroups == null or headToHeadGroups.isEmpty()}">
-        <div class="panel-title">対戦成績</div>
+        <div class="panel-title" th:text="${#locale.language == 'ja'} ? '対戦成績' : #{rikishi.panel.h2h}">対戦成績</div>
         <div class="empty-note" th:text="#{rikishi.empty.h2h}">아직 집계된 상대전적이 없습니다.</div>
     </div>
 
