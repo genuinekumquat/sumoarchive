@@ -490,8 +490,8 @@
 
         const sub = document.createElement('div');
         sub.className = 'sub-info';
-        // 출신지 · 소속 헤야 (둘 다 없으면 표시 생략)
-        sub.textContent = [row.birthplace, row.heyaNameKr].filter(Boolean).join(' · ');
+        // 출신지(일본은 도도부현, 외국은 국가) · 소속 헤야 (둘 다 없으면 표시 생략)
+        sub.textContent = [row.originKr, row.heyaNameKr].filter(Boolean).join(' · ');
 
         td.appendChild(link);
         if (sub.textContent) td.appendChild(sub);

@@ -8,5 +8,7 @@ public record BanzukeDTO(
 		String rankName,   // String으로 변환
 		String side,
 		Integer rankValue,
-		boolean isActive
+		boolean isActive,
+		String heyaNameKr, // 소속 헤야 (없으면 null = 무소속)
+		String originKr    // 출신지 한국어 표기 (OriginDisplayUtil - 일본이면 도도부현, 외국이면 국가명)
 ) {}

@@ -6,6 +6,7 @@ import com.torikumilab.sumoarchive.domain.entity.BashoEntity;
 import com.torikumilab.sumoarchive.domain.entity.constant.Division;
 import com.torikumilab.sumoarchive.repository.BanzukeRepository;
 import com.torikumilab.sumoarchive.repository.BashoRepository;
+import com.torikumilab.sumoarchive.util.OriginDisplayUtil;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -51,7 +52,9 @@ public class BanzukeService {
 						b.getRankName().name(),
 						b.getSide().name(),
 						b.getRankValue(),
-						b.getRikishiEntity().isActive()
+						b.getRikishiEntity().isActive(),
+						b.getRikishiEntity().getHeyaEntity() != null ? b.getRikishiEntity().getHeyaEntity().getNameKr() : null,
+						OriginDisplayUtil.toKorean(b.getRikishiEntity().getBirthplace())
 				))
 				.toList();
 	}

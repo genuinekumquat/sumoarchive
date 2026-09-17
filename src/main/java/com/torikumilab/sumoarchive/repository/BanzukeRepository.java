@@ -16,6 +16,7 @@ public interface BanzukeRepository extends JpaRepository<BanzukeEntity, Integer>
 	@Query("""
         SELECT b FROM BanzukeEntity b
         JOIN FETCH b.rikishiEntity r
+        LEFT JOIN FETCH r.heyaEntity
         WHERE b.bashoEntity.id = :bashoId
         AND b.division = :division
         ORDER BY
