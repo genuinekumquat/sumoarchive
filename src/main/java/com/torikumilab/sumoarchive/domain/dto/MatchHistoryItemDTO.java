@@ -11,6 +11,7 @@ public record MatchHistoryItemDTO(
 		Integer torikumiId,          // 이 경기의 토리쿠미 id (상세/슬라이드 패널 링크용). 휴장(ABSENT)이면 null
 		Integer opponentId,          // 상대 리키시 id (상세페이지 링크용). 휴장(ABSENT)이면 null
 		String opponentShikonaKr,    // 휴장이면 null
+		String opponentShikonaJp,    // 일본어 화면용. 휴장이면 null
 		String opponentRankDisplay,  // 그 바쇼 기준 상대 반즈케 표기. 반즈케 정보 없거나 휴장이면 null
 		Side mySide,                 // 이 경기에서 조회 대상 리키시가 동/서 어느 쪽이었는지. 휴장이면 null
 		Status status,

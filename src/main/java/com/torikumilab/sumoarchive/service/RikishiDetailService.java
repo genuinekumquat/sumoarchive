@@ -54,6 +54,15 @@ public class RikishiDetailService {
 	// 이보다 더 다양한 결정기술이 나오는 리키시(커리어가 아주 긴 경우)만 "기타"로 묶임.
 	private static final int TOP_KIMARITE_COUNT = 10;
 	
+	// 관리자 프로필 수정 화면의 파이팅스타일 select(admin/rikishi/edit.html)와 같은 고정 4종 값.
+	// 자유 입력이 아니라 닫힌 집합이라 일본어 표기도 안전하게 하드코딩 가능.
+	private static final Map<String, String> FIGHTING_STYLE_JP = Map.of(
+			"오시", "押し",
+			"요츠", "四つ",
+			"복합형", "複合型",
+			"변칙형", "変則型"
+	);
+
 	private final RikishiRepository rikishiRepository;
 	private final RikishiShikonaHistoryRepository rikishiShikonaHistoryRepository;
 	private final BanzukeRepository banzukeRepository;
@@ -98,6 +107,8 @@ public class RikishiDetailService {
 		String shikonaKr = r.getShikonaKr() != null ? r.getShikonaKr()
 				: (r.getShikonaJp() != null ? r.getShikonaJp() : r.getShikonaEn());
 
+		String fightingStyleJp = FIGHTING_STYLE_JP.get(r.getFightingStyle());
+
 		return RikishiDetailDTO.builder()
 				.id(r.getId())
 				.shikonaKr(shikonaKr)
@@ -110,15 +121,20 @@ public class RikishiDetailService {
 				.birthplace(r.getBirthplace())
 				.nationality(r.getNationality())
 				.originKr(OriginDisplayUtil.toKorean(r.getOriginKr(), r.getBirthplace()))
+				.originJp(OriginDisplayUtil.toJapanese(r.getBirthplace()))
 				.heyaNameKr(r.getHeyaEntity() != null ? r.getHeyaEntity().getNameKr() : null)
+				.heyaNameJp(r.getHeyaEntity() != null ? r.getHeyaEntity().getNameJp() : null)
 				.height(r.getHeight())
 				.weight(r.getWeight())
 				.fightingStyle(r.getFightingStyle())
+				.fightingStyleJp(fightingStyleJp)
 				.debutDate(r.getDebutDate())
 				.highestRank(RankDisplayUtil.toKorean(r.getHighestRank()))
+				.highestRankJp(RankDisplayUtil.toJapanese(r.getHighestRank()))
 				.isActive(r.isActive())
 				.retiredDate(r.getRetiredDate())
 				.oyakataNameKr(r.getOyakataNameKr())
+				.oyakataNameJp(r.getOyakataNameJp())
 				.photoUrl(r.getPhotoUrl())
 				.sideDisplay(latest != null ? RankDisplayUtil.sideDisplay(latest.getSide()) : null)
 				.rankDisplay(latest != null ? RankDisplayUtil.rankDisplay(latest.getRankName(), latest.getRankValue()) : null)
@@ -168,10 +184,14 @@ public class RikishiDetailService {
 		
 		List<KimariteStatDTO> result = new ArrayList<>();
 		for (KimariteCountRow row : top) {
-			result.add(new KimariteStatDTO(KimariteDisplayUtil.toKr(row.getKimarite()), row.getCnt(), round1(row.getCnt() * 100.0 / total)));
+			result.add(new KimariteStatDTO(
+					KimariteDisplayUtil.toKr(row.getKimarite()),
+					KimariteDisplayUtil.toJp(row.getKimarite()),
+					row.getCnt(),
+					round1(row.getCnt() * 100.0 / total)));
 		}
 		if (etcCount > 0) {
-			result.add(new KimariteStatDTO("기타", etcCount, round1(etcCount * 100.0 / total)));
+			result.add(new KimariteStatDTO("기타", "その他", etcCount, round1(etcCount * 100.0 / total)));
 		}
 		return result;
 	}
@@ -247,7 +267,7 @@ public class RikishiDetailService {
 					.map(t -> toHeadToHeadBout(t, rikishiId))
 					.toList();
 
-			result.add(new HeadToHeadDTO(opponent.getId(), opponentDisplayName(opponent), wins, losses, boutDtos));
+			result.add(new HeadToHeadDTO(opponent.getId(), opponentDisplayName(opponent), opponentDisplayNameJp(opponent), wins, losses, boutDtos));
 		}
 
 		// 상대 이름 가나다순 정렬 (ㄱㄴㄷ 인덱스 그룹화 전제라 알파벳순이어야 함).
@@ -332,7 +352,7 @@ public class RikishiDetailService {
 			if (t != null) {
 				result.add(toMatchHistoryItem(t, rikishiId, opponentBanzukeByRikishiId));
 			} else if (day >= firstDay) {
-				result.add(new MatchHistoryItemDTO(day, null, null, null, null, null,
+				result.add(new MatchHistoryItemDTO(day, null, null, null, null, null, null,
 						MatchHistoryItemDTO.Status.ABSENT, "休場"));
 			}
 		}
@@ -361,6 +381,7 @@ public class RikishiDetailService {
 				t.getId(),
 				opponent.getId(),
 				opponentDisplayName(opponent),
+				opponentDisplayNameJp(opponent),
 				opponentBanzuke != null
 						? RankDisplayUtil.rankDisplay(opponentBanzuke.getRankName(), opponentBanzuke.getRankValue())
 						: null,
@@ -403,6 +424,16 @@ public class RikishiDetailService {
 		}
 		if (opponent.getShikonaJp() != null && !opponent.getShikonaJp().isBlank()) {
 			return opponent.getShikonaJp();
+		}
+		return opponent.getShikonaEn();
+	}
+
+	// 일본어 화면용 상대 이름. shikonaJp는 임포트 때 이미 뒷이름과 분리돼 있지만(firstToken 방어적으로 재적용),
+	// 혹시 비어 있으면 로마자로 폴백.
+	private String opponentDisplayNameJp(RikishiEntity opponent) {
+		String jp = firstToken(opponent.getShikonaJp());
+		if (jp != null && !jp.isBlank()) {
+			return jp;
 		}
 		return opponent.getShikonaEn();
 	}

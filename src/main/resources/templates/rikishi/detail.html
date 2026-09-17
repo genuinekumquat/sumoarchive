@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<html th:lang="${#locale.language}" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title th:text="${rikishi.shikonaFullKr} + ' | 스모아카이브'">스모아카이브 | 리키시</title>
+    <title th:text="(${#locale.language == 'ja'} ? ${rikishi.shikonaFullJp} : ${rikishi.shikonaFullKr}) + ' ' + #{rikishi.title.suffix}">스모아카이브 | 리키시</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Yuji+Syuku&family=Noto+Serif+KR:wght@400;600;900&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
@@ -64,6 +64,21 @@
             color: var(--sumi-faint);
         }
         .breadcrumb a:hover { color: var(--shu); }
+
+        /* ===== 언어 스위처 ===== */
+        .lang-switch {
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 11px;
+            letter-spacing: 1px;
+        }
+        .lang-switch a { color: var(--sumi-faint); text-decoration: none; }
+        .lang-switch a:hover { color: var(--shu); }
+        .lang-switch a.active { color: var(--sumi); font-weight: 700; }
+        .lang-switch .sep { color: var(--washi-line); }
 
         /* ===== 프로필 헤더 ===== */
         .profile-card {
@@ -641,7 +656,13 @@
             <span class="brand-kr">스모아카이브</span>
         </div>
         <div class="breadcrumb">
-            <a th:href="@{/}">반즈케</a> &gt; <span th:text="${rikishi.shikonaFullKr}">시코나</span>
+            <a th:href="@{/}" th:text="#{rikishi.breadcrumb.banzuke}">반즈케</a> &gt;
+            <span th:text="${#locale.language == 'ja'} ? ${rikishi.shikonaFullJp} : ${rikishi.shikonaFullKr}">시코나</span>
+        </div>
+        <div class="lang-switch">
+            <a th:href="@{''(lang='ko')}" th:classappend="${#locale.language == 'ko'} ? 'active'" th:text="#{main.lang.ko}">한국어</a>
+            <span class="sep">/</span>
+            <a th:href="@{''(lang='ja')}" th:classappend="${#locale.language == 'ja'} ? 'active'" th:text="#{main.lang.ja}">日本語</a>
         </div>
     </header>
 
@@ -651,24 +672,28 @@
 
             <div class="profile-info">
                 <button type="button" id="bookmarkBtn" class="bookmark-btn" th:attr="data-rikishi-id=${rikishi.id}">
-                    <span id="bookmarkIcon">☆</span> 북마크
+                    <span id="bookmarkIcon">☆</span> <span th:text="#{rikishi.bookmark}">북마크</span>
                 </button>
                 <span class="status-badge"
                       th:classappend="${rikishi.isActive} ? '' : 'retired'"
                       th:text="${rikishi.isActive} ? '現役' : (${rikishi.oyakataNameKr} != null ? '親方' : '引退')">現役</span>
 
                 <div class="shikona-row">
-                    <span class="shikona-main" th:text="${rikishi.shikonaFullKr}">시코나</span>
+                    <span class="shikona-main" th:if="${#locale.language == 'ja'}" th:text="${rikishi.shikonaFullJp}">시코나</span>
+                    <span class="shikona-main" th:unless="${#locale.language == 'ja'}" th:text="${rikishi.shikonaFullKr}">시코나</span>
                     <span class="rank-display"
                           th:if="${rikishi.isActive and rikishi.rankDisplay != null}"
                           th:text="${rikishi.sideDisplay} + ' ' + ${rikishi.rankDisplay}">東 前頭10枚目</span>
-                    <span class="rank-display" th:unless="${rikishi.isActive}"
-                          th:text="${rikishi.oyakataNameKr} != null ? (${rikishi.oyakataNameKr} + ' 오야카타') : '은퇴'">은퇴</span>
+                    <span class="rank-display" th:if="${!rikishi.isActive and #locale.language == 'ja'}"
+                          th:text="${rikishi.oyakataNameJp} != null ? (${rikishi.oyakataNameJp} + #{rikishi.oyakata.label}) : #{rikishi.retired}">引退</span>
+                    <span class="rank-display" th:if="${!rikishi.isActive and #locale.language != 'ja'}"
+                          th:text="${rikishi.oyakataNameKr} != null ? (${rikishi.oyakataNameKr} + ' ' + #{rikishi.oyakata.label}) : #{rikishi.retired}">은퇴</span>
                 </div>
-                <div class="shikona-kana" th:text="${rikishi.shikonaFullJp}">四股名</div>
+                <div class="shikona-kana" th:if="${#locale.language == 'ja'}" th:text="${rikishi.shikonaFullKr}">四股名</div>
+                <div class="shikona-kana" th:unless="${#locale.language == 'ja'}" th:text="${rikishi.shikonaFullJp}">四股名</div>
 
-                <!-- 시코나 변경 이력 -->
-                <div class="shikona-history" th:if="${rikishi.shikonaHistory != null and !rikishi.shikonaHistory.isEmpty()}">
+                <!-- 시코나 변경 이력 - 일본어 시코나 변경 이력은 아직 없어서(관리자가 한국어만 입력) ja 화면엔 생략 -->
+                <div class="shikona-history" th:if="${rikishi.shikonaHistory != null and !rikishi.shikonaHistory.isEmpty() and #locale.language != 'ja'}">
                     <th:block th:each="h, iter : ${rikishi.shikonaHistory}">
                         <span th:text="${h.shikonaKr}">이전시코나</span>
                         <span class="period" th:text="'(' + ${#temporals.format(h.validFrom, 'yyyy.MM')} + '~' + (${h.validTo} != null ? ${#temporals.format(h.validTo, 'yyyy.MM')} : '') + ')'">(2015.11~2016.11)</span>
@@ -677,47 +702,54 @@
                     <span th:text="${rikishi.shikonaKr}">현재시코나</span>
                     <span class="period">(현재)</span>
                 </div>
-                <div th:unless="${rikishi.shikonaHistory != null and !rikishi.shikonaHistory.isEmpty()}" style="margin-bottom: 18px;"></div>
+                <div th:unless="${rikishi.shikonaHistory != null and !rikishi.shikonaHistory.isEmpty() and #locale.language != 'ja'}" style="margin-bottom: 18px;"></div>
 
                 <table class="info-table">
                     <tr>
-                        <th>소속 헤야</th>
-                        <td th:text="${rikishi.heyaNameKr} ?: '무소속'">헤야</td>
+                        <th th:text="#{rikishi.label.heya}">소속 헤야</th>
+                        <td th:if="${#locale.language == 'ja'}" th:text="${rikishi.heyaNameJp} ?: #{rikishi.value.unaffiliated}">헤야</td>
+                        <td th:unless="${#locale.language == 'ja'}" th:text="${rikishi.heyaNameKr} ?: #{rikishi.value.unaffiliated}">헤야</td>
                     </tr>
-                    <tr>
-                        <th>본명</th>
+                    <!-- 본명은 관리자가 한국어로만 입력해둬서(일본어 원문 미보유) ja 화면엔 생략 -->
+                    <tr th:unless="${#locale.language == 'ja'}">
+                        <th th:text="#{rikishi.label.realname}">본명</th>
                         <td th:text="${rikishi.name}">본명</td>
                     </tr>
                     <tr>
-                        <th>생년월일</th>
-                        <td th:text="${#temporals.format(rikishi.birthdate, 'yyyy.MM.dd')} + ' (' + ${rikishi.age} + '세)'">1994.03.01 (32세)</td>
+                        <th th:text="#{rikishi.label.birthdate}">생년월일</th>
+                        <td th:if="${#locale.language == 'ja'}" th:text="${#temporals.format(rikishi.birthdate, 'yyyy.MM.dd')} + ' (' + ${rikishi.age} + '歳)'">1994.03.01 (32歳)</td>
+                        <td th:unless="${#locale.language == 'ja'}" th:text="${#temporals.format(rikishi.birthdate, 'yyyy.MM.dd')} + ' (' + ${rikishi.age} + '세)'">1994.03.01 (32세)</td>
                     </tr>
                     <tr>
-                        <th>출신지</th>
-                        <td th:text="${rikishi.originKr}">출신지</td>
+                        <th th:text="#{rikishi.label.origin}">출신지</th>
+                        <td th:if="${#locale.language == 'ja'}" th:text="${rikishi.originJp}">출신지</td>
+                        <td th:unless="${#locale.language == 'ja'}" th:text="${rikishi.originKr}">출신지</td>
                     </tr>
-                    <tr>
-                        <th>국적</th>
+                    <!-- 국적(nationality) 컬럼은 자동 파싱 버그가 있는 원문이라(OriginDisplayUtil 참고) ja 화면엔 생략 -->
+                    <tr th:unless="${#locale.language == 'ja'}">
+                        <th th:text="#{rikishi.label.nationality}">국적</th>
                         <td th:text="${rikishi.nationality}">국적</td>
                     </tr>
                     <tr>
-                        <th>신장 / 체중</th>
+                        <th th:text="#{rikishi.label.heightweight}">신장 / 체중</th>
                         <td th:text="${rikishi.height} + 'cm / ' + ${rikishi.weight} + 'kg'">188.0cm / 175.0kg</td>
                     </tr>
                     <tr>
-                        <th>파이팅스타일</th>
-                        <td th:text="${rikishi.fightingStyle} ?: '미분류'">오시</td>
+                        <th th:text="#{rikishi.label.fightingstyle}">파이팅스타일</th>
+                        <td th:if="${#locale.language == 'ja'}" th:text="${rikishi.fightingStyleJp} ?: #{rikishi.value.unclassified}">오시</td>
+                        <td th:unless="${#locale.language == 'ja'}" th:text="${rikishi.fightingStyle} ?: #{rikishi.value.unclassified}">오시</td>
                     </tr>
                     <tr>
-                        <th>데뷔</th>
-                        <td th:text="${rikishi.debutDate} != null ? ${#temporals.format(rikishi.debutDate, 'yyyy.MM')} : '정보 없음'">2016.03</td>
+                        <th th:text="#{rikishi.label.debut}">데뷔</th>
+                        <td th:text="${rikishi.debutDate} != null ? ${#temporals.format(rikishi.debutDate, 'yyyy.MM')} : #{rikishi.value.noinfo}">2016.03</td>
                     </tr>
                     <tr>
-                        <th>최고위</th>
-                        <td th:text="${rikishi.highestRank}">Ozeki</td>
+                        <th th:text="#{rikishi.label.highestrank}">최고위</th>
+                        <td th:if="${#locale.language == 'ja'}" th:text="${rikishi.highestRankJp}">Ozeki</td>
+                        <td th:unless="${#locale.language == 'ja'}" th:text="${rikishi.highestRank}">Ozeki</td>
                     </tr>
                     <tr th:if="${rikishi.retiredDate != null}">
-                        <th>은퇴</th>
+                        <th th:text="#{rikishi.label.retireddate}">은퇴</th>
                         <td th:text="${#temporals.format(rikishi.retiredDate, 'yyyy.MM.dd')}">2025.01.13</td>
                     </tr>
                 </table>
@@ -725,8 +757,11 @@
 
             <!-- 사진 자리: photoUrl 있으면 <img>, 없으면 시코나 첫 글자 낙관 플레이스홀더 -->
             <div class="photo-slot">
-                <img th:if="${rikishi.photoUrl != null}" th:src="${rikishi.photoUrl}" th:alt="${rikishi.shikonaKr}">
-                <span class="photo-placeholder" th:if="${rikishi.photoUrl == null}"
+                <img th:if="${rikishi.photoUrl != null}" th:src="${rikishi.photoUrl}"
+                     th:alt="${#locale.language == 'ja'} ? ${rikishi.shikonaJp} : ${rikishi.shikonaKr}">
+                <span class="photo-placeholder" th:if="${rikishi.photoUrl == null and #locale.language == 'ja'}"
+                      th:text="${#strings.substring(rikishi.shikonaJp, 0, 1)}">朝</span>
+                <span class="photo-placeholder" th:if="${rikishi.photoUrl == null and #locale.language != 'ja'}"
                       th:text="${#strings.substring(rikishi.shikonaKr, 0, 1)}">朝</span>
             </div>
 
@@ -739,12 +774,28 @@
         <div class="panel">
             <div class="panel-title">戦歴・受賞歴</div>
 
-            <div class="record-summary">
+            <div class="record-summary" th:if="${#locale.language == 'ja'}">
+                <span th:text="${rikishi.totalWins} + '勝' + ${rikishi.totalLosses} + '敗' + (${rikishi.totalAbsences} > 0 ? ${rikishi.totalAbsences} + '休' : '')">429勝214敗159休</span>
+                <span class="basho-count" th:text="'通算' + ${rikishi.totalBasho} + '場所'">通算62場所</span>
+            </div>
+            <div class="record-summary" th:unless="${#locale.language == 'ja'}">
                 <span th:text="${rikishi.totalWins} + '승 ' + ${rikishi.totalLosses} + '패' + (${rikishi.totalAbsences} > 0 ? ' ' + ${rikishi.totalAbsences} + '휴' : '')">429승 214패 159휴</span>
                 <span class="basho-count" th:text="'통산 ' + ${rikishi.totalBasho} + '바쇼'">통산 62바쇼</span>
             </div>
 
-            <div class="award-grid">
+            <div class="award-grid" th:if="${#locale.language == 'ja'}">
+                <div class="award-item"><span class="label" th:text="#{rikishi.award.makuuchi}">마쿠우치 우승</span><span class="count" th:text="${rikishi.yushoMakuuchi} + '回'">1回</span></div>
+                <div class="award-item"><span class="label" th:text="#{rikishi.award.juryo}">주료 우승</span><span class="count" th:text="${rikishi.yushoJuryo} + '回'">1回</span></div>
+                <div class="award-item" th:if="${rikishi.yushoMakushita > 0}"><span class="label" th:text="#{rikishi.award.makushita}">마쿠시타 우승</span><span class="count" th:text="${rikishi.yushoMakushita} + '回'">1回</span></div>
+                <div class="award-item" th:if="${rikishi.yushoSandanme > 0}"><span class="label" th:text="#{rikishi.award.sandanme}">산단메 우승</span><span class="count" th:text="${rikishi.yushoSandanme} + '回'">1回</span></div>
+                <div class="award-item" th:if="${rikishi.yushoJonidan > 0}"><span class="label" th:text="#{rikishi.award.jonidan}">조니단 우승</span><span class="count" th:text="${rikishi.yushoJonidan} + '回'">1回</span></div>
+                <div class="award-item" th:if="${rikishi.yushoJonokuchi > 0}"><span class="label" th:text="#{rikishi.award.jonokuchi}">조노구치 우승</span><span class="count" th:text="${rikishi.yushoJonokuchi} + '回'">1回</span></div>
+                <div class="award-item"><span class="label" th:text="#{rikishi.award.shukun}">수훈상</span><span class="count" th:text="${rikishi.sanshoShukun} + '回'">2回</span></div>
+                <div class="award-item"><span class="label" th:text="#{rikishi.award.kanto}">감투상</span><span class="count" th:text="${rikishi.sanshoKanto} + '回'">3回</span></div>
+                <div class="award-item"><span class="label" th:text="#{rikishi.award.gino}">기능상</span><span class="count" th:text="${rikishi.sanshoGino} + '回'">1回</span></div>
+                <div class="award-item"><span class="label" th:text="#{rikishi.award.kinboshi}">킨보시</span><span class="count" th:text="${rikishi.kinboshiCount} + '個'">1個</span></div>
+            </div>
+            <div class="award-grid" th:unless="${#locale.language == 'ja'}">
                 <div class="award-item"><span class="label">마쿠우치 우승</span><span class="count" th:text="${rikishi.yushoMakuuchi} + '회'">1회</span></div>
                 <div class="award-item"><span class="label">주료 우승</span><span class="count" th:text="${rikishi.yushoJuryo} + '회'">1회</span></div>
                 <div class="award-item" th:if="${rikishi.yushoMakushita > 0}"><span class="label">마쿠시타 우승</span><span class="count" th:text="${rikishi.yushoMakushita} + '회'">1회</span></div>
@@ -766,9 +817,9 @@
                     <canvas id="kimariteChart"></canvas>
                 </div>
                 <div class="kimarite-legend" id="kimariteLegend"></div>
-                <div class="chart-note">※ 등록된 토리쿠미 결과 기준으로 산출됩니다</div>
+                <div class="chart-note" th:text="#{rikishi.chart.note}">※ 등록된 토리쿠미 결과 기준으로 산출됩니다</div>
             </div>
-            <div class="empty-note" th:if="${kimariteStats == null or kimariteStats.isEmpty()}">
+            <div class="empty-note" th:if="${kimariteStats == null or kimariteStats.isEmpty()}" th:text="#{rikishi.empty.match}">
                 아직 등록된 대전 기록이 없습니다.
             </div>
         </div>
@@ -798,24 +849,46 @@
                             <span class="mark loss" th:case="'LOSS'">●</span>
                             <span class="mark absent" th:case="'ABSENT'">휴</span>
                         </th:block>
-                        <span class="sd-name" th:text="${m.opponentShikonaKr} ?: '휴장'">상대명</span>
+                        <span class="sd-name" th:if="${#locale.language == 'ja'}" th:text="${m.opponentShikonaJp} ?: #{rikishi.absent}">상대명</span>
+                        <span class="sd-name" th:unless="${#locale.language == 'ja'}" th:text="${m.opponentShikonaKr} ?: #{rikishi.absent}">상대명</span>
                     </button>
                 </div>
             </div>
-            <div class="empty-note" th:if="${g.matches.isEmpty()}" style="padding: 6px 0;">
+            <div class="empty-note" th:if="${g.matches.isEmpty()}" style="padding: 6px 0;" th:text="#{rikishi.empty.match}">
                 등록된 대전 기록이 없습니다.
             </div>
         </div>
     </div>
     <div class="panel match-history-panel" th:if="${gameLog == null or gameLog.isEmpty()}">
         <div class="panel-title">星取表</div>
-        <div class="empty-note">아직 등록된 대전 기록이 없습니다.</div>
+        <div class="empty-note" th:text="#{rikishi.empty.match}">아직 등록된 대전 기록이 없습니다.</div>
     </div>
 
-    <!-- ===== 対戦成績(상대전적) - ㄱㄴㄷ 초성 인덱스로 접어서 나열.
+    <!-- ===== 対戦成績(상대전적) - ko: ㄱㄴㄷ 초성 인덱스로 접어서 나열(초성은 한국어 이름 기준이라
+         ja 화면에선 의미가 없어 그룹/인덱스 없이 평평하게 나열).
          상단 인덱스를 누르면 해당 초성 그룹으로 이동하고, 그룹(h2h-group)과 상대별 줄(h2h-row) 모두
          details/summary라 접었다 펼 수 있다. 상대별 줄을 펼치면 그 상대와의 개별 대전 목록이 나온다. -->
-    <div class="panel h2h-panel" th:if="${headToHeadGroups != null and !headToHeadGroups.isEmpty()}">
+    <div class="panel h2h-panel" th:if="${headToHeadGroups != null and !headToHeadGroups.isEmpty() and #locale.language == 'ja'}">
+        <div class="panel-title">対戦成績</div>
+
+        <th:block th:each="g : ${headToHeadGroups}">
+            <details class="h2h-row" th:each="h : ${g.opponents}">
+                <summary class="h2h-summary">
+                    <a class="h2h-opponent" th:if="${h.opponentId != null}" th:href="@{/rikishi/{id}(id=${h.opponentId})}" th:text="${h.opponentShikonaJp}">상대명</a>
+                    <span class="h2h-opponent" th:if="${h.opponentId == null}" th:text="${h.opponentShikonaJp}">상대명</span>
+                    <span class="h2h-record"><span class="win" th:text="${h.wins} + '勝'">0勝</span> <span th:text="${h.losses} + '敗'">0敗</span></span>
+                </summary>
+                <ul class="h2h-bouts">
+                    <li class="h2h-bout-item" th:each="b : ${h.bouts}">
+                        <span class="h2h-bout-basho" th:text="${b.bashoLabel} + ' ' + ${b.day} + '日目'">2026年07月場所 8日目</span>
+                        <span class="h2h-bout-mark" th:classappend="${b.win} ? 'win' : 'loss'" th:text="${b.win} ? '○' : '●'">○</span>
+                        <span class="h2h-bout-kimarite" th:text="${b.kimarite}">寄り切り</span>
+                    </li>
+                </ul>
+            </details>
+        </th:block>
+    </div>
+    <div class="panel h2h-panel" th:if="${headToHeadGroups != null and !headToHeadGroups.isEmpty() and #locale.language != 'ja'}">
         <div class="panel-title">対戦成績</div>
 
         <nav class="h2h-index">
@@ -847,10 +920,10 @@
     </div>
     <div class="panel h2h-panel" th:if="${headToHeadGroups == null or headToHeadGroups.isEmpty()}">
         <div class="panel-title">対戦成績</div>
-        <div class="empty-note">아직 집계된 상대전적이 없습니다.</div>
+        <div class="empty-note" th:text="#{rikishi.empty.h2h}">아직 집계된 상대전적이 없습니다.</div>
     </div>
 
-    <footer>SUMOARCHIVE — 韓国語で見る大相撲情報アーカイブ</footer>
+    <footer th:text="#{main.footer}">SUMOARCHIVE — 韓国語で見る大相撲情報アーカイブ</footer>
 
     <!-- ===== 대전 상세 슬라이드 패널 =====
          호시토리표 칸을 클릭하면 /torikumi/{id}/fragment (전체 페이지 /torikumi/{id} 와 같은 조각)를
@@ -858,8 +931,8 @@
     <div class="match-panel-overlay" id="matchPanelOverlay"></div>
     <aside class="match-panel" id="matchPanel" aria-hidden="true">
         <div class="mp-bar">
-            <a class="mp-full-link" id="matchPanelFull" href="#">전체 페이지로 보기 →</a>
-            <button type="button" class="mp-close" id="matchPanelClose" aria-label="닫기">×</button>
+            <a class="mp-full-link" id="matchPanelFull" href="#" th:text="#{rikishi.panel.fulllink}">전체 페이지로 보기 →</a>
+            <button type="button" class="mp-close" id="matchPanelClose" th:attr="aria-label=#{rikishi.panel.close}">×</button>
         </div>
         <div class="mp-body" id="matchPanelBody"></div>
     </aside>
@@ -871,7 +944,7 @@
     /*<![CDATA[*/
     const kimariteData = [
         /*[# th:each="k : ${kimariteStats}"]*/
-        { name: /*[[${k.kimarite}]]*/ '寄り切り', count: /*[[${k.count}]]*/ 0, percent: /*[[${k.percent}]]*/ 0 },
+        { name: /*[[${#locale.language == 'ja' ? k.kimariteJp : k.kimarite}]]*/ '寄り切り', count: /*[[${k.count}]]*/ 0, percent: /*[[${k.percent}]]*/ 0 },
         /*[/]*/
     ];
     /*]]>*/

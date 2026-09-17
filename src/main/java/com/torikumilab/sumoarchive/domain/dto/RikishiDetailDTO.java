@@ -29,20 +29,25 @@ public class RikishiDetailDTO {
 	private String birthplace;
 	private String nationality;
 	private String originKr; // OriginDisplayUtil 기반 표시용 출신지 (관리자 직접 입력 우선, 없으면 birthplace에서 자동 계산)
+	private String originJp; // 일본어 화면용 (birthplace에서 자동 계산만. 관리자 직접 입력 오버라이드는 아직 없음)
 
 	private String heyaNameKr; // 무소속(하쿠호 등)이면 null
+	private String heyaNameJp; // 일본어 화면용. 대부분 실제 한자, 일부는 아직 로마자 placeholder
 
 	private BigDecimal height;
 	private BigDecimal weight;
 
-	private String fightingStyle; // 관리자 입력값, 없으면 null → 화면에서 "미분류" 처리
+	private String fightingStyle;   // 관리자 입력값(한국어), 없으면 null → 화면에서 "미분류" 처리
+	private String fightingStyleJp; // 일본어 화면용. fightingStyle이 null이면 null
 
 	private LocalDate debutDate;
 	private String highestRank;
+	private String highestRankJp; // 일본어 화면용
 
 	private boolean isActive;
 	private LocalDate retiredDate;     // 현역이면 null
 	private String oyakataNameKr;      // 오야카타 아니면 null
+	private String oyakataNameJp;      // 일본어 화면용. 오야카타 아니면 null
 
 	private String photoUrl; // 없으면 null → 화면에서 시코나 첫 글자 플레이스홀더로 대체
 

@@ -100,4 +100,27 @@ public final class RankDisplayUtil {
 	public static Map<String, String> koreanLabelOptions() {
 		return new LinkedHashMap<>(KR_LABEL);
 	}
+
+	// ===== 자유 문자열 계급값(highest_rank 등) → 일본어 한자 (리키시 상세 일본어 화면용) =====
+	// LABEL(RankName 키)과 값이 같아서 새로 만들지 않고 이름만 String으로 다시 맵핑.
+	private static final Map<String, String> JP_LABEL = new LinkedHashMap<>();
+
+	static {
+		for (RankName rankName : RankName.values()) {
+			JP_LABEL.put(rankName.name(), LABEL.get(rankName));
+		}
+	}
+
+	/** toKorean과 동일한 규칙으로 일본어 한자 표기를 반환. 매핑에 없으면 원문 그대로. */
+	public static String toJapanese(String stored) {
+		if (stored == null || stored.isBlank()) {
+			return stored;
+		}
+		String[] parts = stored.strip().split("\\s+", 2);
+		String jp = JP_LABEL.get(parts[0]);
+		if (jp == null) {
+			return stored;
+		}
+		return parts.length > 1 ? jp + " " + parts[1] : jp;
+	}
 }
