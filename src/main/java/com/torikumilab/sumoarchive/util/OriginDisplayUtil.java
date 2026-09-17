@@ -114,14 +114,15 @@ public final class OriginDisplayUtil {
 		if (birthplace == null || birthplace.isBlank()) {
 			return null;
 		}
-		String trimmed = birthplace.strip();
-		if (containsHangul(trimmed)) {
-			return trimmed;
+		// 원문이든 관리자가 이미 한글로 고쳐둔 값이든 항상 첫 콤마 앞(지역/국가)만 취한다 -
+		// 그래야 "토야마현, 토야마시"처럼 관리자가 시/군까지 적어놓은 값도 다른 선수들과
+		// 같은 급(도도부현/국가)으로 표시된다.
+		String region = birthplace.strip().split(",", 2)[0].strip();
+		if (containsHangul(region)) {
+			return region;
 		}
 
-		String region = trimmed.split(",", 2)[0].strip();
 		String base = stripSuffix(region);
-
 		String prefKr = PREFECTURE_KR.get(base);
 		if (prefKr != null) {
 			return prefKr;
