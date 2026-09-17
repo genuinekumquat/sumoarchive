@@ -498,6 +498,71 @@
             color: var(--sumi-faint);
         }
 
+        /* ===== 対戦成績(상대전적) - 나무위키식 접이식 목록. 상대별 한 줄(summary)을 누르면
+           그 상대와의 개별 대전 목록이 펼쳐짐. 네이티브 <details>/<summary> 사용(JS 불필요). */
+        .h2h-panel { margin-bottom: 28px; padding: 16px 20px 18px; }
+
+        .h2h-row + .h2h-row { border-top: 1px solid var(--washi-line); }
+
+        .h2h-summary {
+            display: flex;
+            align-items: baseline;
+            gap: 10px;
+            padding: 11px 4px;
+            cursor: pointer;
+            list-style: none;
+        }
+        .h2h-summary::-webkit-details-marker { display: none; }
+
+        .h2h-summary::before {
+            content: '▸';
+            color: var(--sumi-faint);
+            font-size: 11px;
+            transition: transform 0.15s ease;
+            flex-shrink: 0;
+        }
+        .h2h-row[open] > .h2h-summary::before { transform: rotate(90deg); color: var(--shu); }
+
+        .h2h-summary:hover { color: var(--shu); }
+        .h2h-summary:hover .h2h-opponent { color: var(--shu); }
+
+        .h2h-opponent {
+            font-family: 'Noto Serif KR', serif;
+            font-weight: 700;
+            font-size: 15px;
+            color: var(--sumi);
+        }
+        .h2h-record {
+            margin-left: auto;
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--sumi-soft);
+            white-space: nowrap;
+        }
+        .h2h-record .win { color: var(--shu); }
+
+        .h2h-bouts {
+            list-style: none;
+            margin: 0 0 8px 21px;
+            padding: 0;
+            border-left: 1px solid var(--washi-line);
+        }
+        .h2h-bout-item {
+            display: flex;
+            align-items: baseline;
+            gap: 10px;
+            padding: 6px 0 6px 14px;
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 12.5px;
+            color: var(--sumi-soft);
+        }
+        .h2h-bout-item .h2h-bout-basho { color: var(--sumi-faint); white-space: nowrap; }
+        .h2h-bout-item .h2h-bout-mark { font-size: 14px; }
+        .h2h-bout-item .h2h-bout-mark.win { color: var(--shu); }
+        .h2h-bout-item .h2h-bout-mark.loss { color: var(--sumi-faint); }
+        .h2h-bout-item .h2h-bout-kimarite { margin-left: auto; color: var(--sumi-faint); }
+
         footer {
             text-align: center;
             margin-top: 30px;
@@ -686,6 +751,31 @@
     <div class="panel match-history-panel" th:if="${gameLog == null or gameLog.isEmpty()}">
         <div class="panel-title">星取表</div>
         <div class="empty-note">아직 등록된 대전 기록이 없습니다.</div>
+    </div>
+
+    <!-- ===== 対戦成績(상대전적) - 상대 선수별 통산 승패를 접이식(details/summary)으로 나열.
+         summary 줄을 누르면 그 상대와의 개별 대전 목록이 펼쳐진다(나무위키 문서 접이식 문단과 동일한 패턴). -->
+    <div class="panel h2h-panel" th:if="${headToHead != null and !headToHead.isEmpty()}">
+        <div class="panel-title">対戦成績</div>
+
+        <details class="h2h-row" th:each="h : ${headToHead}">
+            <summary class="h2h-summary">
+                <a class="h2h-opponent" th:if="${h.opponentId != null}" th:href="@{/rikishi/{id}(id=${h.opponentId})}" th:text="${h.opponentShikonaKr}">상대명</a>
+                <span class="h2h-opponent" th:if="${h.opponentId == null}" th:text="${h.opponentShikonaKr}">상대명</span>
+                <span class="h2h-record"><span class="win" th:text="${h.wins} + '승'">0승</span> <span th:text="${h.losses} + '패'">0패</span></span>
+            </summary>
+            <ul class="h2h-bouts">
+                <li class="h2h-bout-item" th:each="b : ${h.bouts}">
+                    <span class="h2h-bout-basho" th:text="${b.bashoLabel} + ' ' + ${b.day} + '日目'">2026年07月場所 8日目</span>
+                    <span class="h2h-bout-mark" th:classappend="${b.win} ? 'win' : 'loss'" th:text="${b.win} ? '○' : '●'">○</span>
+                    <span class="h2h-bout-kimarite" th:text="${b.kimarite}">寄り切り</span>
+                </li>
+            </ul>
+        </details>
+    </div>
+    <div class="panel h2h-panel" th:if="${headToHead == null or headToHead.isEmpty()}">
+        <div class="panel-title">対戦成績</div>
+        <div class="empty-note">아직 집계된 상대전적이 없습니다.</div>
     </div>
 
     <footer>SUMOARCHIVE — 韓国語で見る大相撲情報アーカイブ</footer>

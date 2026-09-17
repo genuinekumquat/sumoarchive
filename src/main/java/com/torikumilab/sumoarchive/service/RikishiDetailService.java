@@ -1,6 +1,8 @@
 package com.torikumilab.sumoarchive.service;
 
 import com.torikumilab.sumoarchive.domain.dto.BashoGameLogDTO;
+import com.torikumilab.sumoarchive.domain.dto.HeadToHeadBoutDTO;
+import com.torikumilab.sumoarchive.domain.dto.HeadToHeadDTO;
 import com.torikumilab.sumoarchive.domain.dto.KimariteCountRow;
 import com.torikumilab.sumoarchive.domain.dto.KimariteStatDTO;
 import com.torikumilab.sumoarchive.domain.dto.MatchHistoryItemDTO;
@@ -30,6 +32,8 @@ import java.time.LocalDate;
 import java.time.Period;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -186,6 +190,68 @@ public class RikishiDetailService {
 				.toList();
 	}
 	
+	/**
+	 * 리키시 상세 화면 "상대전적(対戦成績)" 패널. 결정전을 제외한 통산 전 경기를 상대 선수별로 묶어
+	 * 승패를 집계하고, 맞대결 횟수가 많은 상대(=라이벌)부터 보여준다. 등록된 대전이 없으면 빈 리스트.
+	 */
+	public List<HeadToHeadDTO> getHeadToHead(Integer rikishiId) {
+		List<TorikumiEntity> matches = torikumiRepository.findAllRegularByRikishi(rikishiId);
+		if (matches.isEmpty()) {
+			return List.of();
+		}
+
+		// 리포지토리에서 이미 바쇼 최신순으로 내려주므로, 그 순서를 유지한 채(LinkedHashMap) 상대별로 묶는다.
+		Map<Integer, RikishiEntity> opponentById = new HashMap<>();
+		Map<Integer, List<TorikumiEntity>> boutsByOpponent = new LinkedHashMap<>();
+		for (TorikumiEntity t : matches) {
+			RikishiEntity opponent = resolveOpponent(t, rikishiId);
+			opponentById.put(opponent.getId(), opponent);
+			boutsByOpponent.computeIfAbsent(opponent.getId(), k -> new ArrayList<>()).add(t);
+		}
+
+		List<HeadToHeadDTO> result = new ArrayList<>();
+		for (Map.Entry<Integer, List<TorikumiEntity>> entry : boutsByOpponent.entrySet()) {
+			RikishiEntity opponent = opponentById.get(entry.getKey());
+			List<TorikumiEntity> bouts = entry.getValue();
+
+			long wins = bouts.stream().filter(t -> isWinFor(t, rikishiId)).count();
+			long losses = bouts.size() - wins;
+
+			List<HeadToHeadBoutDTO> boutDtos = bouts.stream()
+					.map(t -> toHeadToHeadBout(t, rikishiId))
+					.toList();
+
+			result.add(new HeadToHeadDTO(opponent.getId(), opponentDisplayName(opponent), wins, losses, boutDtos));
+		}
+
+		// 맞대결 횟수(라이벌 강도) 내림차순, 같으면 상대 이름 가나다순으로 안정적인 정렬.
+		result.sort(Comparator
+				.comparingLong((HeadToHeadDTO h) -> h.wins() + h.losses()).reversed()
+				.thenComparing(HeadToHeadDTO::opponentShikonaKr));
+
+		return result;
+	}
+
+	private boolean isWinFor(TorikumiEntity t, Integer rikishiId) {
+		return t.getWinnerRikishiEntity() != null && t.getWinnerRikishiEntity().getId().equals(rikishiId);
+	}
+
+	private HeadToHeadBoutDTO toHeadToHeadBout(TorikumiEntity t, Integer rikishiId) {
+		boolean win = isWinFor(t, rikishiId);
+		BashoEntity basho = t.getBashoEntity();
+		String bashoLabel = basho.getBashoYear() + "年"
+				+ String.format("%02d", basho.getBashoMonth().getMonthValue()) + "月場所";
+
+		String kimarite;
+		if (t.getResultType() == ResultType.FUZEN) {
+			kimarite = win ? "不戦勝" : "不戦敗";
+		} else {
+			kimarite = t.getKimarite() != null ? KimariteDisplayUtil.toJp(t.getKimarite()) : "-";
+		}
+
+		return new HeadToHeadBoutDTO(bashoLabel, t.getDay(), win, kimarite);
+	}
+
 	private BashoGameLogDTO toBashoGameLog(Integer rikishiId, BanzukeEntity banzuke) {
 		List<MatchHistoryItemDTO> matches = buildMatchHistory(rikishiId, banzuke.getBashoEntity().getId());
 		

@@ -59,6 +59,20 @@ public interface TorikumiRepository extends JpaRepository<TorikumiEntity, Intege
 """)
 	List<TorikumiEntity> findMatchHistory(@Param("rikishiId") Integer rikishiId, @Param("bashoId") Integer bashoId);
 
+	// 상대전적(対戦成績)용 - 이 리키시가 동/서 어느 쪽으로 출전했든, 결정전 제외한 통산 전 경기를
+	// 바쇼 시작일 내림차순(최신 바쇼부터) → 같은 바쇼 안에서는 day 오름차순으로.
+	@Query("""
+    SELECT t FROM TorikumiEntity t
+    JOIN FETCH t.eastRikishiEntity
+    JOIN FETCH t.westRikishiEntity
+    LEFT JOIN FETCH t.winnerRikishiEntity
+    JOIN FETCH t.bashoEntity
+    WHERE (t.eastRikishiEntity.id = :rikishiId OR t.westRikishiEntity.id = :rikishiId)
+      AND t.isExtraMatch = false
+    ORDER BY t.bashoEntity.startDate DESC, t.day ASC
+""")
+	List<TorikumiEntity> findAllRegularByRikishi(@Param("rikishiId") Integer rikishiId);
+
 	// 킨보시 파생용 - 특정 바쇼의 정규 대전 전부, 승자/패자 fetch.
 	@Query("""
     SELECT t FROM TorikumiEntity t
