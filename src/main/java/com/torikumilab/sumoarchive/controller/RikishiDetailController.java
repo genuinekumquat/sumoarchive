@@ -10,6 +10,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
 
@@ -23,9 +24,12 @@ public class RikishiDetailController {
 	private final RikishiDetailService rikishiDetailService;
 	
 	@GetMapping("/rikishi/{id}")
-	public String detail(@PathVariable Integer id, Model model) {
+	public String detail(@PathVariable Integer id,
+						  @RequestParam(required = false) Integer fromBasho,
+						  @RequestParam(required = false) Integer toBasho,
+						  Model model) {
 		RikishiDetailDTO rikishi = rikishiDetailService.getRikishiDetail(id);
-		List<KimariteStatDTO> kimariteStats = rikishiDetailService.getKimariteStats(id);
+		List<KimariteStatDTO> kimariteStats = rikishiDetailService.getKimariteStats(id, fromBasho, toBasho);
 		List<BashoGameLogDTO> gameLog = rikishiDetailService.getGameLog(id);
 		List<HeadToHeadGroupDTO> headToHeadGroups = rikishiDetailService.getHeadToHeadGrouped(id);
 
@@ -33,6 +37,9 @@ public class RikishiDetailController {
 		model.addAttribute("kimariteStats", kimariteStats);
 		model.addAttribute("gameLog", gameLog);
 		model.addAttribute("headToHeadGroups", headToHeadGroups);
+		// 결정기술 차트 기간 필터 select 기본 선택값 유지용 (없으면 "전체" 옵션이 선택됨)
+		model.addAttribute("fromBasho", fromBasho);
+		model.addAttribute("toBasho", toBasho);
 		return "rikishi/detail";
 	}
 }

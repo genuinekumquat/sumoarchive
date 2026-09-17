@@ -7,6 +7,7 @@ import java.util.List;
  * RikishiDetailService#getGameLog()에서 바쇼별로 하나씩 만들어줌 (최신 바쇼부터 내림차순).
  */
 public record BashoGameLogDTO(
+		Integer bashoId,        // 결정기술 차트 기간 필터(select) 옵션값으로도 씀
 		String bashoLabel,      // "2026年07月場所" 형태
 		String rankDisplay,     // 그 바쇼 기준 순위 표기 ("前頭10枚目" 등)
 		String recordSummary,   // "9勝6敗" 형태 (그 바쇼에 등록된 토리쿠미 기준. 등록이 없으면 "-")

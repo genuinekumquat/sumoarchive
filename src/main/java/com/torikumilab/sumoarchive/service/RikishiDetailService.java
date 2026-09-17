@@ -19,6 +19,7 @@ import com.torikumilab.sumoarchive.domain.entity.constant.ResultType;
 import com.torikumilab.sumoarchive.domain.entity.constant.Side;
 import com.torikumilab.sumoarchive.repository.AwardRepository;
 import com.torikumilab.sumoarchive.repository.BanzukeRepository;
+import com.torikumilab.sumoarchive.repository.BashoRepository;
 import com.torikumilab.sumoarchive.repository.KinboshiRepository;
 import com.torikumilab.sumoarchive.repository.RikishiRepository;
 import com.torikumilab.sumoarchive.repository.RikishiShikonaHistoryRepository;
@@ -66,6 +67,7 @@ public class RikishiDetailService {
 	private final RikishiRepository rikishiRepository;
 	private final RikishiShikonaHistoryRepository rikishiShikonaHistoryRepository;
 	private final BanzukeRepository banzukeRepository;
+	private final BashoRepository bashoRepository;
 	private final TorikumiRepository torikumiRepository;
 	private final AwardRepository awardRepository;
 	private final KinboshiRepository kinboshiRepository;
@@ -162,13 +164,35 @@ public class RikishiDetailService {
 	}
 	
 	/**
-	 * 결정기술(키마리테) 원형차트용 통계. 등록된 대전 기록이 없으면 빈 리스트.
+	 * 결정기술(키마리테) 원형차트용 통계(통산). 등록된 대전 기록이 없으면 빈 리스트.
 	 * 서로 다른 결정기술이 {@value #TOP_KIMARITE_COUNT}개 이하면 전부 개별로 보여주고,
 	 * 그보다 많을 때만 상위 {@value #TOP_KIMARITE_COUNT}개는 개별로, 나머지는 "기타"로 합쳐서 반환.
 	 */
 	public List<KimariteStatDTO> getKimariteStats(Integer rikishiId) {
-		List<KimariteCountRow> rows = torikumiRepository.findKimariteStats(rikishiId);
-		
+		return buildKimariteStats(torikumiRepository.findKimariteStats(rikishiId));
+	}
+
+	/**
+	 * 결정기술 원형차트용 통계를 특정 바쇼 구간(둘 다 그 바쇼의 startDate 기준, 포함)으로 좁혀서.
+	 * fromBashoId/toBashoId 중 하나라도 못 찾으면(예: 잘못된 id) 통산 통계로 대체한다.
+	 * 순서가 뒤바뀌어 들어와도(fromBasho가 더 최신) min/max로 보정해서 처리.
+	 */
+	public List<KimariteStatDTO> getKimariteStats(Integer rikishiId, Integer fromBashoId, Integer toBashoId) {
+		if (fromBashoId == null || toBashoId == null) {
+			return getKimariteStats(rikishiId);
+		}
+		LocalDate d1 = bashoRepository.findById(fromBashoId).map(BashoEntity::getStartDate).orElse(null);
+		LocalDate d2 = bashoRepository.findById(toBashoId).map(BashoEntity::getStartDate).orElse(null);
+		if (d1 == null || d2 == null) {
+			return getKimariteStats(rikishiId);
+		}
+		LocalDate from = d1.isBefore(d2) ? d1 : d2;
+		LocalDate to = d1.isBefore(d2) ? d2 : d1;
+		return buildKimariteStats(torikumiRepository.findKimariteStatsBetween(rikishiId, from, to));
+	}
+
+	private List<KimariteStatDTO> buildKimariteStats(List<KimariteCountRow> rows) {
+
 		long total = rows.stream().mapToLong(KimariteCountRow::getCnt).sum();
 		if (total == 0) {
 			return List.of();
@@ -311,6 +335,7 @@ public class RikishiDetailService {
 				+ String.format("%02d", basho.getBashoMonth().getMonthValue()) + "月場所";
 		
 		return new BashoGameLogDTO(
+				basho.getId(),
 				bashoLabel,
 				RankDisplayUtil.rankDisplay(banzuke.getRankName(), banzuke.getRankValue()),
 				recordSummary,

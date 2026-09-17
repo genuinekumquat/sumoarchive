@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -44,8 +45,23 @@ public interface TorikumiRepository extends JpaRepository<TorikumiEntity, Intege
     ORDER BY COUNT(t) DESC
 """)
 	List<KimariteCountRow> findKimariteStats(@Param("rikishiId") Integer rikishiId);
-	
-	
+
+	// 키마리테 분포 - 바쇼 시작일 기간 필터 버전 (리키시 상세 화면 "결정기술 기간 지정" 기능용).
+	@Query("""
+    SELECT t.kimarite AS kimarite, COUNT(t) AS cnt
+    FROM TorikumiEntity t
+    WHERE t.winnerRikishiEntity.id = :rikishiId
+      AND t.kimarite IS NOT NULL
+      AND t.isExtraMatch = false
+      AND t.bashoEntity.startDate BETWEEN :from AND :to
+    GROUP BY t.kimarite
+    ORDER BY COUNT(t) DESC
+""")
+	List<KimariteCountRow> findKimariteStatsBetween(@Param("rikishiId") Integer rikishiId,
+													 @Param("from") LocalDate from,
+													 @Param("to") LocalDate to);
+
+
 	// 호시토리표(대전표)용 - 특정 바쇼에서 이 리키시가 동/서 어느 쪽으로 출전했든 전부 day 오름차순으로.
 	// 결정전(is_extra_match=true)은 다른 통계와 동일하게 여기서도 제외 (15일 정규 대전만).
 	@Query("""
