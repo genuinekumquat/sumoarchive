@@ -2,16 +2,27 @@ package com.torikumilab.sumoarchive.service;
 
 import com.torikumilab.sumoarchive.domain.dto.BanzukeDTO;
 import com.torikumilab.sumoarchive.domain.dto.BashoOptionDTO;
+import com.torikumilab.sumoarchive.domain.dto.HeyaSekitoriDTO;
+import com.torikumilab.sumoarchive.domain.dto.IchimonGroupDTO;
+import com.torikumilab.sumoarchive.domain.dto.SekitoriDTO;
+import com.torikumilab.sumoarchive.domain.entity.BanzukeEntity;
 import com.torikumilab.sumoarchive.domain.entity.BashoEntity;
+import com.torikumilab.sumoarchive.domain.entity.HeyaEntity;
+import com.torikumilab.sumoarchive.domain.entity.RikishiEntity;
 import com.torikumilab.sumoarchive.domain.entity.constant.Division;
 import com.torikumilab.sumoarchive.repository.BanzukeRepository;
 import com.torikumilab.sumoarchive.repository.BashoRepository;
+import com.torikumilab.sumoarchive.repository.HeyaRepository;
 import com.torikumilab.sumoarchive.util.OriginDisplayUtil;
+import com.torikumilab.sumoarchive.util.RankDisplayUtil;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -19,6 +30,7 @@ public class BanzukeService {
 
 	private final BashoRepository bashoRepository;
 	private final BanzukeRepository banzukeRepository;
+	private final HeyaRepository heyaRepository;
 
 	/** 메인 화면 기본 노출: 가장 최근 바쇼(시작일 기준)의 해당 디비전 반즈케. */
 	public List<BanzukeDTO> getLatestBanzuke(Division division) {
@@ -71,6 +83,53 @@ public class BanzukeService {
 						b.getBashoMonth().getMonthValue(),
 						b.getBashoMonth().getDisplayNameJp()
 				))
+				.toList();
+	}
+
+	/**
+	 * 메인 페이지 "일문" 탭 - 최신 바쇼 기준 일문(一門)별 헤야, 그 안에 세키토리(마쿠우치+주료) 명단.
+	 * 현재 세키토리가 없는 헤야도 목록에는 남는다(전체 헤야 구조를 보여주는 게 목적).
+	 * 이치몬이 아직 배정 안 된 헤야는 제외 - 지금은 전부 배정돼 있지만 이후 새 헤야가 생기면 비어있을 수 있음.
+	 */
+	public List<IchimonGroupDTO> getIchimonStructure() {
+		BashoEntity basho = bashoRepository.findTopByOrderByStartDateDesc().orElse(null);
+		if (basho == null) {
+			return List.of();
+		}
+
+		Map<Integer, List<SekitoriDTO>> sekitoriByHeyaId = new LinkedHashMap<>();
+		for (BanzukeEntity b : banzukeRepository.findSekitoriByBasho(basho.getId())) {
+			RikishiEntity r = b.getRikishiEntity();
+			if (r.getHeyaEntity() == null) {
+				continue; // 무소속(은퇴 예정 등 드문 케이스) - 일문 구조에는 낄 자리가 없어 스킵
+			}
+			SekitoriDTO dto = new SekitoriDTO(
+					r.getId(),
+					r.getShikonaKr() != null ? r.getShikonaKr() : (r.getShikonaJp() != null ? r.getShikonaJp() : r.getShikonaEn()),
+					r.getShikonaJp(),
+					RankDisplayUtil.rankDisplayKorean(b.getRankName(), b.getRankValue()),
+					RankDisplayUtil.rankDisplay(b.getRankName(), b.getRankValue())
+			);
+			sekitoriByHeyaId.computeIfAbsent(r.getHeyaEntity().getId(), k -> new ArrayList<>()).add(dto);
+		}
+
+		Map<String, List<HeyaSekitoriDTO>> heyaByIchimonKr = new LinkedHashMap<>();
+		Map<String, String> ichimonJpByKr = new LinkedHashMap<>();
+		for (HeyaEntity h : heyaRepository.findAllByOrderByNameKrAsc()) {
+			if (h.getIchimonKr() == null) {
+				continue;
+			}
+			heyaByIchimonKr.computeIfAbsent(h.getIchimonKr(), k -> new ArrayList<>())
+					.add(new HeyaSekitoriDTO(
+							h.getId(), h.getNameKr(), h.getNameJp(),
+							sekitoriByHeyaId.getOrDefault(h.getId(), List.of())
+					));
+			ichimonJpByKr.putIfAbsent(h.getIchimonKr(), h.getIchimonJp());
+		}
+
+		return heyaByIchimonKr.entrySet().stream()
+				.sorted((a, b) -> b.getValue().size() - a.getValue().size()) // 소속 헤야 많은 일문부터
+				.map(e -> new IchimonGroupDTO(e.getKey(), ichimonJpByKr.get(e.getKey()), e.getValue()))
 				.toList();
 	}
 }

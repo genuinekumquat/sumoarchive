@@ -54,6 +54,29 @@ public final class RankDisplayUtil {
 		return label;
 	}
 
+	/**
+	 * rankDisplay(RankName, Integer)의 한국어 버전 - index.html JS RANK_LABEL의 번호 규칙과 동일
+	 * ("마에가시라10", 순번 없는 계급은 "요코즈나" 그대로, "번째" 같은 접미사는 안 붙임).
+	 */
+	public static String rankDisplayKorean(RankName rankName, Integer rankValue) {
+		if (rankName == null) {
+			return null;
+		}
+		String label = KR_LABEL.getOrDefault(rankName.name(), rankName.name());
+
+		boolean numbered = rankName == RankName.Maegashira
+				|| rankName == RankName.Juryo
+				|| rankName == RankName.Makushita
+				|| rankName == RankName.Sandanme
+				|| rankName == RankName.Jonidan
+				|| rankName == RankName.Jonokuchi;
+
+		if (numbered && rankValue != null) {
+			return label + rankValue;
+		}
+		return label;
+	}
+
 	public static String sideDisplay(Side side) {
 		if (side == null) {
 			return null;

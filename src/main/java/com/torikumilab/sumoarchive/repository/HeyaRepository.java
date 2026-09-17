@@ -12,6 +12,9 @@ public interface HeyaRepository extends JpaRepository<HeyaEntity, Integer> {
 
 	List<HeyaEntity> findAllByOrderByNameEnAsc();
 
+	// 메인 페이지 "일문" 탭용 - 헤야를 한국어명 가나다순으로.
+	List<HeyaEntity> findAllByOrderByNameKrAsc();
+
 	// 관리자가 저장해 nameKrAuto=false가 된 행은 제외한다(검수 완료).
 	@Query("SELECT h FROM HeyaEntity h WHERE h.nameKrAuto IS NULL OR h.nameKrAuto = true ORDER BY h.nameEn ASC")
 	List<HeyaEntity> findNameKrAutofillTargets();

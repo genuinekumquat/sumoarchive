@@ -69,4 +69,27 @@ public interface BanzukeRepository extends JpaRepository<BanzukeEntity, Integer>
 """)
 	List<BanzukeEntity> findByBashoEntityIdFetchRikishi(@Param("bashoId") Integer bashoId);
 
+	// 메인 페이지 "일문" 탭용 - 세키토리(마쿠우치+주료)만, 마쿠우치 먼저 그 안에서 순위순, 그다음 주료도 순위순.
+	@Query("""
+    SELECT b FROM BanzukeEntity b
+    JOIN FETCH b.rikishiEntity r
+    LEFT JOIN FETCH r.heyaEntity
+    WHERE b.bashoEntity.id = :bashoId
+      AND b.division IN (com.torikumilab.sumoarchive.domain.entity.constant.Division.Makuuchi,
+                          com.torikumilab.sumoarchive.domain.entity.constant.Division.Juryo)
+    ORDER BY
+        CASE b.division WHEN com.torikumilab.sumoarchive.domain.entity.constant.Division.Makuuchi THEN 1 ELSE 2 END,
+        CASE b.rankName
+            WHEN com.torikumilab.sumoarchive.domain.entity.constant.RankName.Yokozuna THEN 1
+            WHEN com.torikumilab.sumoarchive.domain.entity.constant.RankName.Ozeki THEN 2
+            WHEN com.torikumilab.sumoarchive.domain.entity.constant.RankName.Sekiwake THEN 3
+            WHEN com.torikumilab.sumoarchive.domain.entity.constant.RankName.Komusubi THEN 4
+            WHEN com.torikumilab.sumoarchive.domain.entity.constant.RankName.Maegashira THEN 5
+            ELSE 6
+        END,
+        b.rankValue ASC,
+        b.side ASC
+""")
+	List<BanzukeEntity> findSekitoriByBasho(@Param("bashoId") Integer bashoId);
+
 }

@@ -151,6 +151,93 @@
         .lang-switch a.active { color: var(--sumi); font-weight: 700; }
         .lang-switch .sep { color: var(--washi-line); }
 
+        /* ===== 반즈케/일문 탭 전환 ===== */
+        .view-tabs {
+            display: flex;
+            gap: 2px;
+            margin-bottom: -3px; /* .banzuke의 3px double border와 맞물리게 */
+            position: relative;
+            z-index: 1;
+        }
+        .view-tab {
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 12px;
+            letter-spacing: 2px;
+            color: var(--sumi-faint);
+            background: var(--washi-panel);
+            border: 1px solid var(--washi-line);
+            border-bottom: none;
+            padding: 8px 20px;
+            cursor: pointer;
+        }
+        .view-tab:hover { color: var(--sumi); }
+        .view-tab.active {
+            color: var(--sumi);
+            font-weight: 700;
+            background: var(--washi);
+            border-color: var(--sumi);
+        }
+
+        /* ===== 일문(一門) 탭 ===== */
+        .ichimon-group { margin-bottom: 26px; }
+        .ichimon-group:last-child { margin-bottom: 0; }
+        .ichimon-title {
+            font-family: 'Yuji Syuku', serif;
+            font-size: 19px;
+            letter-spacing: 2px;
+            color: var(--shu);
+            padding-bottom: 8px;
+            margin-bottom: 12px;
+            border-bottom: 1px solid var(--sumi);
+        }
+        .ichimon-heya-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+        }
+        .ichimon-heya {
+            border: 1px solid var(--washi-line);
+            padding: 10px 12px;
+        }
+        .ichimon-heya-name {
+            font-family: 'Noto Serif KR', serif;
+            font-weight: 700;
+            font-size: 13.5px;
+            color: var(--sumi);
+            margin-bottom: 6px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid var(--washi-line);
+        }
+        .ichimon-sekitori-list { list-style: none; margin: 0; padding: 0; }
+        .ichimon-sekitori-list li + li { margin-top: 4px; }
+        .ichimon-sekitori-list a {
+            display: flex;
+            align-items: baseline;
+            gap: 6px;
+            text-decoration: none;
+            font-size: 12.5px;
+        }
+        .ichimon-sekitori-list a:hover .isk-name { color: var(--shu); }
+        .isk-rank {
+            flex-shrink: 0;
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 10.5px;
+            color: var(--sumi-faint);
+            white-space: nowrap;
+        }
+        .isk-name {
+            font-family: 'Noto Serif KR', serif;
+            color: var(--sumi);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .ichimon-heya-empty {
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 11px;
+            color: var(--sumi-faint);
+        }
+
         /* ===== Banzuke Panel ===== */
         .banzuke {
             border: 3px double var(--sumi);
@@ -352,7 +439,14 @@
         </div>
     </header>
 
-    <div class="banzuke">
+    <!-- 반즈케 / 일문 탭 전환. 일문 탭은 최신 바쇼 기준으로 서버에서 통째로 렌더링해두고
+         (하단 .ichimon-panel), JS는 단순히 두 패널의 hidden만 토글한다. -->
+    <div class="view-tabs">
+        <button type="button" class="view-tab active" id="tabBanzuke" th:text="#{main.tab.banzuke}">반즈케</button>
+        <button type="button" class="view-tab" id="tabIchimon" th:text="#{main.tab.ichimon}">일문</button>
+    </div>
+
+    <div class="banzuke" id="banzukePanel">
         <div class="banzuke-inner">
             <div class="banzuke-title">
                 <span class="jp">番付</span>
@@ -383,6 +477,36 @@
                 <tr><td colspan="3" class="empty-row" th:text="#{main.table.loading}">불러오는 중…</td></tr>
                 </tbody>
             </table>
+        </div>
+    </div>
+
+    <!-- ===== 일문(一門) 탭 - 이치몬별 헤야, 그 안에 세키토리(마쿠우치+주료) 명단.
+         세키토리가 없는 헤야도 이름은 그대로 남긴다(헤야 구조 전체를 보여주는 게 목적). -->
+    <div class="banzuke ichimon-panel" id="ichimonPanel" hidden>
+        <div class="banzuke-inner">
+            <div class="banzuke-title">
+                <span class="jp">一門</span>
+            </div>
+
+            <div class="empty-row" th:if="${ichimonGroups == null or ichimonGroups.isEmpty()}" th:text="#{main.table.empty}">등록된 반즈케가 없습니다.</div>
+
+            <div class="ichimon-group" th:each="g : ${ichimonGroups}">
+                <div class="ichimon-title" th:text="${#locale.language == 'ja'} ? ${g.ichimonJp} : ${g.ichimonKr}">일문</div>
+                <div class="ichimon-heya-grid">
+                    <div class="ichimon-heya" th:each="h : ${g.heyaList}">
+                        <div class="ichimon-heya-name" th:text="${#locale.language == 'ja'} ? ${h.heyaNameJp} : ${h.heyaNameKr}">헤야</div>
+                        <ul class="ichimon-sekitori-list" th:if="${!h.sekitori.isEmpty()}">
+                            <li th:each="s : ${h.sekitori}">
+                                <a th:href="@{/rikishi/{id}(id=${s.rikishiId})}">
+                                    <span class="isk-rank" th:text="${#locale.language == 'ja'} ? ${s.rankDisplayJp} : ${s.rankDisplayKr}">前頭10枚目</span>
+                                    <span class="isk-name" th:text="${#locale.language == 'ja'} ? ${s.shikonaJp} : ${s.shikonaKr}">시코나</span>
+                                </a>
+                            </li>
+                        </ul>
+                        <div class="ichimon-heya-empty" th:if="${h.sekitori.isEmpty()}" th:text="#{main.ichimon.none}">세키토리 없음</div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -576,6 +700,26 @@
         fillBashoSelect(Number(yearSelect.value));
     }
     loadBanzuke();
+
+    // ===== 반즈케 / 일문 탭 전환 =====
+    // 일문 패널은 서버가 이미 렌더링해서 내려준 정적 HTML이라, 여기선 hidden 속성만 토글하면 된다.
+    (function () {
+        var tabBanzuke = document.getElementById('tabBanzuke');
+        var tabIchimon = document.getElementById('tabIchimon');
+        var banzukePanel = document.getElementById('banzukePanel');
+        var ichimonPanel = document.getElementById('ichimonPanel');
+
+        function show(tab) {
+            var isBanzuke = tab === 'banzuke';
+            tabBanzuke.classList.toggle('active', isBanzuke);
+            tabIchimon.classList.toggle('active', !isBanzuke);
+            banzukePanel.hidden = !isBanzuke;
+            ichimonPanel.hidden = isBanzuke;
+        }
+
+        tabBanzuke.addEventListener('click', function () { show('banzuke'); });
+        tabIchimon.addEventListener('click', function () { show('ichimon'); });
+    })();
 </script>
 </body>
 </html>
