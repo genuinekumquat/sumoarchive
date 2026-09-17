@@ -238,6 +238,79 @@
             color: var(--sumi-faint);
         }
 
+        /* ===== 키마리테(決まり手) 탭 - rikishi/detail.html 상대전적 패널과 같은 초성 인덱스 + 접이식 구조 ===== */
+        .kimarite-index {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            padding-bottom: 14px;
+            margin-bottom: 4px;
+            border-bottom: 1px solid var(--washi-line);
+        }
+        .kimarite-index a {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 24px;
+            height: 24px;
+            padding: 0 4px;
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--sumi-soft);
+            border: 1px solid var(--washi-line);
+            text-decoration: none;
+        }
+        .kimarite-index a:hover { border-color: var(--shu); color: var(--shu); }
+
+        .kimarite-group { scroll-margin-top: 14px; }
+        .kimarite-group + .kimarite-group { border-top: 1px solid var(--sumi); }
+
+        .kimarite-group-summary {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            padding: 12px 4px;
+            cursor: pointer;
+            list-style: none;
+            font-family: 'Yuji Syuku', serif;
+            font-size: 20px;
+            color: var(--shu);
+        }
+        .kimarite-group-summary::-webkit-details-marker { display: none; }
+        .kimarite-group-summary::before {
+            content: '▸';
+            font-family: initial;
+            font-size: 12px;
+            color: var(--sumi-faint);
+            transition: transform 0.15s ease;
+        }
+        .kimarite-group[open] > .kimarite-group-summary::before { transform: rotate(90deg); color: var(--shu); }
+        .kimarite-group-count {
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 11px;
+            font-weight: 400;
+            color: var(--sumi-faint);
+        }
+        .kimarite-group-body { padding-left: 4px; padding-bottom: 8px; }
+
+        .kimarite-entry {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            flex-wrap: wrap;
+            padding: 8px 4px;
+        }
+        .kimarite-entry + .kimarite-entry { border-top: 1px solid var(--washi-line); }
+        .ke-kr { font-weight: 700; font-size: 14px; color: var(--sumi); }
+        .ke-jp { font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; color: var(--sumi-faint); }
+        .ke-desc {
+            flex-basis: 100%;
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 12px;
+            color: var(--sumi-faint);
+        }
+
         /* ===== Banzuke Panel ===== */
         .banzuke {
             border: 3px double var(--sumi);
@@ -444,6 +517,7 @@
     <div class="view-tabs">
         <button type="button" class="view-tab active" id="tabBanzuke" th:text="#{main.tab.banzuke}">반즈케</button>
         <button type="button" class="view-tab" id="tabIchimon" th:text="#{main.tab.ichimon}">일문</button>
+        <button type="button" class="view-tab" id="tabKimarite" th:text="#{main.tab.kimarite}">키마리테</button>
     </div>
 
     <div class="banzuke" id="banzukePanel">
@@ -507,6 +581,38 @@
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- ===== 키마리테(決まり手) 탭 - 결정기술 백과사전 UI 틀. 설명(description)은 아직 콘텐츠가
+         없어서 전부 비어있고 "설명 준비 중"으로 대체 표시된다 - 나중에 하나씩 채워 넣을 예정.
+         상대전적 패널(rikishi/detail.html)과 같은 ㄱㄴㄷ 초성 인덱스 + 접이식 구조. -->
+    <div class="banzuke kimarite-panel" id="kimaritePanel" hidden>
+        <div class="banzuke-inner">
+            <div class="banzuke-title">
+                <span class="jp">決まり手</span>
+            </div>
+
+            <div class="empty-row" th:if="${kimariteGroups == null or kimariteGroups.isEmpty()}" th:text="#{main.table.empty}">등록된 반즈케가 없습니다.</div>
+
+            <nav class="kimarite-index">
+                <a th:each="g : ${kimariteGroups}" th:href="'#kimarite-grp-' + ${g.initial}" th:text="${g.initial}">ㄱ</a>
+            </nav>
+
+            <details class="kimarite-group" th:each="g : ${kimariteGroups}" th:id="'kimarite-grp-' + ${g.initial}">
+                <summary class="kimarite-group-summary">
+                    <span th:text="${g.initial}">ㄱ</span>
+                    <span class="kimarite-group-count" th:text="'(' + ${g.entries.size()} + ')'">(3)</span>
+                </summary>
+                <div class="kimarite-group-body">
+                    <div class="kimarite-entry" th:each="e : ${g.entries}">
+                        <span class="ke-kr" th:text="${e.kimariteKr}">요리키리</span>
+                        <span class="ke-jp" th:text="${e.kimariteJp}">寄り切り</span>
+                        <span class="ke-desc" th:if="${e.description == null}" th:text="#{main.kimarite.pending}">설명 준비 중</span>
+                        <span class="ke-desc" th:if="${e.description != null}" th:text="${e.description}"></span>
+                    </div>
+                </div>
+            </details>
         </div>
     </div>
 
@@ -701,24 +807,43 @@
     }
     loadBanzuke();
 
-    // ===== 반즈케 / 일문 탭 전환 =====
-    // 일문 패널은 서버가 이미 렌더링해서 내려준 정적 HTML이라, 여기선 hidden 속성만 토글하면 된다.
+    // ===== 반즈케 / 일문 / 키마리테 탭 전환 =====
+    // 일문·키마리테 패널은 서버가 이미 렌더링해서 내려준 정적 HTML이라, 여기선 hidden 속성만 토글하면 된다.
     (function () {
-        var tabBanzuke = document.getElementById('tabBanzuke');
-        var tabIchimon = document.getElementById('tabIchimon');
-        var banzukePanel = document.getElementById('banzukePanel');
-        var ichimonPanel = document.getElementById('ichimonPanel');
+        var tabs = {
+            banzuke: { btn: document.getElementById('tabBanzuke'), panel: document.getElementById('banzukePanel') },
+            ichimon: { btn: document.getElementById('tabIchimon'), panel: document.getElementById('ichimonPanel') },
+            kimarite: { btn: document.getElementById('tabKimarite'), panel: document.getElementById('kimaritePanel') }
+        };
 
-        function show(tab) {
-            var isBanzuke = tab === 'banzuke';
-            tabBanzuke.classList.toggle('active', isBanzuke);
-            tabIchimon.classList.toggle('active', !isBanzuke);
-            banzukePanel.hidden = !isBanzuke;
-            ichimonPanel.hidden = isBanzuke;
+        function show(name) {
+            Object.keys(tabs).forEach(function (key) {
+                var active = key === name;
+                tabs[key].btn.classList.toggle('active', active);
+                tabs[key].panel.hidden = !active;
+            });
         }
 
-        tabBanzuke.addEventListener('click', function () { show('banzuke'); });
-        tabIchimon.addEventListener('click', function () { show('ichimon'); });
+        Object.keys(tabs).forEach(function (key) {
+            tabs[key].btn.addEventListener('click', function () { show(key); });
+        });
+    })();
+
+    // ===== 키마리테 ㄱㄴㄷ 인덱스 - 상대전적 패널과 동일한 방식(인덱스 클릭/딥링크 시 그룹 강제로 열기) =====
+    (function () {
+        function openGroup(hash) {
+            if (!hash || hash.indexOf('#kimarite-grp-') !== 0) return;
+            var el = document.getElementById(hash.slice(1));
+            if (el) el.open = true;
+        }
+        document.querySelectorAll('.kimarite-index a').forEach(function (a) {
+            a.addEventListener('click', function () { openGroup(a.getAttribute('href')); });
+        });
+        // 키마리테 그룹으로 바로 들어온 딥링크면 탭도 같이 전환해줘야 보인다.
+        if (location.hash && location.hash.indexOf('#kimarite-grp-') === 0) {
+            document.getElementById('tabKimarite').click();
+            openGroup(location.hash);
+        }
     })();
 </script>
 </body>
