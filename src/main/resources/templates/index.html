@@ -258,6 +258,10 @@
             text-decoration: none;
         }
 
+        /* ja 화면: 番付 제목과 같은 붓글씨체(Yuji Syuku)로 통일 - Noto Serif KR은 Hangul용이라
+           일본어 화면에서만 이걸로 바꾼다(한글은 이 폰트에 글리프가 없음). */
+        .shikona-link.jp-font { font-family: 'Yuji Syuku', serif; }
+
         .shikona-link:hover { color: var(--shu); }
 
         .sub-info {
@@ -515,7 +519,7 @@
         }
 
         const link = document.createElement('a');
-        link.className = 'shikona-link r-' + rankName;
+        link.className = 'shikona-link r-' + rankName + (LOCALE === 'ja' ? ' jp-font' : '');
         link.href = '/rikishi/' + row.rikishiId;
         // ja 화면은 일본어 한자를 우선, 없으면 로마자로. ko(기본)는 한국어 우선, sumo-api 임포트
         // 직후엔 한국어 시코나가 비어 있어 일본어(한자)→로마자 순으로 폴백.
