@@ -25,6 +25,7 @@ import com.torikumilab.sumoarchive.repository.RikishiShikonaHistoryRepository;
 import com.torikumilab.sumoarchive.repository.TorikumiRepository;
 import com.torikumilab.sumoarchive.util.HangulIndexUtil;
 import com.torikumilab.sumoarchive.util.KimariteDisplayUtil;
+import com.torikumilab.sumoarchive.util.OriginDisplayUtil;
 import com.torikumilab.sumoarchive.util.RankDisplayUtil;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -108,6 +109,7 @@ public class RikishiDetailService {
 				.age(age)
 				.birthplace(r.getBirthplace())
 				.nationality(r.getNationality())
+				.originKr(OriginDisplayUtil.toKorean(r.getOriginKr(), r.getBirthplace()))
 				.heyaNameKr(r.getHeyaEntity() != null ? r.getHeyaEntity().getNameKr() : null)
 				.height(r.getHeight())
 				.weight(r.getWeight())

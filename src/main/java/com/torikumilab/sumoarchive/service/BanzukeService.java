@@ -54,7 +54,9 @@ public class BanzukeService {
 						b.getRankValue(),
 						b.getRikishiEntity().isActive(),
 						b.getRikishiEntity().getHeyaEntity() != null ? b.getRikishiEntity().getHeyaEntity().getNameKr() : null,
-						OriginDisplayUtil.toKorean(b.getRikishiEntity().getBirthplace())
+						b.getRikishiEntity().getHeyaEntity() != null ? b.getRikishiEntity().getHeyaEntity().getNameJp() : null,
+						OriginDisplayUtil.toKorean(b.getRikishiEntity().getOriginKr(), b.getRikishiEntity().getBirthplace()),
+						OriginDisplayUtil.toJapanese(b.getRikishiEntity().getBirthplace())
 				))
 				.toList();
 	}

@@ -52,9 +52,15 @@ public class RikishiEntity {
 	
 	@Column(name = "birthplace", length = 255)
 	private String birthplace;
-	
+
 	@Column(name = "nationality", length = 100)
 	private String nationality;
+
+	// 출신지 한국어 표기 관리자 직접 입력(선택). null이면 OriginDisplayUtil이 birthplace에서 자동 계산한
+	// 값을 대신 쓴다 - birthplace 자체를 한글로 덮어쓰면 일본어 표기 등 다른 언어 변환이 깨지므로
+	// (예: "토야마현"처럼 표준 표기와 다르게 적으면 일본어 매핑 실패) 여기 별도로 둔다.
+	@Column(name = "origin_kr", length = 100)
+	private String originKr;
 	
 	@Column(name = "height", precision = 4, scale = 1)
 	private BigDecimal height; // Integer ➔ BigDecimal 변경
@@ -170,7 +176,8 @@ public class RikishiEntity {
 			LocalDate retiredDate,
 			String oyakataNameKr,
 			String oyakataNameJp,
-			String photoUrl
+			String photoUrl,
+			String originKr
 	) {
 		this.shikonaKr = shikonaKr;
 		this.shikonaKrAuto = false; // 관리자가 저장한 이상 검수된 값으로 본다
@@ -192,6 +199,7 @@ public class RikishiEntity {
 		this.oyakataNameKr = oyakataNameKr;
 		this.oyakataNameJp = oyakataNameJp;
 		this.photoUrl = photoUrl;
+		this.originKr = (originKr == null || originKr.isBlank()) ? null : originKr.strip();
 	}
 
 	/** {@code isShikonaKrAuto()} — null(수동/미입력)도 false로. */

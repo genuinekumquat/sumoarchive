@@ -28,6 +28,7 @@ public class RikishiDetailDTO {
 
 	private String birthplace;
 	private String nationality;
+	private String originKr; // OriginDisplayUtil 기반 표시용 출신지 (관리자 직접 입력 우선, 없으면 birthplace에서 자동 계산)
 
 	private String heyaNameKr; // 무소속(하쿠호 등)이면 null
 

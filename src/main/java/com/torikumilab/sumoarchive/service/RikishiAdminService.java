@@ -72,6 +72,7 @@ public class RikishiAdminService {
 		form.setOyakataNameKr(r.getOyakataNameKr());
 		form.setOyakataNameJp(r.getOyakataNameJp());
 		form.setPhotoUrl(r.getPhotoUrl());
+		form.setOriginKr(r.getOriginKr());
 		return form;
 	}
 
@@ -104,7 +105,8 @@ public class RikishiAdminService {
 				form.getRetiredDate(),
 				blankToNull(form.getOyakataNameKr()),
 				blankToNull(form.getOyakataNameJp()),
-				blankToNull(form.getPhotoUrl())
+				blankToNull(form.getPhotoUrl()),
+				blankToNull(form.getOriginKr())
 		);
 	}
 

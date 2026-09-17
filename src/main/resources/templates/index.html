@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<html th:lang="${#locale.language}" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>스모아카이브 | 반즈케</title>
+    <title th:text="#{main.title}">스모아카이브 | 반즈케</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Yuji+Syuku&family=Noto+Serif+KR:wght@400;600;900&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
@@ -135,6 +135,21 @@
         }
 
         .search-wrap button:hover { background: var(--shu-deep); border-color: var(--shu-deep); }
+
+        /* ===== 언어 스위처 ===== */
+        .lang-switch {
+            margin-top: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 11px;
+            letter-spacing: 1px;
+        }
+        .lang-switch a { color: var(--sumi-faint); text-decoration: none; }
+        .lang-switch a:hover { color: var(--shu); }
+        .lang-switch a.active { color: var(--sumi); font-weight: 700; }
+        .lang-switch .sep { color: var(--washi-line); }
 
         /* ===== Banzuke Panel ===== */
         .banzuke {
@@ -319,10 +334,17 @@
 
         <div class="search-wrap">
             <form th:action="@{/search}" method="get" style="display: flex; gap: 10px; flex: 1;">
-                <input type="text" name="keyword" placeholder="시코나 검색">
-                <button type="submit">검색</button>
+                <input type="text" name="keyword" th:placeholder="#{main.search.placeholder}" placeholder="시코나 검색">
+                <button type="submit" th:text="#{main.search.button}">검색</button>
             </form>
-            <a th:href="@{/bookmark}" style="white-space: nowrap; align-self: center; font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; color: var(--sumi-soft); text-decoration: none;">★ 즐겨찾기</a>
+            <a th:href="@{/bookmark}" th:text="#{main.bookmark.link}" style="white-space: nowrap; align-self: center; font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; color: var(--sumi-soft); text-decoration: none;">★ 즐겨찾기</a>
+        </div>
+
+        <!-- 언어 스위처(시범: 메인 페이지만) - 세션에 언어를 저장해두는 LocaleChangeInterceptor(WebConfig)가 처리 -->
+        <div class="lang-switch">
+            <a th:href="@{''(lang='ko')}" th:classappend="${#locale.language == 'ko'} ? 'active'" th:text="#{main.lang.ko}">한국어</a>
+            <span class="sep">/</span>
+            <a th:href="@{''(lang='ja')}" th:classappend="${#locale.language == 'ja'} ? 'active'" th:text="#{main.lang.ja}">日本語</a>
         </div>
     </header>
 
@@ -335,12 +357,12 @@
                     <select class="panel-select" id="basho-select" aria-label="대회 선택"></select>
 <!--                    <span class="sep">·</span>-->
                     <select class="panel-select" id="division-select" aria-label="계급 선택">
-                        <option value="Makuuchi">마쿠우치</option>
-                        <option value="Juryo">주료</option>
-                        <option value="Makushita">마쿠시타</option>
-                        <option value="Sandanme">산단메</option>
-                        <option value="Jonidan">조니단</option>
-                        <option value="Jonokuchi">조노구치</option>
+                        <option value="Makuuchi" th:text="#{main.division.makuuchi}">마쿠우치</option>
+                        <option value="Juryo" th:text="#{main.division.juryo}">주료</option>
+                        <option value="Makushita" th:text="#{main.division.makushita}">마쿠시타</option>
+                        <option value="Sandanme" th:text="#{main.division.sandanme}">산단메</option>
+                        <option value="Jonidan" th:text="#{main.division.jonidan}">조니단</option>
+                        <option value="Jonokuchi" th:text="#{main.division.jonokuchi}">조노구치</option>
                     </select>
                 </span>
             </div>
@@ -348,24 +370,28 @@
             <table class="banzuke-table">
                 <thead>
                 <tr>
-                    <th class="col-east">동</th>
-                    <th class="col-rank">반즈케</th>
-                    <th class="col-west">서</th>
+                    <th class="col-east" th:text="#{main.table.east}">동</th>
+                    <th class="col-rank" th:text="#{main.table.rank}">반즈케</th>
+                    <th class="col-west" th:text="#{main.table.west}">서</th>
                 </tr>
                 </thead>
                 <tbody id="banzuke-body">
-                <tr><td colspan="3" class="empty-row">불러오는 중…</td></tr>
+                <tr><td colspan="3" class="empty-row" th:text="#{main.table.loading}">불러오는 중…</td></tr>
                 </tbody>
             </table>
         </div>
     </div>
 
-    <footer>SUMOARCHIVE — 韓国語で見る大相撲情報アーカイブ</footer>
+    <footer th:text="#{main.footer}">SUMOARCHIVE — 韓国語で見る大相撲情報アーカイブ</footer>
 </div>
 
 <script th:inline="javascript">
     // 서버에서 내려준 바쇼 목록(최신순). 연/대회 드롭다운을 이걸로 구성한다.
     const BASHO_OPTIONS = /*[[${bashoOptions}]]*/ [];
+    // 반즈케 표는 fetch로 비동기 렌더링돼서(loadBanzuke) 언어별 라벨을 서버가 아니라 JS가 골라야 함.
+    const LOCALE = /*[[${#locale.language}]]*/ 'ko';
+    const MSG_EMPTY = /*[[#{main.table.empty}]]*/ '등록된 반즈케가 없습니다.';
+    const MSG_ERROR = /*[[#{main.table.error}]]*/ '데이터를 불러오지 못했습니다.';
 
     const tbody = document.getElementById('banzuke-body');
     const yearSelect = document.getElementById('year-select');
@@ -378,12 +404,20 @@
         Juryo: 5, Makushita: 6, Sandanme: 7, Jonidan: 8, Jonokuchi: 9
     };
 
-    // 반즈케 칸(番付欄) 표기용 라벨
-    const RANK_LABEL = {
-        Yokozuna: '요코즈나', Ozeki: '오제키', Sekiwake: '세키와케', Komusubi: '코무스비',
-        Maegashira: '마에가시라', Juryo: '주료', Makushita: '마쿠시타',
-        Sandanme: '산단메', Jonidan: '조니단', Jonokuchi: '조노구치'
+    // 반즈케 칸(番付欄) 표기용 라벨 - 언어별 (ja는 RankDisplayUtil.LABEL과 동일한 일본어 표기)
+    const RANK_LABEL_BY_LOCALE = {
+        ko: {
+            Yokozuna: '요코즈나', Ozeki: '오제키', Sekiwake: '세키와케', Komusubi: '코무스비',
+            Maegashira: '마에가시라', Juryo: '주료', Makushita: '마쿠시타',
+            Sandanme: '산단메', Jonidan: '조니단', Jonokuchi: '조노구치'
+        },
+        ja: {
+            Yokozuna: '横綱', Ozeki: '大関', Sekiwake: '関脇', Komusubi: '小結',
+            Maegashira: '前頭', Juryo: '十両', Makushita: '幕下',
+            Sandanme: '三段目', Jonidan: '序二段', Jonokuchi: '序ノ口'
+        }
     };
+    const RANK_LABEL = RANK_LABEL_BY_LOCALE[LOCALE] || RANK_LABEL_BY_LOCALE.ko;
 
     // ===== 연 / 대회 드롭다운 구성 =====
     function uniqueYearsDesc() {
@@ -435,7 +469,8 @@
             .then(renderTable)
             .catch(error => {
                 console.error('반즈케 조회 실패:', error);
-                tbody.innerHTML = '<tr><td colspan="3" class="empty-row">데이터를 불러오지 못했습니다.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="3" class="empty-row"></td></tr>';
+                tbody.querySelector('.empty-row').textContent = MSG_ERROR;
             });
     }
 
@@ -482,16 +517,22 @@
         const link = document.createElement('a');
         link.className = 'shikona-link r-' + rankName;
         link.href = '/rikishi/' + row.rikishiId;
-        // sumo-api 임포트 직후엔 한국어 시코나가 비어 있어 일본어(한자)→로마자 순으로 폴백
-        const shikona = row.shikonaKr || row.shikonaJp || row.shikonaEn || '?';
+        // ja 화면은 일본어 한자를 우선, 없으면 로마자로. ko(기본)는 한국어 우선, sumo-api 임포트
+        // 직후엔 한국어 시코나가 비어 있어 일본어(한자)→로마자 순으로 폴백.
+        const shikona = LOCALE === 'ja'
+            ? (row.shikonaJp || row.shikonaEn || row.shikonaKr || '?')
+            : (row.shikonaKr || row.shikonaJp || row.shikonaEn || '?');
         // "아사노야마 히로키"처럼 시코나+이름이 함께 들어온 경우 공백 앞부분(시코나)만 표시
         link.textContent = shikona.split(' ')[0];
         link.title = shikona; // 전체 표기는 툴팁으로 확인 가능
 
         const sub = document.createElement('div');
         sub.className = 'sub-info';
-        // 출신지(일본은 도도부현, 외국은 국가) · 소속 헤야 (둘 다 없으면 표시 생략)
-        sub.textContent = [row.originKr, row.heyaNameKr].filter(Boolean).join(' · ');
+        // ko: 출신지(도도부현/국가, 한글) · 소속 헤야(한글). ja: 출신지(도도부현 한자/국가 가타카나) ·
+        // 소속 헤야(일본어, 대부분 아직 로마자 임시값). 둘 다 없으면 표시 생략.
+        sub.textContent = LOCALE === 'ja'
+            ? [row.originJp, row.heyaNameJp].filter(Boolean).join(' · ')
+            : [row.originKr, row.heyaNameKr].filter(Boolean).join(' · ');
 
         td.appendChild(link);
         if (sub.textContent) td.appendChild(sub);
@@ -502,7 +543,8 @@
         tbody.innerHTML = '';
 
         if (!data || data.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="3" class="empty-row">등록된 반즈케가 없습니다.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="3" class="empty-row"></td></tr>';
+            tbody.querySelector('.empty-row').textContent = MSG_EMPTY;
             return;
         }
 

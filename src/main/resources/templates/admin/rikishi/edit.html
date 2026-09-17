@@ -107,8 +107,16 @@
             </div>
             <div class="field-row">
                 <div class="field"><label>생년월일</label><input type="date" th:field="*{birthdate}"></div>
-                <div class="field"><label>출신지</label><input type="text" th:field="*{birthplace}"></div>
+                <div class="field"><label>출신지(원문)</label><input type="text" th:field="*{birthplace}"></div>
                 <div class="field"><label>국적</label><input type="text" th:field="*{nationality}"></div>
+            </div>
+            <div class="field-row">
+                <div class="field full">
+                    <label>출신지 한국어 표기 직접 입력
+                        <span style="color:var(--sumi-faint);font-size:11px;">비워두면 위 출신지(원문)에서 자동 계산</span>
+                    </label>
+                    <input type="text" th:field="*{originKr}" placeholder="예: 도야마현">
+                </div>
             </div>
             <div class="field-row">
                 <div class="field"><label>신장 (cm)</label><input type="number" step="0.1" th:field="*{height}"></div>

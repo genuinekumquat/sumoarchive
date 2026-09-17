@@ -29,6 +29,8 @@ public class RikishiEditFormDTO {
 	private LocalDate birthdate;
 	private String birthplace;
 	private String nationality;
+	// 출신지 한국어 표기 직접 입력(선택). 비워두면 화면에서 birthplace로 자동 계산한 값을 쓴다.
+	private String originKr;
 	private BigDecimal height;
 	private BigDecimal weight;
 	private Integer heyaId; // null이면 무소속
