@@ -126,16 +126,19 @@
         .shikona-row {
             display: flex;
             align-items: baseline;
-            gap: 14px;
+            column-gap: 14px;
+            row-gap: 8px;
             flex-wrap: wrap;
-            margin-bottom: 4px;
+            margin-bottom: 8px;
         }
 
         .shikona-main {
             font-family: 'Yuji Syuku', serif;
-            font-size: 40px;
-            letter-spacing: 4px;
+            font-size: 38px;
+            line-height: 1.2;
+            letter-spacing: 2px;
             color: var(--sumi);
+            word-break: keep-all;
         }
 
         .rank-display {
@@ -148,9 +151,11 @@
 
         .shikona-kana {
             font-family: 'Zen Kaku Gothic New', sans-serif;
-            font-size: 13px;
+            font-size: 13.5px;
             color: var(--sumi-faint);
-            margin-bottom: 14px;
+            letter-spacing: 0.5px;
+            margin-bottom: 18px;
+            line-height: 1.4;
         }
 
         .shikona-history {
@@ -158,11 +163,15 @@
             font-size: 12px;
             color: var(--sumi-soft);
             padding-bottom: 14px;
-            margin-bottom: 18px;
+            margin-bottom: 22px;
             border-bottom: 1px solid var(--washi-line);
         }
         .shikona-history .arrow { color: var(--sumi-faint); margin: 0 6px; }
         .shikona-history .period { color: var(--sumi-faint); font-size: 10.5px; }
+
+        .shikona-spacer {
+            height: 10px;
+        }
 
         /* 정보 테이블 */
         .info-table { width: 100%; border-collapse: collapse; }
@@ -358,91 +367,162 @@
         /* ===== 호시토리표(星取表) - 바쇼별 가로 스트립 ===== */
         .match-history-panel { margin-bottom: 28px; padding: 16px 20px 18px; }
 
-        .game-log-row { padding: 10px 0; }
-        .game-log-row:first-child { padding-top: 2px; }
+        .game-log-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            padding: 14px 0;
+        }
+        .game-log-row:first-child { padding-top: 4px; }
         .game-log-row + .game-log-row { border-top: 1px solid var(--washi-line); }
 
         .game-log-meta {
             display: flex;
-            align-items: baseline;
-            gap: 10px;
-            flex-wrap: wrap;
-            margin-bottom: 8px;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 4px;
+            flex-shrink: 0;
+            min-width: 140px;
         }
         .game-log-meta .glm-basho {
             font-family: 'Zen Kaku Gothic New', sans-serif;
             font-weight: 700;
-            font-size: 13px;
+            font-size: 13.5px;
             color: var(--sumi);
+            letter-spacing: 0.5px;
+            line-height: 1.25;
         }
         .game-log-meta .glm-rank {
             font-family: 'Zen Kaku Gothic New', sans-serif;
-            font-size: 11.5px;
-            color: var(--sumi-faint);
+            font-size: 12px;
+            color: var(--sumi-soft);
+            line-height: 1.25;
         }
         .game-log-meta .glm-record {
-            margin-left: auto;
             font-family: 'Zen Kaku Gothic New', sans-serif;
             font-size: 13px;
             font-weight: 700;
             color: var(--shu);
+            line-height: 1.25;
         }
 
         /* 가로 스트립(星取表 요약) - 일차마다 마크(○●휴) + 상대명(세로쓰기)을 한 칸에.
            칸을 클릭하면 옆에서 상세 패널이 슬라이드로 열림 (아래 .match-panel). */
         .hoshitori-strip-wrap {
             overflow-x: auto;
+            margin-left: auto;
+            padding-bottom: 2px;
         }
         .hoshitori-strip-row {
             display: flex;
-            gap: 2px;
+            gap: 3px;
+            align-items: stretch;
         }
         .strip-day-btn {
             display: flex;
             flex-direction: column;
             align-items: center;
+            justify-content: flex-start;
             gap: 4px;
-            min-width: 32px;
-            padding: 6px 3px 8px;
+            min-width: 33px;
+            width: 33px;
+            height: 118px; /* 출장/휴장 모두 완벽하게 동일한 고정 높이 */
+            box-sizing: border-box;
+            padding: 6px 2px 8px;
             background: none;
             border: none;
             border-bottom: 2px solid transparent;
+            border-radius: 4px 4px 0 0;
             font: inherit;
             color: inherit;
             cursor: pointer;
+            transition: background 0.15s ease, border-color 0.15s ease;
         }
         .strip-day-btn:hover,
         .strip-day-btn:focus-visible {
+            background: rgba(184, 51, 42, 0.05);
             border-bottom-color: var(--shu);
             outline: none;
         }
         .strip-day-btn .sd-day {
             font-family: 'Zen Kaku Gothic New', sans-serif;
-            font-size: 9.5px;
+            font-size: 10px;
+            font-weight: 500;
             color: var(--sumi-faint);
+            line-height: 1;
+            height: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
-        .strip-day-btn .mark { font-size: 16px; line-height: 1; }
+        .strip-day-btn .mark {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 18px;
+            height: 18px;
+            font-size: 15px;
+            line-height: 1;
+        }
         .strip-day-btn .mark.win { color: var(--shu); }
         .strip-day-btn .mark.loss { color: var(--sumi-faint); }
         .strip-day-btn .mark.absent {
-            font-size: 10px;
+            font-size: 10.5px;
+            font-weight: 700;
             font-family: 'Zen Kaku Gothic New', sans-serif;
             color: var(--sumi-faint);
+            background: rgba(0, 0, 0, 0.04);
+            border-radius: 50%;
         }
         .strip-day-btn .sd-name {
+            display: inline-flex;
+            align-items: center;
+            justify-content: flex-start;
             writing-mode: vertical-rl;
             text-orientation: mixed;
             font-family: 'Noto Serif KR', serif;
             font-size: 11px;
+            line-height: 1.15;
             letter-spacing: 1px;
             color: var(--sumi-soft);
-            max-height: 62px;
+            height: 68px; /* 출장/휴장 모두 통일된 세로 텍스트 영역 */
+            max-height: 68px;
             white-space: nowrap;
+            overflow: hidden;
         }
         .strip-day-btn:hover .sd-name { color: var(--shu); }
-        .strip-day-btn.is-absent { cursor: default; }
-        .strip-day-btn.is-absent:hover { border-bottom-color: transparent; }
-        .strip-day-btn.is-absent:hover .sd-name { color: var(--sumi-soft); }
+        .strip-day-btn.is-absent {
+            cursor: default;
+            opacity: 0.55;
+        }
+        .strip-day-btn.is-absent:hover {
+            background: none;
+            border-bottom-color: transparent;
+        }
+        .strip-day-btn.is-absent .sd-name {
+            color: var(--sumi-faint);
+            letter-spacing: 2px;
+        }
+
+        @media (max-width: 720px) {
+            .game-log-row {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 10px;
+            }
+            .game-log-meta {
+                flex-direction: row;
+                align-items: baseline;
+                gap: 10px;
+            }
+            .game-log-meta .glm-record {
+                margin-left: auto;
+            }
+            .hoshitori-strip-wrap {
+                margin-left: 0;
+            }
+        }
 
         /* 대전 상세 슬라이드 패널 (클릭한 일차의 대진 정보 - 댓글창은 다음 단계에서 추가 예정) */
         .match-panel-overlay {
@@ -738,7 +818,7 @@
                     <span th:text="${rikishi.shikonaKr}">현재시코나</span>
                     <span class="period">(현재)</span>
                 </div>
-                <div th:unless="${rikishi.shikonaHistory != null and !rikishi.shikonaHistory.isEmpty() and #locale.language != 'ja'}" style="margin-bottom: 18px;"></div>
+                <div th:unless="${rikishi.shikonaHistory != null and !rikishi.shikonaHistory.isEmpty() and #locale.language != 'ja'}" class="shikona-spacer"></div>
 
                 <table class="info-table">
                     <tr>
@@ -901,14 +981,14 @@
                         <th:block th:switch="${m.status.name()}">
                             <span class="mark win" th:case="'WIN'">○</span>
                             <span class="mark loss" th:case="'LOSS'">●</span>
-                            <span class="mark absent" th:case="'ABSENT'">휴</span>
+                            <span class="mark absent" th:case="'ABSENT'" th:text="${#locale.language == 'ja'} ? '休' : '휴'">휴</span>
                         </th:block>
                         <span class="sd-name" th:if="${#locale.language == 'ja'}" th:text="${m.opponentShikonaJp} ?: #{rikishi.absent}">상대명</span>
                         <span class="sd-name" th:unless="${#locale.language == 'ja'}" th:text="${m.opponentShikonaKr} ?: #{rikishi.absent}">상대명</span>
                     </button>
                 </div>
             </div>
-            <div class="empty-note" th:if="${g.matches.isEmpty()}" style="padding: 6px 0;" th:text="#{rikishi.empty.match}">
+            <div class="empty-note" th:if="${g.matches.isEmpty()}" style="margin-left: auto; padding: 6px 0;" th:text="#{rikishi.empty.match}">
                 등록된 대전 기록이 없습니다.
             </div>
         </div>
