@@ -327,6 +327,35 @@
         .kimarite-filter a { color: var(--sumi-faint); text-decoration: none; }
         .kimarite-filter a:hover { color: var(--shu); }
 
+        .kimarite-tools {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            margin-bottom: 8px;
+        }
+        .kimarite-toggle-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 11.5px;
+            color: var(--sumi-soft);
+            cursor: pointer;
+            user-select: none;
+            transition: color 0.15s ease;
+        }
+        .kimarite-toggle-label:hover {
+            color: var(--shu);
+        }
+        .kimarite-toggle-label input[type="checkbox"] {
+            accent-color: var(--shu);
+            cursor: pointer;
+            width: 13px;
+            height: 13px;
+            margin: 0;
+            vertical-align: middle;
+        }
+
         .chart-wrap { position: relative; height: 210px; margin-bottom: 12px; }
 
         .kimarite-legend {
@@ -946,6 +975,12 @@
             </form>
 
             <div th:if="${kimariteStats != null and !kimariteStats.isEmpty()}">
+                <div class="kimarite-tools">
+                    <label class="kimarite-toggle-label">
+                        <input type="checkbox" id="groupUnder10Check">
+                        <span th:text="#{rikishi.kimarite.groupunder10}">10% 미만 '기타'로 통합</span>
+                    </label>
+                </div>
                 <div class="chart-wrap">
                     <canvas id="kimariteChart"></canvas>
                 </div>
@@ -1118,21 +1153,25 @@
 
     if (kimariteData.length > 0) {
         // 프로젝트 팔레트(먹색/낙관다홍 계열 + 일본 전통색 톤 4종 추가)로 원형차트 배색.
-        // RikishiDetailService.TOP_KIMARITE_COUNT(10)와 맞춰 10개까지는 색이 겹치지 않음.
-        // "기타"가 실제로 나오는 경우(결정기술이 10종 초과)에만 11번째 색부터 순환됨.
         const PALETTE = [
             '#a3272c', '#1a1a18', '#56554e', '#c98a2e', '#7c8a6e', '#86857f',
             '#3d5a6c', '#b06a3a', '#6b3b4f', '#4f6b6a'
         ];
+        const ETC_COLOR = '#86857f';
 
         const ctx = document.getElementById('kimariteChart');
-        new Chart(ctx, {
+        const legend = document.getElementById('kimariteLegend');
+        const groupCheck = document.getElementById('groupUnder10Check');
+        const isJa = /*[[${#locale.language == 'ja'}]]*/ false;
+        const etcLabel = isJa ? 'その他' : '기타';
+
+        const chartInstance = new Chart(ctx, {
             type: 'doughnut',
             data: {
-                labels: kimariteData.map(k => k.name),
+                labels: [],
                 datasets: [{
-                    data: kimariteData.map(k => k.count),
-                    backgroundColor: kimariteData.map((_, i) => PALETTE[i % PALETTE.length]),
+                    data: [],
+                    backgroundColor: [],
                     borderColor: '#f7f6f3',
                     borderWidth: 2
                 }]
@@ -1140,21 +1179,89 @@
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: { legend: { display: false }, tooltip: { enabled: true } }
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        enabled: true,
+                        callbacks: {
+                            label: function (context) {
+                                const val = context.raw || 0;
+                                const ds = context.dataset.data;
+                                const total = ds.reduce((a, b) => a + b, 0);
+                                const pct = total > 0 ? (val * 100 / total).toFixed(1) : 0;
+                                return ' ' + context.label + ': ' + val + (isJa ? '勝' : '승') + ' (' + pct + '%)';
+                            }
+                        }
+                    }
+                }
             }
         });
 
-        const legend = document.getElementById('kimariteLegend');
-        kimariteData.forEach((k, i) => {
-            const row = document.createElement('div');
-            row.className = 'kimarite-legend-item';
-            row.innerHTML = `
-                <span class="swatch" style="background:${PALETTE[i % PALETTE.length]}"></span>
-                <span class="kname">${k.name}</span>
-                <span class="kpct">${k.percent}%</span>
-            `;
-            legend.appendChild(row);
-        });
+        function updateChartAndLegend(groupUnder10) {
+            let data = kimariteData;
+            if (groupUnder10) {
+                const major = [];
+                let etcCount = 0;
+                let totalCount = 0;
+
+                kimariteData.forEach(k => {
+                    totalCount += k.count;
+                    if (k.name === '기타' || k.name === 'その他' || k.percent < 10.0) {
+                        etcCount += k.count;
+                    } else {
+                        major.push({ ...k });
+                    }
+                });
+
+                if (etcCount > 0 && totalCount > 0) {
+                    const etcPct = Math.round((etcCount * 100.0 / totalCount) * 10) / 10;
+                    major.push({
+                        name: etcLabel,
+                        count: etcCount,
+                        percent: etcPct
+                    });
+                }
+                data = major;
+            }
+
+            chartInstance.data.labels = data.map(k => k.name);
+            chartInstance.data.datasets[0].data = data.map(k => k.count);
+            chartInstance.data.datasets[0].backgroundColor = data.map((item, i) => {
+                if (item.name === '기타' || item.name === 'その他') {
+                    return ETC_COLOR;
+                }
+                return PALETTE[i % PALETTE.length];
+            });
+            chartInstance.update();
+
+            legend.innerHTML = '';
+            data.forEach((k, i) => {
+                const row = document.createElement('div');
+                row.className = 'kimarite-legend-item';
+                const color = (k.name === '기타' || k.name === 'その他')
+                    ? ETC_COLOR
+                    : PALETTE[i % PALETTE.length];
+                row.innerHTML = `
+                    <span class="swatch" style="background:${color}"></span>
+                    <span class="kname">${k.name}</span>
+                    <span class="kpct">${k.percent}%</span>
+                `;
+                legend.appendChild(row);
+            });
+        }
+
+        if (groupCheck) {
+            const savedPref = localStorage.getItem('sumo_kimarite_group_under_10') === 'true';
+            groupCheck.checked = savedPref;
+            updateChartAndLegend(savedPref);
+
+            groupCheck.addEventListener('change', function () {
+                localStorage.setItem('sumo_kimarite_group_under_10', groupCheck.checked);
+                updateChartAndLegend(groupCheck.checked);
+            });
+        } else {
+            updateChartAndLegend(false);
+        }
     }
 
     // ===== 대전 상세 슬라이드 패널 =====
