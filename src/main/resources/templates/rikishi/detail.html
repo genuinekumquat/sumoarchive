@@ -980,7 +980,7 @@
                         <th:block th:switch="${m.status.name()}">
                             <span class="mark win" th:case="'WIN'">○</span>
                             <span class="mark loss" th:case="'LOSS'">●</span>
-                            <span class="mark absent" th:case="'ABSENT'" th:text="${#locale.language == 'ja'} ? '休' : '휴'">휴</span>
+                            <span class="mark absent" th:case="'ABSENT'" th:text="${#locale.language == 'ja'} ? 'や' : '휴'">휴</span>
                         </th:block>
                         <span class="sd-name" th:if="${#locale.language == 'ja'}" th:text="${m.opponentShikonaJp} ?: #{rikishi.absent}">상대명</span>
                         <span class="sd-name" th:unless="${#locale.language == 'ja'}" th:text="${m.opponentShikonaKr} ?: #{rikishi.absent}">상대명</span>
