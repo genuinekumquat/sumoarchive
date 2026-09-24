@@ -1,6 +1,11 @@
 package com.torikumilab.sumoarchive.controller;
 
+import com.torikumilab.sumoarchive.service.exception.RateLimitExceededException;
+import com.torikumilab.sumoarchive.service.security.RateLimiterService;
+import com.torikumilab.sumoarchive.util.ClientIpResolver;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -14,7 +19,10 @@ import org.springframework.web.bind.annotation.RequestParam;
  * /admin/** 하위 화면 보호는 AdminAuthInterceptor(WebConfig에 등록)가 담당한다.
  */
 @Controller
+@RequiredArgsConstructor
 public class AdminViewController {
+
+	private final RateLimiterService rateLimiterService;
 
 	@Value("${admin.username}")
 	private String adminUsername;
@@ -32,11 +40,22 @@ public class AdminViewController {
 
 	@PostMapping("/admin/login")
 	public String login(@RequestParam String username, @RequestParam String password,
-						 HttpSession session, Model model) {
+						 HttpSession session, HttpServletRequest request, Model model) {
+		String clientIp = ClientIpResolver.getClientIp(request);
+		try {
+			rateLimiterService.checkAdminLoginAllowed(clientIp);
+		} catch (RateLimitExceededException e) {
+			model.addAttribute("error", e.getMessage());
+			return "admin/login";
+		}
+
 		if (adminUsername.equals(username) && adminPassword.equals(password)) {
+			rateLimiterService.recordAdminLoginSuccess(clientIp);
 			session.setAttribute("isAdmin", true);
 			return "redirect:/admin/comments";
 		}
+
+		rateLimiterService.recordAdminLoginFailure(clientIp);
 		model.addAttribute("error", "아이디 또는 비밀번호가 올바르지 않습니다.");
 		return "admin/login";
 	}

@@ -3,6 +3,10 @@ package com.torikumilab.sumoarchive.controller.api;
 import com.torikumilab.sumoarchive.domain.dto.CommentDTO;
 import com.torikumilab.sumoarchive.service.CommentService;
 import com.torikumilab.sumoarchive.service.exception.AdminOnlyException;
+import com.torikumilab.sumoarchive.service.exception.PasswordMismatchException;
+import com.torikumilab.sumoarchive.service.security.RateLimiterService;
+import com.torikumilab.sumoarchive.util.ClientIpResolver;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -21,6 +25,7 @@ import java.util.List;
 public class TorikumiCommentApiController {
 
 	private final CommentService commentService;
+	private final RateLimiterService rateLimiterService;
 
 	@GetMapping
 	public List<CommentDTO> list(@PathVariable Integer torikumiId) {
@@ -32,20 +37,34 @@ public class TorikumiCommentApiController {
 			@PathVariable Integer torikumiId,
 			@RequestParam String nickname,
 			@RequestParam String password,
-			@RequestParam String content
+			@RequestParam String content,
+			HttpServletRequest request
 	) {
+		String clientIp = ClientIpResolver.getClientIp(request);
+		rateLimiterService.checkCommentPostAllowed(clientIp);
+
 		List<CommentDTO> comments = commentService.addComment(torikumiId, nickname, password, content);
 		return ResponseEntity.status(HttpStatus.CREATED).body(comments);
 	}
 
-	/** 작성자 본인 삭제 (비밀번호 4자리 검증). */
+	/** 작성자 본인 삭제 (비밀번호 4자리 검증 + 무차별 대입 방어). */
 	@PostMapping("/{commentId}/delete")
 	public List<CommentDTO> delete(
 			@PathVariable Integer torikumiId,
 			@PathVariable Integer commentId,
-			@RequestParam String password
+			@RequestParam String password,
+			HttpServletRequest request
 	) {
-		return commentService.deleteByUser(torikumiId, commentId, password);
+		String clientIp = ClientIpResolver.getClientIp(request);
+		rateLimiterService.checkCommentDeleteAllowed(clientIp);
+		try {
+			List<CommentDTO> result = commentService.deleteByUser(torikumiId, commentId, password);
+			rateLimiterService.recordCommentDeleteSuccess(clientIp);
+			return result;
+		} catch (PasswordMismatchException e) {
+			rateLimiterService.recordCommentDeleteFailure(clientIp);
+			throw e;
+		}
 	}
 
 	/**

@@ -2,6 +2,7 @@ package com.torikumilab.sumoarchive.controller.api;
 
 import com.torikumilab.sumoarchive.service.exception.AdminOnlyException;
 import com.torikumilab.sumoarchive.service.exception.PasswordMismatchException;
+import com.torikumilab.sumoarchive.service.exception.RateLimitExceededException;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -33,6 +34,11 @@ public class ApiExceptionHandler {
 	@ExceptionHandler(AdminOnlyException.class)
 	public ResponseEntity<Map<String, String>> unauthorized(AdminOnlyException e) {
 		return body(HttpStatus.UNAUTHORIZED, e.getMessage());
+	}
+
+	@ExceptionHandler(RateLimitExceededException.class)
+	public ResponseEntity<Map<String, String>> tooManyRequests(RateLimitExceededException e) {
+		return body(HttpStatus.TOO_MANY_REQUESTS, e.getMessage());
 	}
 
 	@ExceptionHandler(EntityNotFoundException.class)
