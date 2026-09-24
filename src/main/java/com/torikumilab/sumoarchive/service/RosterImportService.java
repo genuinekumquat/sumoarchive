@@ -6,8 +6,10 @@ import com.torikumilab.sumoarchive.domain.dto.sumoapi.SumoApiRikishiDTO;
 import com.torikumilab.sumoarchive.domain.dto.sumoapi.SumoApiRikishiPageDTO;
 import com.torikumilab.sumoarchive.domain.entity.HeyaEntity;
 import com.torikumilab.sumoarchive.domain.entity.RikishiEntity;
-import com.torikumilab.sumoarchive.repository.*;
+import com.torikumilab.sumoarchive.repository.HeyaRepository;
+import com.torikumilab.sumoarchive.repository.RikishiRepository;
 import com.torikumilab.sumoarchive.util.OriginDisplayUtil;
+import com.torikumilab.sumoarchive.util.ShikonaKrTransliterator;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,16 +18,14 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
- * sumo-api.com에서 로스터(헤야 + 현역 리키시)를 통째로 가져와 우리 DB를 재구성한다.
- * 옛 더미데이터(수작업 한국어 시코나 포함)는 버리는 게 사용자 확정이라, 임포트 전에
- * 리키시·헤야와 그 하위 데이터를 전부 지운다. 바쇼/반즈케/토리쿠미 임포트는 이후 슬라이스.
+ * sumo-api.com에서 현역 로스터(헤야 + 리키시)를 가져와 우리 DB와 안전하게 동기화(Upsert)한다.
+ * 기존 데이터를 전체 삭제(wipe)하지 않고, externalApiId(또는 nameEn)를 기준으로
+ * 이미 존재하는 데이터는 최신 스펙으로 갱신하고, 새로운 헤야/리키시만 추가한다.
+ * 관리자가 검수한 한국어 표기, 수기 입력 데이터, 바쇼/반즈케/댓글 등 연관 데이터는 안전하게 보존된다.
  */
 @Service
 @RequiredArgsConstructor
@@ -35,40 +35,69 @@ public class RosterImportService {
 	private static final int PAGE_SIZE = 500;
 
 	private final SumoApiClient sumoApiClient;
-
 	private final RikishiRepository rikishiRepository;
 	private final HeyaRepository heyaRepository;
-	private final BashoRepository bashoRepository;
-	private final BanzukeRepository banzukeRepository;
-	private final TorikumiRepository torikumiRepository;
-	private final KinboshiRepository kinboshiRepository;
-	private final AwardRepository awardRepository;
-	private final CommentRepository commentRepository;
-	private final RikishiShikonaHistoryRepository rikishiShikonaHistoryRepository;
 
 	@Transactional
 	public RosterImportResultDTO importRoster() {
 		List<SumoApiRikishiDTO> apiRikishis = fetchAllActive();
 		log.info("[RosterImport] sumo-api 현역 리키시 {}명 수신", apiRikishis.size());
 
-		wipeExisting();
+		// 1. 헤야 동기화 (기존 헤야 보존 + 신규 헤야 추가)
+		HeyaImportResult heyaResult = syncHeyas(apiRikishis);
 
-		Map<String, HeyaEntity> heyaByEn = importHeya(apiRikishis);
-
+		// 2. 리키시 동기화 (기존 리키시 update + 신규 리키시 insert)
 		List<String> warnings = new ArrayList<>();
-		int imported = 0;
+		int createdCount = 0;
+		int updatedCount = 0;
+
+		// 성능 최적화: 기존 리키시들을 externalApiId 키로 맵핑하여 1건당 N+1 쿼리 방지
+		Map<Integer, RikishiEntity> existingByExternalId = rikishiRepository.findAll().stream()
+				.filter(r -> r.getExternalApiId() != null)
+				.collect(Collectors.toMap(RikishiEntity::getExternalApiId, r -> r, (e1, e2) -> e1));
+
 		for (SumoApiRikishiDTO api : apiRikishis) {
 			try {
-				rikishiRepository.save(toEntity(api, heyaByEn, warnings));
-				imported++;
+				int apiId = (int) api.id();
+				HeyaEntity heya = api.heya() != null
+						? heyaResult.heyaByEnMap().get(api.heya().strip().toLowerCase())
+						: null;
+
+				RikishiEntity existing = existingByExternalId.get(apiId);
+				if (existing != null) {
+					// 갱신 (Update): 수동 입력된 한글 시코나/뒷이름/출신지/사진 등은 건드리지 않고 기본 스펙만 갱신
+					existing.updateFromApi(
+							firstToken(api.shikonaJp()),
+							secondToken(api.shikonaJp()),
+							api.shikonaEn(),
+							parseIsoDate(api.birthDate(), api, "birthDate", warnings),
+							api.shusshin(),
+							deriveNationality(api.shusshin()),
+							toBigDecimal(api.height()),
+							toBigDecimal(api.weight()),
+							parseYyyymm(api.debut(), api, warnings),
+							api.currentRank(),
+							heya,
+							true
+					);
+					updatedCount++;
+				} else {
+					// 신규 추가 (Insert)
+					RikishiEntity newRikishi = toEntity(api, heya, warnings);
+					RikishiEntity saved = rikishiRepository.save(newRikishi);
+					existingByExternalId.put(apiId, saved);
+					createdCount++;
+				}
 			} catch (RuntimeException e) {
-				warnings.add("리키시 저장 실패 id=" + api.id() + " (" + api.shikonaEn() + "): " + e.getMessage());
+				warnings.add("리키시 처리 실패 id=" + api.id() + " (" + api.shikonaEn() + "): " + e.getMessage());
 			}
 		}
 
-		log.info("[RosterImport] 완료 - 헤야 {}개, 리키시 {}명, 경고 {}건",
-				heyaByEn.size(), imported, warnings.size());
-		return new RosterImportResultDTO(heyaByEn.size(), imported, warnings);
+		int totalImported = createdCount + updatedCount;
+		log.info("[RosterImport] 동기화 완료 - 헤야 신규 {}개 · 리키시 신규 {}명 / 갱신 {}명 (총 {}명), 경고 {}건",
+				heyaResult.createdCount(), createdCount, updatedCount, totalImported, warnings.size());
+
+		return new RosterImportResultDTO(heyaResult.createdCount(), createdCount, updatedCount, totalImported, warnings);
 	}
 
 	// ===== 조회 =====
@@ -90,63 +119,73 @@ public class RosterImportService {
 		return all;
 	}
 
-	// ===== 삭제 (FK 자식부터) =====
+	// ===== 헤야 동기화 (기존 데이터 보존) =====
 
-	private void wipeExisting() {
-		commentRepository.deleteAllInBatch();
-		kinboshiRepository.deleteAllInBatch();
-		torikumiRepository.deleteAllInBatch();
-		awardRepository.deleteAllInBatch();
-		banzukeRepository.deleteAllInBatch();
-		rikishiShikonaHistoryRepository.deleteAllInBatch();
-		bashoRepository.deleteAllInBatch();
-		// heya <-> rikishi 순환 FK: 대표 오야카타 참조를 끊고 나서 삭제
-		heyaRepository.findAll().forEach(h -> h.updateMasterRikishi(null));
-		heyaRepository.flush();
-		rikishiRepository.deleteAllInBatch();
-		heyaRepository.deleteAllInBatch();
-	}
+	private record HeyaImportResult(Map<String, HeyaEntity> heyaByEnMap, int createdCount) {}
 
-	// ===== 헤야 =====
+	private HeyaImportResult syncHeyas(List<SumoApiRikishiDTO> apiRikishis) {
+		Map<String, HeyaEntity> byEn = new HashMap<>();
+		for (HeyaEntity h : heyaRepository.findAll()) {
+			if (h.getNameEn() != null && !h.getNameEn().isBlank()) {
+				byEn.put(h.getNameEn().strip().toLowerCase(), h);
+			}
+		}
 
-	private Map<String, HeyaEntity> importHeya(List<SumoApiRikishiDTO> apiRikishis) {
-		Map<String, HeyaEntity> byEn = new LinkedHashMap<>();
-		apiRikishis.stream()
+		int created = 0;
+		List<String> distinctApiHeyas = apiRikishis.stream()
 				.map(SumoApiRikishiDTO::heya)
 				.filter(Objects::nonNull)
 				.map(String::strip)
 				.filter(s -> !s.isEmpty())
 				.distinct()
-				.forEach(en -> byEn.put(en, heyaRepository.save(
-						// 한/일명은 NOT NULL이라 로마자 임시값. 후속 슬라이스에서 보강.
-						HeyaEntity.builder().nameEn(en).nameKr(en).nameJp(en).build())));
-		return byEn;
+				.toList();
+
+		for (String en : distinctApiHeyas) {
+			String key = en.toLowerCase();
+			if (!byEn.containsKey(key)) {
+				String kr = ShikonaKrTransliterator.fromRomaji(en);
+				if (kr == null || kr.isBlank()) {
+					kr = en;
+				}
+				HeyaEntity newHeya = HeyaEntity.builder()
+						.nameEn(en)
+						.nameKr(kr)
+						.nameJp(en) // 일본어 한자명은 관리자 화면에서 추후 검수/입력
+						.build();
+				HeyaEntity saved = heyaRepository.save(newHeya);
+				byEn.put(key, saved);
+				created++;
+			}
+		}
+		return new HeyaImportResult(byEn, created);
 	}
 
-	// ===== 리키시 =====
+	// ===== 신규 리키시 생성 =====
 
-	private RikishiEntity toEntity(SumoApiRikishiDTO api, Map<String, HeyaEntity> heyaByEn, List<String> warnings) {
+	private RikishiEntity toEntity(SumoApiRikishiDTO api, HeyaEntity heya, List<String> warnings) {
+		String shikonaKr = ShikonaKrTransliterator.fromRomaji(api.shikonaEn());
 		return RikishiEntity.builder()
 				.externalApiId((int) api.id())
 				.shikonaJp(firstToken(api.shikonaJp()))
-				.givenNameJp(secondToken(api.shikonaJp())) // "朝乃山　広暉" → 뒷토큰 "広暉" (없으면 null)
+				.givenNameJp(secondToken(api.shikonaJp())) // "朝乃山 広暉" → 뒷토큰 "広暉" (없으면 null)
 				.shikonaEn(api.shikonaEn())
-				.shikonaKr(null) // 한국어 시코나는 별도 작업(관리자 입력/음차)
+				.shikonaKr(shikonaKr) // 초기 음차값 자동 설정
+				.shikonaKrAuto(shikonaKr != null)
 				.birthdate(parseIsoDate(api.birthDate(), api, "birthDate", warnings))
 				.birthplace(api.shusshin())
 				.nationality(deriveNationality(api.shusshin()))
 				.height(toBigDecimal(api.height()))
 				.weight(toBigDecimal(api.weight()))
 				.debutDate(parseYyyymm(api.debut(), api, warnings))
-				.currentRank(api.currentRank()) // 죽은 캐시 필드지만 저장은 무해
-				.heyaEntity(api.heya() == null ? null : heyaByEn.get(api.heya().strip()))
+				.currentRank(api.currentRank())
+				.heyaEntity(heya)
 				.isActive(true) // intai=false 조회라 전부 현역
 				.build();
 	}
 
 	// ===== 파싱 헬퍼 =====
 
-	/** "朝乃山　広暉"(전각공백) / "朝乃山 広暉" / "朝乃山" → 첫 토큰(시코나). */
+	/** "朝乃山 広暉"(전각공백) / "朝乃山 広暉" / "朝乃山" → 첫 토큰(시코나). */
 	private static String firstToken(String s) {
 		if (s == null) {
 			return null;
@@ -155,7 +194,7 @@ public class RosterImportService {
 		return stripped.isEmpty() ? null : stripped.split("[\\s\\u3000]+", 2)[0];
 	}
 
-	/** "朝乃山　広暉" → 뒷토큰 "広暉" (뒷이름). 토큰이 하나뿐이면 null. */
+	/** "朝乃山 広暉" → 뒷토큰 "広暉" (뒷이름). 토큰이 하나뿐이면 null. */
 	private static String secondToken(String s) {
 		if (s == null) {
 			return null;

@@ -99,7 +99,7 @@
     </header>
 
     <div class="saved-msg" th:if="${importResult}">
-        <span th:text="'sumo-api 임포트 완료 — 헤야 ' + ${importResult.heyaCreated} + '개 · 리키시 ' + ${importResult.rikishiImported} + '명'">완료</span>
+        <span th:text="'sumo-api 동기화 완료 — 헤야 ' + ${importResult.heyaCreated} + '개 신규 · 리키시 신규 ' + ${importResult.rikishiCreated} + '명, 갱신 ' + ${importResult.rikishiUpdated} + '명 (총 ' + ${importResult.rikishiImported} + '명)'">완료</span>
         <ul class="warn-list" th:if="${!importResult.warnings.isEmpty()}">
             <li th:each="w : ${importResult.warnings}" th:text="${w}">경고</li>
         </ul>

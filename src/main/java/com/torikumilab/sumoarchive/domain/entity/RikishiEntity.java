@@ -107,6 +107,7 @@ public class RikishiEntity {
 	private RikishiEntity(
 			Integer externalApiId,
 			String shikonaKr,
+			Boolean shikonaKrAuto,
 			String shikonaJp,
 			String shikonaEn,
 			String givenNameKr,
@@ -130,6 +131,7 @@ public class RikishiEntity {
 	) {
 		this.externalApiId = externalApiId;
 		this.shikonaKr = shikonaKr;
+		this.shikonaKrAuto = shikonaKrAuto != null ? shikonaKrAuto : (shikonaKr != null ? true : null);
 		this.shikonaJp = shikonaJp;
 		this.shikonaEn = shikonaEn;
 		this.givenNameKr = givenNameKr;
@@ -150,6 +152,44 @@ public class RikishiEntity {
 		this.oyakataNameKr = oyakataNameKr;
 		this.oyakataNameJp = oyakataNameJp;
 		this.photoUrl = photoUrl;
+	}
+
+	/**
+	 * sumo-api 로스터 재임포트(동기화) 시 호출.
+	 * 한국어 시코나(shikonaKr), 한국어 뒷이름(givenNameKr), 출신지(originKr), 프로필 사진(photoUrl),
+	 * 특기(fightingStyle), 최고위(highestRank) 등 수동 검수 및 서비스 전용 데이터는 일체 건드리지 않고,
+	 * sumo-api에서 실시간으로 변동되는 기본 신체 스펙(키, 몸무게), 현역 상태, 소속 헤야 등을 안전하게 갱신한다.
+	 */
+	public void updateFromApi(
+			String shikonaJp,
+			String givenNameJp,
+			String shikonaEn,
+			LocalDate birthdate,
+			String birthplace,
+			String nationality,
+			BigDecimal height,
+			BigDecimal weight,
+			LocalDate debutDate,
+			String currentRank,
+			HeyaEntity heyaEntity,
+			boolean isActive
+	) {
+		if (shikonaJp != null && !shikonaJp.isBlank()) this.shikonaJp = shikonaJp;
+		if (givenNameJp != null && !givenNameJp.isBlank()) this.givenNameJp = givenNameJp;
+		if (shikonaEn != null && !shikonaEn.isBlank()) this.shikonaEn = shikonaEn;
+		if (birthdate != null) this.birthdate = birthdate;
+		if (birthplace != null && !birthplace.isBlank()) {
+			this.birthplace = birthplace;
+			if (this.nationality == null || this.nationality.isBlank()) {
+				this.nationality = nationality;
+			}
+		}
+		if (height != null) this.height = height;
+		if (weight != null) this.weight = weight;
+		if (debutDate != null) this.debutDate = debutDate;
+		if (currentRank != null && !currentRank.isBlank()) this.currentRank = currentRank;
+		if (heyaEntity != null) this.heyaEntity = heyaEntity;
+		this.isActive = isActive;
 	}
 
 	/**
