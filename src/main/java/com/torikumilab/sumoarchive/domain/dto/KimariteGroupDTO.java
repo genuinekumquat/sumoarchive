@@ -3,11 +3,12 @@ package com.torikumilab.sumoarchive.domain.dto;
 import java.util.List;
 
 /**
- * 키마리테 백과사전의 ㄱㄴㄷ 초성 인덱스 한 그룹. rikishi/detail.html 상대전적 패널에서 쓴
- * HeadToHeadGroupDTO/HangulIndexUtil 패턴과 동일.
+ * 키마리테 백과사전의 공식 분류별 그룹 (기본기, 던지기, 걸기 등).
  */
 public record KimariteGroupDTO(
-		String initial,
+		String code,
+		String categoryKr,
+		String categoryJp,
 		List<KimariteEntryDTO> entries
 ) {
 }

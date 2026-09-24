@@ -2,7 +2,7 @@ package com.torikumilab.sumoarchive.service;
 
 import com.torikumilab.sumoarchive.domain.dto.KimariteEntryDTO;
 import com.torikumilab.sumoarchive.domain.dto.KimariteGroupDTO;
-import com.torikumilab.sumoarchive.util.HangulIndexUtil;
+import com.torikumilab.sumoarchive.domain.entity.constant.KimariteCategory;
 import com.torikumilab.sumoarchive.util.KimariteDisplayUtil;
 import org.springframework.stereotype.Service;
 
@@ -13,26 +13,40 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 메인 페이지 "키마리테" 탭(결정기술 백과사전) UI 틀. KimariteDisplayUtil에 이미 있는
- * 한/일 매핑을 그대로 목록화만 한다 - 기술 설명(description)은 아직 콘텐츠가 없어서
- * 전부 null로 내려가고, 화면에서는 "설명 준비 중"으로 대체 표시한다.
+ * 메인 페이지 "키마리테" 탭(결정기술 백과사전) 서비스.
+ * 일본 스모 협회 공식 6대 분류(기본기·던지기·걸기·비틀기·젖히기·특수기) 및
+ * 비기/승부결과 기준으로 그룹화하여 반환한다.
  */
 @Service
 public class KimariteEncyclopediaService {
 
 	public List<KimariteGroupDTO> getKimariteEncyclopedia() {
-		List<KimariteEntryDTO> entries = KimariteDisplayUtil.krSuggestions().stream()
-				.map(kr -> new KimariteEntryDTO(kr, KimariteDisplayUtil.toJp(kr), null))
-				.sorted(Comparator.comparing(KimariteEntryDTO::kimariteKr))
-				.toList();
-
-		Map<String, List<KimariteEntryDTO>> byInitial = new LinkedHashMap<>();
-		for (KimariteEntryDTO e : entries) {
-			byInitial.computeIfAbsent(HangulIndexUtil.indexOf(e.kimariteKr()), k -> new ArrayList<>()).add(e);
+		Map<KimariteCategory, List<KimariteEntryDTO>> byCategory = new LinkedHashMap<>();
+		for (KimariteCategory cat : KimariteCategory.values()) {
+			byCategory.put(cat, new ArrayList<>());
 		}
 
-		return byInitial.entrySet().stream()
-				.map(entry -> new KimariteGroupDTO(entry.getKey(), entry.getValue()))
-				.toList();
+		for (String kr : KimariteDisplayUtil.krSuggestions()) {
+			KimariteCategory cat = KimariteDisplayUtil.categoryOf(kr);
+			KimariteEntryDTO entry = new KimariteEntryDTO(kr, KimariteDisplayUtil.toJp(kr), null);
+			byCategory.get(cat).add(entry);
+		}
+
+		List<KimariteGroupDTO> groups = new ArrayList<>();
+		for (Map.Entry<KimariteCategory, List<KimariteEntryDTO>> entry : byCategory.entrySet()) {
+			List<KimariteEntryDTO> list = entry.getValue();
+			if (!list.isEmpty()) {
+				list.sort(Comparator.comparing(KimariteEntryDTO::kimariteKr));
+				KimariteCategory cat = entry.getKey();
+				groups.add(new KimariteGroupDTO(
+						cat.getCode(),
+						cat.getNameKr(),
+						cat.getNameJp(),
+						list
+				));
+			}
+		}
+
+		return groups;
 	}
 }

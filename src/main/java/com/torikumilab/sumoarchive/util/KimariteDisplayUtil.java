@@ -1,5 +1,7 @@
 package com.torikumilab.sumoarchive.util;
 
+import com.torikumilab.sumoarchive.domain.entity.constant.KimariteCategory;
+
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -23,6 +25,8 @@ public final class KimariteDisplayUtil {
 	private static final Map<String, String> JP_TO_KR = new LinkedHashMap<>();
 	// key: sumo-api 로마자 소문자, value: 일본어 한자 (KR 칸은 한자 → 한국어 매핑으로 이어붙임)
 	private static final Map<String, String> ROMAJI_TO_JP = new LinkedHashMap<>();
+	// key: 한국어 음차, value: 공식 6대 분류 및 비기 카테고리
+	private static final Map<String, KimariteCategory> KR_TO_CATEGORY = new LinkedHashMap<>();
 
 	private static void put(String kr, String jp) {
 		KR_TO_JP.put(kr, jp);
@@ -31,6 +35,12 @@ public final class KimariteDisplayUtil {
 
 	private static void romaji(String romaji, String jp) {
 		ROMAJI_TO_JP.put(romaji, jp);
+	}
+
+	private static void cat(KimariteCategory category, String... krNames) {
+		for (String kr : krNames) {
+			KR_TO_CATEGORY.put(kr, category);
+		}
 	}
 
 	static {
@@ -150,6 +160,35 @@ public final class KimariteDisplayUtil {
 		romaji("hansoku", "反則");
 		romaji("hikiwake", "引き分け");
 		romaji("itamiwake", "痛み分け");
+
+		// 일본 스모 협회 공식 6대 분류 및 비기 매핑 (총 55개)
+		cat(KimariteCategory.KIHON,
+				"요리키리", "오시다시", "츠키다시", "요리타오시", "오시타오시",
+				"츠키타오시", "아비세타오시", "하즈오시");
+
+		cat(KimariteCategory.NAGE,
+				"우와테나게", "시타테나게", "코테나게", "스쿠이나게", "우와테다시나게",
+				"시타테다시나게", "쿠비나게", "니초나게", "카케나게", "다시나게");
+
+		cat(KimariteCategory.KAKE,
+				"우치가케", "소토가케", "키리카에시", "케카에시", "켓타오시",
+				"스소하라이", "코마타스쿠이", "와타시코미", "아시토리");
+
+		cat(KimariteCategory.HINERI,
+				"츠키오토시", "마키오토시", "슷타리", "카타스카시", "우치무소",
+				"우와테히네리", "시타테히네리", "카이나히네리");
+
+		cat(KimariteCategory.SORI,
+				"츠타에조리");
+
+		cat(KimariteCategory.TOKUSHU,
+				"하타키코미", "히키오토시", "츠리다시", "요비모도시", "오쿠리다시",
+				"오쿠리타오시", "오쿠리나게", "웃차리", "키메다시", "키메타오시",
+				"힛카케");
+
+		cat(KimariteCategory.HIGI,
+				"이사미아시", "코시쿠다케", "츠키테", "츠키히자", "후미다시",
+				"한소쿠", "히키와케", "이타미와케");
 	}
 
 	/**
@@ -158,6 +197,22 @@ public final class KimariteDisplayUtil {
 	 */
 	public static List<String> krSuggestions() {
 		return new ArrayList<>(KR_TO_JP.keySet());
+	}
+
+	/**
+	 * 결정기술(한국어·일본어·로마자 무관)의 공식 카테고리를 반환.
+	 * 매핑되지 않은 기술은 기본적으로 특수기(TOKUSHU)로 분류.
+	 */
+	public static KimariteCategory categoryOf(String raw) {
+		if (raw == null || raw.isBlank()) {
+			return KimariteCategory.TOKUSHU;
+		}
+		String kr = toKr(raw);
+		KimariteCategory cat = KR_TO_CATEGORY.get(kr);
+		if (cat != null) {
+			return cat;
+		}
+		return KimariteCategory.TOKUSHU;
 	}
 
 	/**

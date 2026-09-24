@@ -238,11 +238,11 @@
             color: var(--sumi-faint);
         }
 
-        /* ===== 키마리테(決まり手) 탭 - rikishi/detail.html 상대전적 패널과 같은 초성 인덱스 + 접이식 구조 ===== */
+        /* ===== 키마리테(決まり手) 탭 - 공식 6대 분류(+비기) 카테고리 인덱스 + 접이식 구조 ===== */
         .kimarite-index {
             display: flex;
             flex-wrap: wrap;
-            gap: 4px;
+            gap: 6px;
             padding-bottom: 14px;
             margin-bottom: 4px;
             border-bottom: 1px solid var(--washi-line);
@@ -251,17 +251,20 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            min-width: 24px;
-            height: 24px;
-            padding: 0 4px;
+            padding: 4px 10px;
             font-family: 'Zen Kaku Gothic New', sans-serif;
             font-size: 12px;
-            font-weight: 700;
+            font-weight: 500;
             color: var(--sumi-soft);
             border: 1px solid var(--washi-line);
             text-decoration: none;
+            transition: all 0.15s ease;
         }
-        .kimarite-index a:hover { border-color: var(--shu); color: var(--shu); }
+        .kimarite-index a:hover {
+            border-color: var(--shu);
+            color: var(--shu);
+            background: rgba(163, 39, 44, 0.04);
+        }
 
         .kimarite-group { scroll-margin-top: 14px; }
         .kimarite-group + .kimarite-group { border-top: 1px solid var(--sumi); }
@@ -286,6 +289,11 @@
             transition: transform 0.15s ease;
         }
         .kimarite-group[open] > .kimarite-group-summary::before { transform: rotate(90deg); color: var(--shu); }
+        .kimarite-category-jp {
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 13px;
+            color: var(--sumi-faint);
+        }
         .kimarite-group-count {
             font-family: 'Zen Kaku Gothic New', sans-serif;
             font-size: 11px;
@@ -584,9 +592,8 @@
         </div>
     </div>
 
-    <!-- ===== 키마리테(決まり手) 탭 - 결정기술 백과사전 UI 틀. 설명(description)은 아직 콘텐츠가
-         없어서 전부 비어있고 "설명 준비 중"으로 대체 표시된다 - 나중에 하나씩 채워 넣을 예정.
-         상대전적 패널(rikishi/detail.html)과 같은 ㄱㄴㄷ 초성 인덱스 + 접이식 구조. -->
+    <!-- ===== 키마리테(決まり手) 탭 - 공식 6대 분류(+비기) 백과사전 UI 틀. 설명(description)은 아직
+         콘텐츠가 없어서 전부 비어있고 "설명 준비 중"으로 대체 표시된다 - 나중에 하나씩 채워 넣을 예정. -->
     <div class="banzuke kimarite-panel" id="kimaritePanel" hidden>
         <div class="banzuke-inner">
             <div class="banzuke-title">
@@ -596,13 +603,14 @@
             <div class="empty-row" th:if="${kimariteGroups == null or kimariteGroups.isEmpty()}" th:text="#{main.table.empty}">등록된 반즈케가 없습니다.</div>
 
             <nav class="kimarite-index">
-                <a th:each="g : ${kimariteGroups}" th:href="'#kimarite-grp-' + ${g.initial}" th:text="${g.initial}">ㄱ</a>
+                <a th:each="g : ${kimariteGroups}" th:href="'#kimarite-grp-' + ${g.code}" th:text="${#locale.language == 'ja'} ? ${g.categoryJp} : ${g.categoryKr}">기본기</a>
             </nav>
 
-            <details class="kimarite-group" th:each="g : ${kimariteGroups}" th:id="'kimarite-grp-' + ${g.initial}">
+            <details class="kimarite-group" th:each="g : ${kimariteGroups}" th:id="'kimarite-grp-' + ${g.code}">
                 <summary class="kimarite-group-summary">
-                    <span th:text="${g.initial}">ㄱ</span>
-                    <span class="kimarite-group-count" th:text="'(' + ${g.entries.size()} + ')'">(3)</span>
+                    <span th:text="${#locale.language == 'ja'} ? ${g.categoryJp} : ${g.categoryKr}">기본기</span>
+                    <span class="kimarite-category-jp" th:if="${#locale.language != 'ja'}" th:text="${g.categoryJp}">基本技</span>
+                    <span class="kimarite-group-count" th:text="'(' + ${g.entries.size()} + ')'">(7)</span>
                 </summary>
                 <div class="kimarite-group-body">
                     <div class="kimarite-entry" th:each="e : ${g.entries}">
