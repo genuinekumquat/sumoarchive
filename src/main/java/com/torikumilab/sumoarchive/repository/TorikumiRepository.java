@@ -75,6 +75,19 @@ public interface TorikumiRepository extends JpaRepository<TorikumiEntity, Intege
 """)
 	List<TorikumiEntity> findMatchHistory(@Param("rikishiId") Integer rikishiId, @Param("bashoId") Integer bashoId);
 
+	// 호시토리표 전체 휴장(全休) 판정용 - 그 바쇼·지위(division)의 토리쿠미가 적재돼 있는지.
+	// 적재된 바쇼인데 본인 대전만 0건이면 全休, 아예 적재 전이면 "기록 없음"으로 구분하기 위함.
+	boolean existsByBashoEntityIdAndDivisionAndIsExtraMatchFalse(Integer bashoId, Division division);
+
+	// 호시토리표 휴장 칸 채우기 상한 - 그 바쇼에 적재된 마지막 일차. 진행 중 바쇼의 아직 안 열린 날을
+	// 휴장으로 세지 않기 위함 (끝난 바쇼는 15).
+	@Query("""
+    SELECT MAX(t.day) FROM TorikumiEntity t
+    WHERE t.bashoEntity.id = :bashoId
+      AND t.isExtraMatch = false
+""")
+	Integer findLastLoadedDay(@Param("bashoId") Integer bashoId);
+
 	// 상대전적(対戦成績)용 - 이 리키시가 동/서 어느 쪽으로 출전했든, 결정전 제외한 통산 전 경기를
 	// 바쇼 시작일 내림차순(최신 바쇼부터) → 같은 바쇼 안에서는 day 오름차순으로.
 	@Query("""

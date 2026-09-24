@@ -327,11 +327,21 @@ public class RikishiDetailService {
 		long wins = matches.stream().filter(m -> m.status() == MatchHistoryItemDTO.Status.WIN).count();
 		long losses = matches.stream().filter(m -> m.status() == MatchHistoryItemDTO.Status.LOSS).count();
 		long absences = matches.stream().filter(m -> m.status() == MatchHistoryItemDTO.Status.ABSENT).count();
-		String recordSummary = matches.isEmpty()
-				? "-"
-				: wins + "勝" + losses + "敗" + (absences > 0 ? absences + "休" : "");
-		
 		BashoEntity basho = banzuke.getBashoEntity();
+		// 첫날부터 휴장하면 대진 자체가 안 짜여 부전 기록도 안 남음. 같은 바쇼·지위 토리쿠미가 적재돼 있는지로
+		// "全休"와 "아직 적재 전"을 구분한다.
+		boolean fullAbsence = matches.isEmpty()
+				&& torikumiRepository.existsByBashoEntityIdAndDivisionAndIsExtraMatchFalse(basho.getId(), banzuke.getDivision());
+
+		String recordSummary;
+		if (fullAbsence) {
+			recordSummary = "全休";
+		} else if (matches.isEmpty()) {
+			recordSummary = "-";
+		} else {
+			recordSummary = wins + "勝" + losses + "敗" + (absences > 0 ? absences + "休" : "");
+		}
+
 		String bashoLabel = basho.getBashoYear() + "年"
 				+ String.format("%02d", basho.getBashoMonth().getMonthValue()) + "月場所";
 		
@@ -340,7 +350,8 @@ public class RikishiDetailService {
 				bashoLabel,
 				RankDisplayUtil.rankDisplay(banzuke.getRankName(), banzuke.getRankValue()),
 				recordSummary,
-				matches
+				matches,
+				fullAbsence
 		);
 	}
 	
@@ -348,6 +359,7 @@ public class RikishiDetailService {
 	 * 특정 바쇼 하나의 대전 목록을 day 1~15 오름차순으로 조립.
 	 * 이 리키시가 그 바쇼에 등록된 토리쿠미가 하나도 없으면 빈 리스트(= "기록 없음" 처리).
 	 * 등록된 게 있는 바쇼인데 특정 날짜만 비어 있으면(= 첫 출전일 이후 공백) 휴장(ABSENT)으로 채워서 반환.
+	 * 채우는 범위는 그 바쇼에 적재된 마지막 일차까지 (진행 중 바쇼의 미개최일은 제외).
 	 * ⚠ 스키마에 별도 휴장 테이블/컬럼이 없어서 "그 바쇼의 첫 출전일 이후 토리쿠미 공백 = 휴장"으로
 	 *   추론하는 방식입니다. 첫 출전일 이전 공백(예: 데이터가 아직 다 안 채워진 경우)은 휴장으로
 	 *   보지 않고 그냥 표에서 생략합니다.
@@ -371,9 +383,12 @@ public class RikishiDetailService {
 		Map<Integer, TorikumiEntity> matchByDay = matches.stream()
 				.collect(Collectors.toMap(TorikumiEntity::getDay, t -> t));
 		int firstDay = matches.get(0).getDay(); // findMatchHistory가 day ASC로 내려주므로 첫 번째가 첫 출전일
-		
+		// 진행 중 바쇼는 아직 안 열린 날까지 휴장으로 채우지 않도록, 그 바쇼에 적재된 마지막 일차까지만 돈다.
+		Integer lastLoadedDay = torikumiRepository.findLastLoadedDay(bashoId);
+		int lastDay = (lastLoadedDay != null) ? Math.min(lastLoadedDay, 15) : 15;
+
 		List<MatchHistoryItemDTO> result = new ArrayList<>();
-		for (int day = 1; day <= 15; day++) {
+		for (int day = 1; day <= lastDay; day++) {
 			TorikumiEntity t = matchByDay.get(day);
 			if (t != null) {
 				result.add(toMatchHistoryItem(t, rikishiId, opponentBanzukeByRikishiId));

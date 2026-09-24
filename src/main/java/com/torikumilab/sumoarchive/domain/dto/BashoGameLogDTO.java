@@ -10,7 +10,8 @@ public record BashoGameLogDTO(
 		Integer bashoId,        // 결정기술 차트 기간 필터(select) 옵션값으로도 씀
 		String bashoLabel,      // "2026年07月場所" 형태
 		String rankDisplay,     // 그 바쇼 기준 순위 표기 ("前頭10枚目" 등)
-		String recordSummary,   // "9勝6敗" 형태 (그 바쇼에 등록된 토리쿠미 기준. 등록이 없으면 "-")
-		List<MatchHistoryItemDTO> matches // day 오름차순, 가로 요약 줄(호시토리표)용
+		String recordSummary,   // "9勝6敗" 형태 (그 바쇼에 등록된 토리쿠미 기준. 全休면 "全休", 등록이 없으면 "-")
+		List<MatchHistoryItemDTO> matches, // day 오름차순, 가로 요약 줄(호시토리표)용
+		boolean fullAbsence     // 그 바쇼·지위 토리쿠미는 적재돼 있는데 본인 대전만 0건 = 전체 휴장(全休)
 ) {
 }
