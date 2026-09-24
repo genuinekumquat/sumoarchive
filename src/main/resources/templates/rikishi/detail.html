@@ -761,10 +761,10 @@
                         <td th:if="${#locale.language == 'ja'}" th:text="${rikishi.originJp}">출신지</td>
                         <td th:unless="${#locale.language == 'ja'}" th:text="${rikishi.originKr}">출신지</td>
                     </tr>
-                    <!-- 국적(nationality) 컬럼은 자동 파싱 버그가 있는 원문이라(OriginDisplayUtil 참고) ja 화면엔 생략 -->
-                    <tr th:unless="${#locale.language == 'ja'}">
+                    <tr>
                         <th th:text="#{rikishi.label.nationality}">국적</th>
-                        <td th:text="${rikishi.nationality}">국적</td>
+                        <td th:if="${#locale.language == 'ja'}" th:text="${rikishi.nationalityJp} ?: #{rikishi.value.noinfo}">国籍</td>
+                        <td th:unless="${#locale.language == 'ja'}" th:text="${rikishi.nationality} ?: #{rikishi.value.noinfo}">국적</td>
                     </tr>
                     <tr>
                         <th th:text="#{rikishi.label.heightweight}">신장 / 체중</th>

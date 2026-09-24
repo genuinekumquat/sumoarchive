@@ -7,6 +7,7 @@ import com.torikumilab.sumoarchive.domain.dto.sumoapi.SumoApiRikishiPageDTO;
 import com.torikumilab.sumoarchive.domain.entity.HeyaEntity;
 import com.torikumilab.sumoarchive.domain.entity.RikishiEntity;
 import com.torikumilab.sumoarchive.repository.*;
+import com.torikumilab.sumoarchive.util.OriginDisplayUtil;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -195,17 +196,10 @@ public class RosterImportService {
 	}
 
 	/**
-	 * shusshin에서 국적을 대충 뽑는다. 일본 지명은 "...-ken, ...-shi" 꼴이라 "-ken" 포함이면 일본,
-	 * 아니면 마지막 콤마 뒤 토큰(국가명)으로 본다. 정확한 매핑은 후속 작업.
+	 * shusshin에서 국적(한국어)을 도출한다.
+	 * OriginDisplayUtil의 도도부현/국가명 매핑 로직을 활용한다.
 	 */
 	private static String deriveNationality(String shusshin) {
-		if (shusshin == null || shusshin.isBlank()) {
-			return null;
-		}
-		if (shusshin.contains("-ken")) {
-			return "일본";
-		}
-		int comma = shusshin.lastIndexOf(',');
-		return comma >= 0 ? shusshin.substring(comma + 1).strip() : shusshin.strip();
+		return OriginDisplayUtil.deriveNationality(shusshin);
 	}
 }

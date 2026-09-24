@@ -28,6 +28,7 @@ public class RikishiDetailDTO {
 
 	private String birthplace;
 	private String nationality;
+	private String nationalityJp; // 일본어 화면용
 	private String originKr; // OriginDisplayUtil 기반 표시용 출신지 (관리자 직접 입력 우선, 없으면 birthplace에서 자동 계산)
 	private String originJp; // 일본어 화면용 (birthplace에서 자동 계산만. 관리자 직접 입력 오버라이드는 아직 없음)
 

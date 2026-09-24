@@ -109,7 +109,7 @@ public class RikishiDetailService {
 		String shikonaKr = r.getShikonaKr() != null ? r.getShikonaKr()
 				: (r.getShikonaJp() != null ? r.getShikonaJp() : r.getShikonaEn());
 
-		String fightingStyleJp = FIGHTING_STYLE_JP.get(r.getFightingStyle());
+		String fightingStyleJp = r.getFightingStyle() != null ? FIGHTING_STYLE_JP.get(r.getFightingStyle()) : null;
 
 		return RikishiDetailDTO.builder()
 				.id(r.getId())
@@ -121,9 +121,10 @@ public class RikishiDetailService {
 				.birthdate(r.getBirthdate())
 				.age(age)
 				.birthplace(r.getBirthplace())
-				.nationality(r.getNationality())
-				.originKr(OriginDisplayUtil.toKorean(r.getOriginKr(), r.getBirthplace()))
-				.originJp(OriginDisplayUtil.toJapanese(r.getBirthplace()))
+				.nationality(OriginDisplayUtil.deriveNationality(r.getBirthplace()))
+				.nationalityJp(OriginDisplayUtil.deriveNationalityJp(r.getBirthplace()))
+				.originKr(OriginDisplayUtil.toDetailOriginKr(r.getOriginKr(), r.getBirthplace()))
+				.originJp(OriginDisplayUtil.toDetailOriginJp(r.getBirthplace()))
 				.heyaNameKr(r.getHeyaEntity() != null ? r.getHeyaEntity().getNameKr() : null)
 				.heyaNameJp(r.getHeyaEntity() != null ? r.getHeyaEntity().getNameJp() : null)
 				.height(r.getHeight())

@@ -1,20 +1,16 @@
 package com.torikumilab.sumoarchive.util;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 /**
- * 리키시 출신지(birthplace, sumo-api의 shusshin 원문) → 반즈케/프로필에 보여줄 한국어/일본어 표기.
+ * 리키시 출신지(birthplace) 및 국적(nationality) 한국어/일본어 변환 유틸.
  *
  * <p>원문은 "&lt;지역&gt;, &lt;나머지&gt;" 꼴이다. 지역이 일본 도도부현(접미사 -ken/-to/-fu 또는
- * 접미사 없는 홋카이도/현 이름)이면 그 현 이름을, 아니면 외국 국가명으로 보고 국가명을 반환한다.
- * ⚠ RosterImportService#deriveNationality는 콤마 뒤(마지막 토큰)를 국적으로 잘못 뽑아서 도쿄·오사카·
- * 홋카이도 출신 선수의 nationality 컬럼이 시/구 이름으로 잘못 들어가 있다 — 그래서 저장된 nationality
- * 대신 원문 birthplace를 직접 파싱한다(맨 앞 토큰이 항상 지역/국가).</p>
- *
- * <p>매핑에 없는 지역/국가는 KimariteDisplayUtil과 같은 방침으로 원문 그대로 통과시킨다.
- * 관리자가 birthplace를 이미 한글로 고쳐둔 값(예: "토야마현, 토야마시")은 영문 기본형으로 역매핑해서
- * 일본어 표기도 뽑아낼 수 있게 한다(KR_TO_BASE).</p>
+ * 접미사 없는 홋카이도/현 이름)이면 일본 출신(국적: 일본)으로 분류하고,
+ * 그 외에는 국가명으로 보아 국적을 해당 국가("몽골", "우크라이나" 등)로 도출한다.</p>
  */
 public final class OriginDisplayUtil {
 
@@ -27,16 +23,28 @@ public final class OriginDisplayUtil {
 	// 한국어 표기 → 영문 기본형 역매핑 (관리자가 birthplace를 이미 한글로 고쳐둔 경우 사용)
 	private static final Map<String, String> KR_TO_BASE = new HashMap<>();
 
+	private static final Set<String> PREFECTURES = new HashSet<>();
+	private static final Set<String> COUNTRIES = new HashSet<>();
+	private static final Map<String, String> CITY_KR = new HashMap<>();
+	private static final Map<String, String> CITY_JP = new HashMap<>();
+
 	private static void pref(String base, String kr, String jp) {
 		KR_LABEL.put(base, kr);
 		JP_LABEL.put(base, jp);
 		KR_TO_BASE.put(kr, base);
+		PREFECTURES.add(base);
 	}
 
 	private static void country(String en, String kr, String jp) {
 		KR_LABEL.put(en, kr);
 		JP_LABEL.put(en, jp);
 		KR_TO_BASE.put(kr, en);
+		COUNTRIES.add(en);
+	}
+
+	private static void city(String en, String kr, String jp) {
+		CITY_KR.put(en, kr);
+		CITY_JP.put(en, jp);
 	}
 
 	static {
@@ -114,6 +122,18 @@ public final class OriginDisplayUtil {
 		country("Indonesia", "인도네시아", "インドネシア");
 		country("India", "인도", "インド");
 		country("Taiwan", "대만", "台湾");
+
+		// 외국 주요 출신 도시/지역
+		city("Ulaanbaatar", "울란바토르", "ウランバートル");
+		city("Uvs", "옵스", "オブス");
+		city("Ulaangom", "올랑곰", "オラーンゴム");
+		city("Almaty", "알마티", "アルマトイ");
+		city("Zaporizhia Oblast", "자포리자", "ザポリージャ");
+		city("Vinnytsia Oblast", "빈니차", "ヴィンニツァ");
+		city("Bayankhongor", "바양홍고르", "バヤンホンゴル");
+		city("Inner Mongolia", "내몽골", "内モンゴル");
+		city("Province of Laguna", "라구나", "ラグナ");
+		city("T?v", "투브", "トゥブ");
 	}
 
 	public static String toKorean(String birthplace) {
@@ -135,16 +155,111 @@ public final class OriginDisplayUtil {
 		return resolve(birthplace, JP_LABEL);
 	}
 
+	/**
+	 * 출신지 원문(birthplace)으로부터 올바른 국적(한국어)을 도출한다.
+	 * 일본 도도부현이면 "일본", 외국이면 해당 국가의 한국어명("몽골", "우크라이나" 등) 반환.
+	 */
+	public static String deriveNationality(String birthplace) {
+		if (birthplace == null || birthplace.isBlank()) {
+			return "일본";
+		}
+		String first = birthplace.strip().split(",", 2)[0].strip();
+		if (containsHangul(first)) {
+			String base = KR_TO_BASE.get(first);
+			if (base != null && COUNTRIES.contains(base)) {
+				return KR_LABEL.getOrDefault(base, first);
+			}
+			return "일본";
+		}
+		String base = stripSuffix(first);
+		if (COUNTRIES.contains(base)) {
+			return KR_LABEL.getOrDefault(base, base);
+		}
+		return "일본";
+	}
+
+	/**
+	 * 출신지 원문(birthplace)으로부터 올바른 국적(일본어)을 도출한다.
+	 * 일본 도도부현이면 "日本", 외국이면 해당 국가의 일본어명("モンゴル", "ウクライナ" 등) 반환.
+	 */
+	public static String deriveNationalityJp(String birthplace) {
+		if (birthplace == null || birthplace.isBlank()) {
+			return "日本";
+		}
+		String first = birthplace.strip().split(",", 2)[0].strip();
+		if (containsHangul(first)) {
+			String base = KR_TO_BASE.get(first);
+			if (base != null && COUNTRIES.contains(base)) {
+				return JP_LABEL.getOrDefault(base, first);
+			}
+			return "日本";
+		}
+		String base = stripSuffix(first);
+		if (COUNTRIES.contains(base)) {
+			return JP_LABEL.getOrDefault(base, base);
+		}
+		return "日本";
+	}
+
+	/**
+	 * 리키시 상세 프로필용 상세 출신지(한국어).
+	 * 외국 선수의 경우 도시/지역이 있으면 "울란바토르", 없으면 국가명 반환.
+	 * 일본 선수의 경우 도도부현 표기 반환.
+	 */
+	public static String toDetailOriginKr(String curatedKr, String birthplace) {
+		if (curatedKr != null && !curatedKr.isBlank()) {
+			return curatedKr.strip();
+		}
+		if (birthplace == null || birthplace.isBlank()) {
+			return null;
+		}
+		String[] parts = birthplace.strip().split(",", 2);
+		String first = parts[0].strip();
+		String base = containsHangul(first) ? KR_TO_BASE.get(first) : stripSuffix(first);
+		if (base != null && COUNTRIES.contains(base) && parts.length > 1) {
+			String cityPart = parts[1].strip();
+			String lastCity = cityPart.contains(",") ? cityPart.substring(cityPart.lastIndexOf(',') + 1).strip() : cityPart;
+			if (CITY_KR.containsKey(lastCity)) {
+				return CITY_KR.get(lastCity);
+			}
+			if (CITY_KR.containsKey(cityPart)) {
+				return CITY_KR.get(cityPart);
+			}
+			return cityPart;
+		}
+		return toKorean(birthplace);
+	}
+
+	/**
+	 * 리키시 상세 프로필용 상세 출신지(일본어).
+	 */
+	public static String toDetailOriginJp(String birthplace) {
+		if (birthplace == null || birthplace.isBlank()) {
+			return null;
+		}
+		String[] parts = birthplace.strip().split(",", 2);
+		String first = parts[0].strip();
+		String base = containsHangul(first) ? KR_TO_BASE.get(first) : stripSuffix(first);
+		if (base != null && COUNTRIES.contains(base) && parts.length > 1) {
+			String cityPart = parts[1].strip();
+			String lastCity = cityPart.contains(",") ? cityPart.substring(cityPart.lastIndexOf(',') + 1).strip() : cityPart;
+			if (CITY_JP.containsKey(lastCity)) {
+				return CITY_JP.get(lastCity);
+			}
+			if (CITY_JP.containsKey(cityPart)) {
+				return CITY_JP.get(cityPart);
+			}
+			return cityPart;
+		}
+		return toJapanese(birthplace);
+	}
+
 	private static String resolve(String birthplace, Map<String, String> label) {
 		if (birthplace == null || birthplace.isBlank()) {
 			return null;
 		}
-		// 원문이든 관리자가 이미 한글로 고쳐둔 값이든 항상 첫 콤마 앞(지역/국가)만 취한다 -
-		// 그래야 "토야마현, 토야마시"처럼 관리자가 시/군까지 적어놓은 값도 다른 선수들과
-		// 같은 급(도도부현/국가)으로 표시된다.
 		String region = birthplace.strip().split(",", 2)[0].strip();
 
-		// 이미 한글로 저장된 값이면 영문 기본형으로 역매핑해서 다른 언어 표기도 찾을 수 있게 한다.
 		String base = containsHangul(region) ? KR_TO_BASE.get(region) : stripSuffix(region);
 		if (base == null) {
 			return region;
