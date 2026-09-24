@@ -44,6 +44,7 @@ public class TorikumiImportService {
 	private final BashoRepository bashoRepository;
 	private final TorikumiRepository torikumiRepository;
 	private final RikishiRepository rikishiRepository;
+	private final RosterImportService rosterImportService;
 
 	private enum Outcome { CREATED, UPDATED, SKIPPED }
 
@@ -103,8 +104,10 @@ public class TorikumiImportService {
 			skipped.add(matchLabel(m) + " (필수 필드 없음)");
 			return Outcome.SKIPPED;
 		}
-		RikishiEntity east = rikishiRepository.findByExternalApiId(m.eastId()).orElse(null);
-		RikishiEntity west = rikishiRepository.findByExternalApiId(m.westId()).orElse(null);
+		RikishiEntity east = rikishiRepository.findByExternalApiId(m.eastId())
+				.orElseGet(() -> rosterImportService.getOrFetchRikishi(m.eastId()));
+		RikishiEntity west = rikishiRepository.findByExternalApiId(m.westId())
+				.orElseGet(() -> rosterImportService.getOrFetchRikishi(m.westId()));
 		if (east == null || west == null) {
 			String miss = (east == null ? "東 " + label(m.eastShikona(), m.eastId()) : "")
 					+ (east == null && west == null ? " / " : "")

@@ -45,6 +45,7 @@ public class BanzukeImportService {
 	private final BashoRepository bashoRepository;
 	private final BanzukeRepository banzukeRepository;
 	private final RikishiRepository rikishiRepository;
+	private final RosterImportService rosterImportService;
 
 	@Transactional
 	@CacheEvict(value = {"banzuke", "ichimonStructure"}, allEntries = true)
@@ -72,7 +73,8 @@ public class BanzukeImportService {
 			if (e.rikishiID() == null) {
 				continue;
 			}
-			RikishiEntity rikishi = rikishiRepository.findByExternalApiId(e.rikishiID()).orElse(null);
+			RikishiEntity rikishi = rikishiRepository.findByExternalApiId(e.rikishiID())
+					.orElseGet(() -> rosterImportService.getOrFetchRikishi(e.rikishiID()));
 			if (rikishi == null) {
 				unmatched.add(label(e) + " (api id=" + e.rikishiID() + ")");
 				continue;

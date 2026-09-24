@@ -56,6 +56,7 @@ public class AwardImportService {
 	private final KinboshiRepository kinboshiRepository;
 	private final BanzukeRepository banzukeRepository;
 	private final TorikumiRepository torikumiRepository;
+	private final RosterImportService rosterImportService;
 
 	@Transactional
 	public AwardImportResultDTO importForBasho(Integer bashoId) {
@@ -186,7 +187,8 @@ public class AwardImportService {
 		if (h.rikishiId() == null) {
 			return null;
 		}
-		return rikishiRepository.findByExternalApiId(h.rikishiId()).orElse(null);
+		return rikishiRepository.findByExternalApiId(h.rikishiId())
+				.orElseGet(() -> rosterImportService.getOrFetchRikishi(h.rikishiId()));
 	}
 
 	private static Division parseDivision(String type) {

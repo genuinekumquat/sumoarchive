@@ -2,6 +2,7 @@ package com.torikumilab.sumoarchive.client;
 
 import com.torikumilab.sumoarchive.domain.dto.sumoapi.SumoApiBanzukeDTO;
 import com.torikumilab.sumoarchive.domain.dto.sumoapi.SumoApiBashoDTO;
+import com.torikumilab.sumoarchive.domain.dto.sumoapi.SumoApiRikishiDTO;
 import com.torikumilab.sumoarchive.domain.dto.sumoapi.SumoApiRikishiPageDTO;
 import com.torikumilab.sumoarchive.domain.dto.sumoapi.SumoApiTorikumiDayDTO;
 import com.torikumilab.sumoarchive.domain.entity.constant.Division;
@@ -45,6 +46,20 @@ public class SumoApiClient {
 				.uri("/api/rikishis?limit={limit}&skip={skip}&intai=false", limit, skip)
 				.retrieve()
 				.body(SumoApiRikishiPageDTO.class);
+	}
+
+	/**
+	 * 특정 리키시({@code id}) 단건 조회. 은퇴자 포함. 없거나 실패 시 null.
+	 */
+	public SumoApiRikishiDTO getRikishi(int id) {
+		try {
+			return rc.get()
+					.uri("/api/rikishi/{id}", id)
+					.retrieve()
+					.body(SumoApiRikishiDTO.class);
+		} catch (RuntimeException e) {
+			return null;
+		}
 	}
 
 	/**

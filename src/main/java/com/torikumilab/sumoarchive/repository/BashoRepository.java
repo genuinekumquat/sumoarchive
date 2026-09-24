@@ -28,4 +28,6 @@ public interface BashoRepository extends JpaRepository<BashoEntity, Integer> {
 	Optional<BashoEntity> findByBashoYearAndBashoMonth(Integer bashoYear, BashoMonth bashoMonth);
 
 	Optional<BashoEntity> findByExternalBashoId(String externalBashoId);
+
+	List<BashoEntity> findByBashoYearOrderByStartDateAsc(Integer bashoYear);
 }

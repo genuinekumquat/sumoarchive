@@ -9,6 +9,7 @@ import com.torikumilab.sumoarchive.domain.entity.constant.Side;
 import com.torikumilab.sumoarchive.service.AwardImportService;
 import com.torikumilab.sumoarchive.service.BanzukeAdminService;
 import com.torikumilab.sumoarchive.service.BanzukeImportService;
+import com.torikumilab.sumoarchive.service.BashoBatchImportService;
 import com.torikumilab.sumoarchive.service.BashoImportService;
 import com.torikumilab.sumoarchive.util.RankDisplayUtil;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +35,7 @@ public class AdminBanzukeViewController {
 	private final BashoImportService bashoImportService;
 	private final BanzukeImportService banzukeImportService;
 	private final AwardImportService awardImportService;
+	private final BashoBatchImportService bashoBatchImportService;
 
 	// 빈 <input type="number">("")를 null로 (요코즈나 등 번호 없는 계급). AdminRikishiViewController와 동일 기법.
 	@InitBinder
@@ -70,6 +72,28 @@ public class AdminBanzukeViewController {
 			redirectAttributes.addFlashAttribute("awardResult", awardImportService.importForBasho(bashoId));
 		} catch (Exception e) {
 			redirectAttributes.addFlashAttribute("error", "우승·삼상·킨보시 갱신 실패: " + e.getMessage());
+		}
+		return "redirect:/admin/basho";
+	}
+
+	/** 특정 바쇼 1건의 전체 데이터(마쿠우치·쥬료 반즈케, 토리쿠미, 우승·삼상·킨보시) 일괄 임포트. */
+	@PostMapping("/admin/basho/{bashoId}/import-all")
+	public String importAllForBasho(@PathVariable Integer bashoId, RedirectAttributes redirectAttributes) {
+		try {
+			redirectAttributes.addFlashAttribute("batchResult", bashoBatchImportService.importBashoFull(bashoId));
+		} catch (Exception e) {
+			redirectAttributes.addFlashAttribute("error", "바쇼 일괄 임포트 실패: " + e.getMessage());
+		}
+		return "redirect:/admin/basho";
+	}
+
+	/** 특정 연도(예: 2025) 전체 바쇼의 마쿠우치·쥬료 반즈케, 토리쿠미, 우승·삼상·킨보시 일괄 임포트. */
+	@PostMapping("/admin/basho/import-year")
+	public String importYear(@RequestParam int year, RedirectAttributes redirectAttributes) {
+		try {
+			redirectAttributes.addFlashAttribute("yearBatchResult", bashoBatchImportService.importYear(year));
+		} catch (Exception e) {
+			redirectAttributes.addFlashAttribute("error", year + "년도 일괄 임포트 실패: " + e.getMessage());
 		}
 		return "redirect:/admin/basho";
 	}

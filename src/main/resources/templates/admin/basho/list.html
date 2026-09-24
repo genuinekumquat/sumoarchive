@@ -105,6 +105,20 @@
         </ul>
     </div>
 
+    <div class="saved-msg" th:if="${batchResult}">
+        <span th:text="${batchResult.bashoLabel} + ' 전체 일괄 임포트 완료 — 반즈케: 신규 ' + ${batchResult.banzukeCreated}
+            + ' · 경기: 신규 ' + ${batchResult.torikumiCreated} + ' · 우승 ' + ${batchResult.yushoCreated}
+            + ' · 삼상 ' + ${batchResult.sanshoCreated} + ' · 킨보시 ' + ${batchResult.kinboshiCreated}">완료</span>
+        <ul class="skip-list" th:if="${!batchResult.warnings.isEmpty()}">
+            <li th:each="w : ${batchResult.warnings}" th:text="${w}">경고</li>
+        </ul>
+    </div>
+
+    <div class="saved-msg" th:if="${yearBatchResult}">
+        <span th:text="${yearBatchResult.year} + '년도 일괄 임포트 완료 — 총 ' + ${yearBatchResult.totalBashos} + '개 바쇼, 반즈케 신규 '
+            + ${yearBatchResult.totalBanzukeCreated} + '건, 경기 신규 ' + ${yearBatchResult.totalTorikumiCreated} + '건 적재'">완료</span>
+    </div>
+
     <div class="import-bar">
         <span class="desc">sumo-api.com에서 바쇼 메타를 가져옵니다 (본장소 1·3·5·7·9·11월).</span>
         <form th:action="@{/admin/basho/import}" method="post" style="display: flex; gap: 8px; align-items: center;"
@@ -112,7 +126,16 @@
             <input type="number" name="fromYear" th:value="${thisYear - 1}" aria-label="시작 연도">
             <span>~</span>
             <input type="number" name="toYear" th:value="${thisYear}" aria-label="끝 연도">
-            <button type="submit">바쇼 임포트</button>
+            <button type="submit">바쇼 메타 임포트</button>
+        </form>
+    </div>
+
+    <div class="import-bar" style="border-left: 3px solid var(--shu);">
+        <span class="desc"><strong>연도별 원클릭 일괄 임포트</strong>: 해당 연도 모든 바쇼의 마쿠우치+쥬료 반즈케, 15일치 대진표, 우승·삼상·킨보시를 순차 적재합니다.</span>
+        <form th:action="@{/admin/basho/import-year}" method="post" style="display: flex; gap: 8px; align-items: center;"
+              onsubmit="return confirm('선택 연도의 모든 바쇼(마쿠우치+쥬료 반즈케, 15일치 경기, 우승/삼상/킨보시)를 일괄 임포트합니다. 수십 초가 소요될 수 있습니다. 계속할까요?');">
+            <input type="number" name="year" value="2025" aria-label="임포트 연도">
+            <button type="submit" style="background: var(--shu); border-color: var(--shu);">연도 전체 일괄 임포트</button>
         </form>
     </div>
 
@@ -146,6 +169,11 @@
                       onsubmit="return confirm('이 바쇼의 우승·삼상을 sumo-api에서, 킨보시를 반즈케·토리쿠미에서 채웁니다(없던 것만 추가). 계속할까요?');">
                     <button type="submit" class="edit-link"
                             style="background:none;border:none;padding:0;cursor:pointer;font:inherit">우승·삼상·킨보시 갱신 →</button>
+                </form><br>
+                <form th:action="@{'/admin/basho/' + ${b.id} + '/import-all'}" method="post" style="display:inline"
+                      onsubmit="return confirm('이 바쇼의 마쿠우치+쥬료 반즈케, 15일치 대진표, 우승·삼상·킨보시를 일괄 임포트합니다. 계속할까요?');">
+                    <button type="submit" class="edit-link"
+                            style="background:none;border:none;padding:0;cursor:pointer;font:inherit;font-weight:600;color:var(--sumi)">⚡ 전체 일괄 임포트 →</button>
                 </form>
             </td>
         </tr>

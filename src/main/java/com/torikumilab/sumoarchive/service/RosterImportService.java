@@ -102,6 +102,69 @@ public class RosterImportService {
 		return new RosterImportResultDTO(heyaResult.createdCount(), createdCount, updatedCount, totalImported, warnings);
 	}
 
+	/**
+	 * 특정 리키시 단건 조회 또는 sumo-api 동적 적재.
+	 * 반즈케나 토리쿠미 임포트 시 현역 로스터에 없는 은퇴자(예: 2025년 은퇴한 테루노후지 등)가 등장했을 때
+	 * 자동으로 단건을 가져와 DB에 안전하게 보존한다.
+	 */
+	@Transactional
+	public RikishiEntity getOrFetchRikishi(Integer apiId) {
+		if (apiId == null) {
+			return null;
+		}
+		Optional<RikishiEntity> opt = rikishiRepository.findByExternalApiId(apiId);
+		if (opt.isPresent()) {
+			return opt.get();
+		}
+
+		SumoApiRikishiDTO api = sumoApiClient.getRikishi(apiId);
+		if (api == null || api.shikonaEn() == null) {
+			return null;
+		}
+
+		HeyaEntity heya = null;
+		if (api.heya() != null && !api.heya().isBlank()) {
+			String heyaName = api.heya().strip();
+			heya = heyaRepository.findAll().stream()
+					.filter(h -> h.getNameEn() != null && h.getNameEn().equalsIgnoreCase(heyaName))
+					.findFirst()
+					.orElseGet(() -> {
+						String kr = ShikonaKrTransliterator.fromRomaji(heyaName);
+						return heyaRepository.save(HeyaEntity.builder()
+								.nameEn(heyaName)
+								.nameKr(kr != null ? kr : heyaName)
+								.nameJp(heyaName)
+								.build());
+					});
+		}
+
+		boolean isActive = (api.intai() == null || api.intai().isBlank());
+		LocalDate retired = parseIsoDate(api.intai(), api, "intai", new ArrayList<>());
+		String shikonaKr = ShikonaKrTransliterator.fromRomaji(api.shikonaEn());
+
+		RikishiEntity entity = RikishiEntity.builder()
+				.externalApiId((int) api.id())
+				.shikonaJp(firstToken(api.shikonaJp()))
+				.givenNameJp(secondToken(api.shikonaJp()))
+				.shikonaEn(api.shikonaEn())
+				.shikonaKr(shikonaKr)
+				.shikonaKrAuto(shikonaKr != null)
+				.birthdate(parseIsoDate(api.birthDate(), api, "birthDate", new ArrayList<>()))
+				.birthplace(api.shusshin())
+				.nationality(deriveNationality(api.shusshin()))
+				.height(toBigDecimal(api.height()))
+				.weight(toBigDecimal(api.weight()))
+				.debutDate(parseYyyymm(api.debut(), api, new ArrayList<>()))
+				.currentRank(api.currentRank())
+				.heyaEntity(heya)
+				.isActive(isActive)
+				.retiredDate(retired)
+				.build();
+
+		log.info("[RosterImport] 은퇴/미등록 리키시 단건 자동 동기화: {} (apiId={})", api.shikonaEn(), apiId);
+		return rikishiRepository.save(entity);
+	}
+
 	// ===== 조회 =====
 
 	private List<SumoApiRikishiDTO> fetchAllActive() {
