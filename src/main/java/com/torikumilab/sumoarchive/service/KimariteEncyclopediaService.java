@@ -5,6 +5,7 @@ import com.torikumilab.sumoarchive.domain.dto.KimariteGroupDTO;
 import com.torikumilab.sumoarchive.domain.entity.constant.KimariteCategory;
 import com.torikumilab.sumoarchive.util.KimariteDescriptionUtil;
 import com.torikumilab.sumoarchive.util.KimariteDisplayUtil;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -21,6 +22,7 @@ import java.util.Map;
 @Service
 public class KimariteEncyclopediaService {
 
+	@Cacheable("kimariteEncyclopedia")
 	public List<KimariteGroupDTO> getKimariteEncyclopedia() {
 		Map<KimariteCategory, List<KimariteEntryDTO>> byCategory = new LinkedHashMap<>();
 		for (KimariteCategory cat : KimariteCategory.values()) {

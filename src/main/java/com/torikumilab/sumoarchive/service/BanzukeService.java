@@ -17,6 +17,7 @@ import com.torikumilab.sumoarchive.util.OriginDisplayUtil;
 import com.torikumilab.sumoarchive.util.RankDisplayUtil;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -41,6 +42,7 @@ public class BanzukeService {
 	 * bashoId가 있으면 그 바쇼, 없으면 가장 최근 바쇼의 반즈케를 반환한다.
 	 * (메인 화면에서 바쇼 선택 드롭다운으로 이전 바쇼를 조회할 때 bashoId를 넘긴다.)
 	 */
+	@Cacheable(value = "banzuke", key = "(#bashoId != null ? #bashoId : 'latest') + '-' + #division.name()")
 	public List<BanzukeDTO> getBanzuke(Integer bashoId, Division division) {
 		BashoEntity basho;
 		if (bashoId != null) {
@@ -74,6 +76,7 @@ public class BanzukeService {
 	}
 
 	/** 메인 화면 바쇼 선택 드롭다운 옵션 (최신 바쇼가 맨 앞). */
+	@Cacheable(value = "bashoOptions")
 	public List<BashoOptionDTO> listBashoOptions() {
 		return bashoRepository.findAllByOrderByStartDateDesc().stream()
 				.map(b -> new BashoOptionDTO(
@@ -91,6 +94,7 @@ public class BanzukeService {
 	 * 현재 세키토리가 없는 헤야도 목록에는 남는다(전체 헤야 구조를 보여주는 게 목적).
 	 * 이치몬이 아직 배정 안 된 헤야는 제외 - 지금은 전부 배정돼 있지만 이후 새 헤야가 생기면 비어있을 수 있음.
 	 */
+	@Cacheable(value = "ichimonStructure")
 	public List<IchimonGroupDTO> getIchimonStructure() {
 		BashoEntity basho = bashoRepository.findTopByOrderByStartDateDesc().orElse(null);
 		if (basho == null) {

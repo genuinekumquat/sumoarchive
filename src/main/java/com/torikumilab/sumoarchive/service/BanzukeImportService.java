@@ -16,6 +16,7 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -46,6 +47,7 @@ public class BanzukeImportService {
 	private final RikishiRepository rikishiRepository;
 
 	@Transactional
+	@CacheEvict(value = {"banzuke", "ichimonStructure"}, allEntries = true)
 	public BanzukeImportResultDTO importDivision(Integer bashoId, Division division) {
 		BashoEntity basho = bashoRepository.findById(bashoId)
 				.orElseThrow(() -> new EntityNotFoundException("바쇼를 찾을 수 없습니다. id=" + bashoId));

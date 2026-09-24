@@ -13,6 +13,7 @@ import com.torikumilab.sumoarchive.util.ShikonaKrTransliterator;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,6 +40,7 @@ public class RosterImportService {
 	private final HeyaRepository heyaRepository;
 
 	@Transactional
+	@CacheEvict(value = {"banzuke", "ichimonStructure"}, allEntries = true)
 	public RosterImportResultDTO importRoster() {
 		List<SumoApiRikishiDTO> apiRikishis = fetchAllActive();
 		log.info("[RosterImport] sumo-api 현역 리키시 {}명 수신", apiRikishis.size());

@@ -9,6 +9,7 @@ import com.torikumilab.sumoarchive.repository.BashoRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,6 +38,7 @@ public class BashoImportService {
 	private final BashoRepository bashoRepository;
 
 	@Transactional
+	@CacheEvict(value = {"bashoOptions", "banzuke", "ichimonStructure"}, allEntries = true)
 	public BashoImportResultDTO importRange(Integer fromYear, Integer toYear) {
 		int nowYear = LocalDate.now().getYear();
 		int from = fromYear != null ? fromYear : nowYear - 1;
