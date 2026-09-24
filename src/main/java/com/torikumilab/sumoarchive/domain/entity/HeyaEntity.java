@@ -53,11 +53,38 @@ public class HeyaEntity {
 	@Column(name = "created_at", updatable = false)
 	private LocalDateTime createdAt;  // 초 단위까지 저장되도록 LocalDateTime 변경
 	
+	public static String cleanNameJp(String nameJp) {
+		if (nameJp == null) return null;
+		String trimmed = nameJp.strip();
+		if (trimmed.endsWith("部屋")) {
+			return trimmed.substring(0, trimmed.length() - "部屋".length()).strip();
+		}
+		return trimmed;
+	}
+
+	public static String cleanNameKr(String nameKr) {
+		if (nameKr == null) return null;
+		String trimmed = nameKr.strip();
+		if (trimmed.endsWith(" 헤야")) {
+			return trimmed.substring(0, trimmed.length() - " 헤야".length()).strip();
+		}
+		if (trimmed.endsWith("헤야")) {
+			return trimmed.substring(0, trimmed.length() - "헤야".length()).strip();
+		}
+		if (trimmed.endsWith(" 베야")) {
+			return trimmed.substring(0, trimmed.length() - " 베야".length()).strip();
+		}
+		if (trimmed.endsWith("베야")) {
+			return trimmed.substring(0, trimmed.length() - "베야".length()).strip();
+		}
+		return trimmed;
+	}
+
 	// 최초 DB 데이터 적재 등을 위한 깔끔한 빌더 생성자 제공
 	@Builder
 	private HeyaEntity(String nameKr, String nameJp, String nameEn, String ichimonKr, String ichimonJp, RikishiEntity masterRikishiEntity) {
-		this.nameKr = nameKr;
-		this.nameJp = nameJp;
+		this.nameKr = cleanNameKr(nameKr);
+		this.nameJp = cleanNameJp(nameJp);
 		this.nameEn = nameEn;
 		this.ichimonKr = ichimonKr;
 		this.ichimonJp = ichimonJp;
@@ -75,14 +102,22 @@ public class HeyaEntity {
 
 	/** 자동 채우기: 로마자 음차로 만든 한국어 헤야명을 넣고 "자동" 표시를 켠다. */
 	public void applyAutoNameKr(String nameKr) {
-		this.nameKr = nameKr;
+		this.nameKr = cleanNameKr(nameKr);
 		this.nameKrAuto = true;
 	}
 
 	/** 관리자 검수: 한/일명을 저장하고 "자동" 표시를 끈다. */
 	public void updateNames(String nameKr, String nameJp) {
-		this.nameKr = nameKr;
-		this.nameJp = nameJp;
+		this.nameKr = cleanNameKr(nameKr);
+		this.nameJp = cleanNameJp(nameJp);
 		this.nameKrAuto = false;
+	}
+
+	public String getNameJp() {
+		return cleanNameJp(this.nameJp);
+	}
+
+	public String getNameKr() {
+		return cleanNameKr(this.nameKr);
 	}
 }
