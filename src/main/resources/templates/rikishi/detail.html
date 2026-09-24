@@ -425,9 +425,9 @@
             align-items: center;
             justify-content: flex-start;
             gap: 4px;
-            min-width: 33px;
-            width: 33px;
-            height: 118px; /* 출장/휴장 모두 완벽하게 동일한 고정 높이 */
+            min-width: 34px;
+            width: 34px;
+            height: 142px; /* 출장/휴장 모두 완벽하게 동일한 고정 높이, 6~7자 시코나 여유있게 수용 */
             box-sizing: border-box;
             padding: 6px 2px 8px;
             background: none;
@@ -484,12 +484,11 @@
             font-family: 'Noto Serif KR', serif;
             font-size: 11px;
             line-height: 1.15;
-            letter-spacing: 1px;
+            letter-spacing: 0.5px;
             color: var(--sumi-soft);
-            height: 68px; /* 출장/휴장 모두 통일된 세로 텍스트 영역 */
-            max-height: 68px;
+            height: 90px; /* 6~7자 긴 시코나도 잘리지 않고 온전하게 노출 */
+            max-height: 90px;
             white-space: nowrap;
-            overflow: hidden;
         }
         .strip-day-btn:hover .sd-name { color: var(--shu); }
         .strip-day-btn.is-absent {
