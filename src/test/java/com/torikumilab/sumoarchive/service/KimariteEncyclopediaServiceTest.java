@@ -71,4 +71,23 @@ class KimariteEncyclopediaServiceTest {
 			assertThat(names).isEqualTo(sorted);
 		}
 	}
+
+	@Test
+	void 등록된_55개_기술_전체에_한국어_및_일본어_설명이_존재한다() {
+		List<KimariteGroupDTO> groups = service.getKimariteEncyclopedia();
+
+		for (KimariteGroupDTO group : groups) {
+			for (KimariteEntryDTO entry : group.entries()) {
+				assertThat(entry.descriptionKr())
+						.as("한국어 설명 누락: " + entry.kimariteKr())
+						.isNotBlank();
+				assertThat(entry.descriptionJp())
+						.as("일본어 설명 누락: " + entry.kimariteKr())
+						.isNotBlank();
+				assertThat(entry.description())
+						.as("호환용 description() 메서드 검증")
+						.isEqualTo(entry.descriptionKr());
+			}
+		}
+	}
 }

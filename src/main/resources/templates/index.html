@@ -315,8 +315,10 @@
         .ke-desc {
             flex-basis: 100%;
             font-family: 'Zen Kaku Gothic New', sans-serif;
-            font-size: 12px;
-            color: var(--sumi-faint);
+            font-size: 12.5px;
+            line-height: 1.6;
+            color: var(--sumi-soft);
+            margin-top: 2px;
         }
 
         /* ===== Banzuke Panel ===== */
@@ -616,8 +618,9 @@
                     <div class="kimarite-entry" th:each="e : ${g.entries}">
                         <span class="ke-kr" th:text="${e.kimariteKr}">요리키리</span>
                         <span class="ke-jp" th:text="${e.kimariteJp}">寄り切り</span>
-                        <span class="ke-desc" th:if="${e.description == null}" th:text="#{main.kimarite.pending}">설명 준비 중</span>
-                        <span class="ke-desc" th:if="${e.description != null}" th:text="${e.description}"></span>
+                        <span class="ke-desc" th:if="${#locale.language == 'ja' and e.descriptionJp != null}" th:text="${e.descriptionJp}"></span>
+                        <span class="ke-desc" th:if="${#locale.language != 'ja' and e.descriptionKr != null}" th:text="${e.descriptionKr}"></span>
+                        <span class="ke-desc" th:if="${(#locale.language == 'ja' and e.descriptionJp == null) or (#locale.language != 'ja' and e.descriptionKr == null)}" th:text="#{main.kimarite.pending}">설명 준비 중</span>
                     </div>
                 </div>
             </details>
