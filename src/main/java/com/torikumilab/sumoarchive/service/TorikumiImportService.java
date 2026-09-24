@@ -77,8 +77,15 @@ public class TorikumiImportService {
 				continue; // 아직 안 치러진 일차
 			}
 			daysWithData++;
+			int pending = 0;
 			for (SumoApiTorikumiDayDTO.Match m : matches) {
 				matchesSeen++;
+				// 진행 중 바쇼는 다음 날 대진이 결과 없이(winnerId 0, kimarite "") 먼저 공개된다.
+				// 그대로 저장하면 승자 없는 경기가 화면에서 패배처럼 보이므로, 결과가 나온 뒤 재임포트 때 넣는다.
+				if (isUndecided(m)) {
+					pending++;
+					continue;
+				}
 				try {
 					switch (upsert(basho, division, m, skipped)) {
 						case CREATED -> created++;
@@ -88,6 +95,9 @@ public class TorikumiImportService {
 				} catch (RuntimeException e) {
 					skipped.add(matchLabel(m) + " 저장 실패: " + e.getMessage());
 				}
+			}
+			if (pending > 0) {
+				skipped.add(day + "일차 결과 미확정 " + pending + "경기 (재임포트 시 반영)");
 			}
 			throttle();
 		}
@@ -159,6 +169,12 @@ public class TorikumiImportService {
 				.isExtraMatch(false)
 				.build());
 		return Outcome.CREATED;
+	}
+
+	private static boolean isUndecided(SumoApiTorikumiDayDTO.Match m) {
+		boolean noWinner = m.winnerId() == null || m.winnerId() == 0;
+		boolean noKimarite = m.kimarite() == null || m.kimarite().isBlank();
+		return noWinner && noKimarite;
 	}
 
 	private static void throttle() {
