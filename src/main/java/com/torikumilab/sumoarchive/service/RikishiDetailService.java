@@ -322,25 +322,24 @@ public class RikishiDetailService {
 	}
 
 	private BashoGameLogDTO toBashoGameLog(Integer rikishiId, BanzukeEntity banzuke) {
-		List<MatchHistoryItemDTO> matches = buildMatchHistory(rikishiId, banzuke.getBashoEntity().getId());
-		
+		BashoEntity basho = banzuke.getBashoEntity();
+		List<MatchHistoryItemDTO> matches = buildMatchHistory(rikishiId, basho.getId());
+		// 첫날부터 휴장하면 대진 자체가 안 짜여 부전 기록도 안 남음. 같은 바쇼·지위 토리쿠미가 적재돼 있는지로
+		// "全休"와 "아직 적재 전"을 구분하고, 全休면 적재된 일차 전부를 휴장 칸으로 채운다 (0勝0敗15休).
+		if (matches.isEmpty()
+				&& torikumiRepository.existsByBashoEntityIdAndDivisionAndIsExtraMatchFalse(basho.getId(), banzuke.getDivision())) {
+			matches = new ArrayList<>();
+			for (int day = 1; day <= lastLoadedDay(basho.getId()); day++) {
+				matches.add(absentItem(day));
+			}
+		}
+
 		long wins = matches.stream().filter(m -> m.status() == MatchHistoryItemDTO.Status.WIN).count();
 		long losses = matches.stream().filter(m -> m.status() == MatchHistoryItemDTO.Status.LOSS).count();
 		long absences = matches.stream().filter(m -> m.status() == MatchHistoryItemDTO.Status.ABSENT).count();
-		BashoEntity basho = banzuke.getBashoEntity();
-		// 첫날부터 휴장하면 대진 자체가 안 짜여 부전 기록도 안 남음. 같은 바쇼·지위 토리쿠미가 적재돼 있는지로
-		// "全休"와 "아직 적재 전"을 구분한다.
-		boolean fullAbsence = matches.isEmpty()
-				&& torikumiRepository.existsByBashoEntityIdAndDivisionAndIsExtraMatchFalse(basho.getId(), banzuke.getDivision());
-
-		String recordSummary;
-		if (fullAbsence) {
-			recordSummary = "全休";
-		} else if (matches.isEmpty()) {
-			recordSummary = "-";
-		} else {
-			recordSummary = wins + "勝" + losses + "敗" + (absences > 0 ? absences + "休" : "");
-		}
+		String recordSummary = matches.isEmpty()
+				? "-"
+				: wins + "勝" + losses + "敗" + (absences > 0 ? absences + "休" : "");
 
 		String bashoLabel = basho.getBashoYear() + "年"
 				+ String.format("%02d", basho.getBashoMonth().getMonthValue()) + "月場所";
@@ -350,8 +349,7 @@ public class RikishiDetailService {
 				bashoLabel,
 				RankDisplayUtil.rankDisplay(banzuke.getRankName(), banzuke.getRankValue()),
 				recordSummary,
-				matches,
-				fullAbsence
+				matches
 		);
 	}
 	
@@ -383,9 +381,7 @@ public class RikishiDetailService {
 		Map<Integer, TorikumiEntity> matchByDay = matches.stream()
 				.collect(Collectors.toMap(TorikumiEntity::getDay, t -> t));
 		int firstDay = matches.get(0).getDay(); // findMatchHistory가 day ASC로 내려주므로 첫 번째가 첫 출전일
-		// 진행 중 바쇼는 아직 안 열린 날까지 휴장으로 채우지 않도록, 그 바쇼에 적재된 마지막 일차까지만 돈다.
-		Integer lastLoadedDay = torikumiRepository.findLastLoadedDay(bashoId);
-		int lastDay = (lastLoadedDay != null) ? Math.min(lastLoadedDay, 15) : 15;
+		int lastDay = lastLoadedDay(bashoId);
 
 		List<MatchHistoryItemDTO> result = new ArrayList<>();
 		for (int day = 1; day <= lastDay; day++) {
@@ -393,11 +389,21 @@ public class RikishiDetailService {
 			if (t != null) {
 				result.add(toMatchHistoryItem(t, rikishiId, opponentBanzukeByRikishiId));
 			} else if (day >= firstDay) {
-				result.add(new MatchHistoryItemDTO(day, null, null, null, null, null, null,
-						MatchHistoryItemDTO.Status.ABSENT, "休場"));
+				result.add(absentItem(day));
 			}
 		}
 		return result;
+	}
+
+	/** 휴장 칸을 채울 상한. 진행 중 바쇼는 아직 안 열린 날까지 휴장으로 채우지 않도록 적재된 마지막 일차까지 (끝난 바쇼는 15). */
+	private int lastLoadedDay(Integer bashoId) {
+		Integer lastLoadedDay = torikumiRepository.findLastLoadedDay(bashoId);
+		return (lastLoadedDay != null) ? Math.min(lastLoadedDay, 15) : 15;
+	}
+
+	private MatchHistoryItemDTO absentItem(int day) {
+		return new MatchHistoryItemDTO(day, null, null, null, null, null, null,
+				MatchHistoryItemDTO.Status.ABSENT, "休場");
 	}
 	
 	private MatchHistoryItemDTO toMatchHistoryItem(TorikumiEntity t, Integer rikishiId,
