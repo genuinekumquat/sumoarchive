@@ -962,12 +962,12 @@
                  아무것도 안 바꾸고 적용을 눌러도 결과가 그대로 유지된다. -->
             <form method="get" class="kimarite-filter" th:if="${gameLog != null and gameLog.size() > 1}">
                 <select name="fromBasho">
-                    <option th:each="g, iter : ${gameLog}" th:value="${g.bashoId}" th:text="${g.bashoLabel}"
+                    <option th:each="g, iter : ${gameLog}" th:value="${g.bashoId}" th:text="${#locale.language == 'ja'} ? ${g.bashoLabel} : ${g.bashoLabelKr}"
                             th:selected="${fromBasho != null} ? (${fromBasho} == ${g.bashoId}) : ${iter.last}">2026年07月場所</option>
                 </select>
                 <span class="sep">~</span>
                 <select name="toBasho">
-                    <option th:each="g, iter : ${gameLog}" th:value="${g.bashoId}" th:text="${g.bashoLabel}"
+                    <option th:each="g, iter : ${gameLog}" th:value="${g.bashoId}" th:text="${#locale.language == 'ja'} ? ${g.bashoLabel} : ${g.bashoLabelKr}"
                             th:selected="${toBasho != null} ? (${toBasho} == ${g.bashoId}) : ${iter.first}">2026年07月場所</option>
                 </select>
                 <button type="submit" th:text="#{rikishi.filter.apply}">적용</button>
@@ -1002,9 +1002,9 @@
 
         <div class="game-log-row" th:each="g, iter : ${gameLog}">
             <div class="game-log-meta">
-                <span class="glm-basho" th:text="${g.bashoLabel}">2026年07月場所</span>
-                <span class="glm-rank" th:text="${g.rankDisplay}">前頭10枚目</span>
-                <span class="glm-record" th:text="${g.recordSummary}">9勝6敗</span>
+                <span class="glm-basho" th:text="${#locale.language == 'ja'} ? ${g.bashoLabel} : ${g.bashoLabelKr}">2026年07月場所</span>
+                <span class="glm-rank" th:text="${#locale.language == 'ja'} ? ${g.rankDisplay} : ${g.rankDisplayKr}">東 前頭10枚目</span>
+                <span class="glm-record" th:text="${#locale.language == 'ja'} ? ${g.recordSummary} : ${g.recordSummaryKr}">9勝6敗</span>
             </div>
 
             <div class="hoshitori-strip-wrap" th:if="${!g.matches.isEmpty()}">

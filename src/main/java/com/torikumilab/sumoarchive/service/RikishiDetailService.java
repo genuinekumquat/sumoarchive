@@ -340,15 +340,25 @@ public class RikishiDetailService {
 		String recordSummary = matches.isEmpty()
 				? "-"
 				: wins + "勝" + losses + "敗" + (absences > 0 ? absences + "休" : "");
+		String recordSummaryKr = matches.isEmpty()
+				? "-"
+				: wins + "승 " + losses + "패" + (absences > 0 ? " " + absences + "휴" : "");
 
 		String bashoLabel = basho.getBashoYear() + "年"
 				+ String.format("%02d", basho.getBashoMonth().getMonthValue()) + "月場所";
-		
+		String bashoLabelKr = basho.getBashoYear() + "년 " + basho.getBashoMonth().getMonthValue() + "월 "
+				+ basho.getBashoMonth().getDisplayNameKr();
+
 		return new BashoGameLogDTO(
 				basho.getId(),
 				bashoLabel,
-				RankDisplayUtil.rankDisplay(banzuke.getRankName(), banzuke.getRankValue()),
+				bashoLabelKr,
+				withSide(RankDisplayUtil.sideDisplay(banzuke.getSide()),
+						RankDisplayUtil.rankDisplay(banzuke.getRankName(), banzuke.getRankValue())),
+				withSide(RankDisplayUtil.sideDisplayKorean(banzuke.getSide()),
+						RankDisplayUtil.rankDisplayKorean(banzuke.getRankName(), banzuke.getRankValue())),
 				recordSummary,
+				recordSummaryKr,
 				matches
 		);
 	}
@@ -393,6 +403,14 @@ public class RikishiDetailService {
 			}
 		}
 		return result;
+	}
+
+	/** 프로필 상단과 같은 "東 前頭10枚目" / "동 마에가시라10" 형태. 동서나 계급이 없으면 있는 쪽만. */
+	private static String withSide(String side, String rank) {
+		if (side == null) {
+			return rank;
+		}
+		return rank == null ? side : side + " " + rank;
 	}
 
 	/** 휴장 칸을 채울 상한. 진행 중 바쇼는 아직 안 열린 날까지 휴장으로 채우지 않도록 적재된 마지막 일차까지 (끝난 바쇼는 15). */

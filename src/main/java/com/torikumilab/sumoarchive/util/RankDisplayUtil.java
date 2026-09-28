@@ -84,6 +84,14 @@ public final class RankDisplayUtil {
 		return side == Side.EAST ? "東" : "西";
 	}
 
+	/** sideDisplay의 한국어 버전 ("동" / "서"). */
+	public static String sideDisplayKorean(Side side) {
+		if (side == null) {
+			return null;
+		}
+		return side == Side.EAST ? "동" : "서";
+	}
+
 	// ===== 자유 문자열 계급값(highest_rank 등) → 한국어 음차 =====
 
 	/** index.html의 RANK_LABEL과 같은 한국어 음차. 계급 이름(영문 enum 철자) → 표기. */
