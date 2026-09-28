@@ -1,5 +1,7 @@
 package com.torikumilab.sumoarchive.service;
 
+import com.torikumilab.sumoarchive.domain.dto.HeadToHeadDTO;
+import com.torikumilab.sumoarchive.domain.dto.HeadToHeadHighlightsDTO;
 import com.torikumilab.sumoarchive.domain.dto.LossTypeSummaryDTO;
 import com.torikumilab.sumoarchive.domain.dto.OpponentConditionDTO;
 import com.torikumilab.sumoarchive.domain.entity.constant.Division;
@@ -9,12 +11,15 @@ import com.torikumilab.sumoarchive.repository.TorikumiRepository;
 import com.torikumilab.sumoarchive.repository.TorikumiRepository.DivisionKimariteCountRow;
 import com.torikumilab.sumoarchive.repository.TorikumiRepository.OpponentBoutRow;
 import com.torikumilab.sumoarchive.repository.TorikumiRepository.PhysiqueDiffRow;
+import com.torikumilab.sumoarchive.repository.TorikumiRepository.WinRateRow;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -44,6 +49,13 @@ public class RikishiAnalysisService {
 	// ===== 상대 조건별 성적 =====
 	/** 구간 경기 수가 이보다 적으면 흐리게 "표본 적음" */
 	static final int MIN_BOUTS = 10;
+
+	// ===== 상대전적 "유독 약한/강한 상대" =====
+	/** 부전 제외 맞대결이 이보다 적은 상대는 후보에서 뺀다. */
+	static final int H2H_MIN_BOUTS = 3;
+	/** 실제 승수와 예상 승수의 차이가 이 이상이어야 "유독" 약하거나 강하다고 본다. */
+	static final double H2H_MIN_DIFF = 1.5;
+	static final int H2H_TOP = 3;
 
 	private final TorikumiRepository torikumiRepository;
 	private final BashoRepository bashoRepository;
@@ -173,6 +185,63 @@ public class RikishiAnalysisService {
 				rankRows,
 				physiqueRows(WeightBucket.values(), byWeight, leagueWeight, w -> w.labelKr, w -> w.labelJp),
 				physiqueRows(HeightBucket.values(), byHeight, leagueHeight, h -> h.labelKr, h -> h.labelJp));
+	}
+
+	/**
+	 * 상대전적 요약 - 두 선수의 평소 승률로 예상한 것보다 유독 크게 지거나 이긴 상대.
+	 * 예상 승률은 log5 방식: pA(1-pB) / (pA(1-pB) + pB(1-pA)). 상대가 강하면 예상이 저절로 낮아져서
+	 * 반즈케를 따로 따지지 않아도 "요코즈나에게 진 것"이 천적으로 잡히지 않는다.
+	 * 평소 승률은 (승+1)/(경기+2)로 살짝 보정 - 전승·전패 선수가 있어도 식이 0으로 나뉘지 않게.
+	 *
+	 * @param headToHead RikishiDetailService.getHeadToHead 결과 (재조회 없이 그대로 사용)
+	 */
+	public HeadToHeadHighlightsDTO getHeadToHeadHighlights(Integer rikishiId, List<HeadToHeadDTO> headToHead) {
+		// 부전은 실제로 붙지 않은 경기라 상성과 무관 - 빼고 센다.
+		record Candidate(HeadToHeadDTO h, long wins, long bouts) {
+		}
+		List<Candidate> candidates = new ArrayList<>();
+		for (HeadToHeadDTO h : headToHead) {
+			long bouts = h.bouts().stream().filter(b -> !b.fusen()).count();
+			long wins = h.bouts().stream().filter(b -> !b.fusen() && b.win()).count();
+			if (bouts >= H2H_MIN_BOUTS) {
+				candidates.add(new Candidate(h, wins, bouts));
+			}
+		}
+		if (candidates.isEmpty()) {
+			return new HeadToHeadHighlightsDTO(H2H_MIN_BOUTS, H2H_MIN_DIFF, List.of(), List.of());
+		}
+
+		List<Integer> ids = new ArrayList<>();
+		ids.add(rikishiId);
+		candidates.forEach(c -> ids.add(c.h().opponentId()));
+		Map<Integer, Double> winRate = new HashMap<>();
+		for (WinRateRow r : torikumiRepository.findWinRates(ids)) {
+			winRate.put(r.getRikishiId(), (r.getWins().doubleValue() + 1) / (r.getBouts().doubleValue() + 2));
+		}
+		double myRate = winRate.getOrDefault(rikishiId, 0.5);
+
+		List<HeadToHeadHighlightsDTO.Row> rows = new ArrayList<>();
+		for (Candidate c : candidates) {
+			double oppRate = winRate.getOrDefault(c.h().opponentId(), 0.5);
+			double expected = myRate * (1 - oppRate) / (myRate * (1 - oppRate) + oppRate * (1 - myRate));
+			double diff = c.wins() - c.bouts() * expected;
+			if (Math.abs(diff) >= H2H_MIN_DIFF) {
+				rows.add(new HeadToHeadHighlightsDTO.Row(c.h().opponentId(), c.h().opponentShikonaKr(),
+						c.h().opponentShikonaJp(), c.wins(), c.bouts() - c.wins(), round1(diff)));
+			}
+		}
+
+		List<HeadToHeadHighlightsDTO.Row> tough = rows.stream()
+				.filter(r -> r.diff() < 0)
+				.sorted(Comparator.comparingDouble(HeadToHeadHighlightsDTO.Row::diff))
+				.limit(H2H_TOP)
+				.toList();
+		List<HeadToHeadHighlightsDTO.Row> favorable = rows.stream()
+				.filter(r -> r.diff() > 0)
+				.sorted(Comparator.comparingDouble(HeadToHeadHighlightsDTO.Row::diff).reversed())
+				.limit(H2H_TOP)
+				.toList();
+		return new HeadToHeadHighlightsDTO(H2H_MIN_BOUTS, H2H_MIN_DIFF, tough, favorable);
 	}
 
 	private <B extends Enum<B>> List<OpponentConditionDTO.Row> physiqueRows(B[] buckets, Map<B, Tally> mine,

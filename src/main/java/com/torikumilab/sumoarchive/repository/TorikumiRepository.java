@@ -195,6 +195,30 @@ public interface TorikumiRepository extends JpaRepository<TorikumiEntity, Intege
 """, nativeQuery = true)
 	List<PhysiqueDiffRow> findPhysiqueDiffStats();
 
+	// 상대전적 "유독 약한/강한 상대"용 - 여러 리키시의 통산 정규 대전 승수 (결정전·부전·승자 미정 제외).
+	@Query(value = """
+    SELECT x.rid AS rikishiId, COUNT(*) AS bouts, SUM(x.win) AS wins
+    FROM (
+        SELECT t.east_rikishi_id AS rid, CASE WHEN t.winner_rikishi_id = t.east_rikishi_id THEN 1 ELSE 0 END AS win
+        FROM torikumi t
+        WHERE t.east_rikishi_id IN (:ids)
+          AND t.is_extra_match = false AND t.result_type <> 'FUZEN' AND t.winner_rikishi_id IS NOT NULL
+        UNION ALL
+        SELECT t.west_rikishi_id, CASE WHEN t.winner_rikishi_id = t.west_rikishi_id THEN 1 ELSE 0 END
+        FROM torikumi t
+        WHERE t.west_rikishi_id IN (:ids)
+          AND t.is_extra_match = false AND t.result_type <> 'FUZEN' AND t.winner_rikishi_id IS NOT NULL
+    ) x
+    GROUP BY x.rid
+""", nativeQuery = true)
+	List<WinRateRow> findWinRates(@Param("ids") Collection<Integer> ids);
+
+	interface WinRateRow {
+		Integer getRikishiId();
+		Number getBouts();
+		Number getWins();
+	}
+
 	interface PhysiqueDiffRow {
 		Number getWeightDiff();
 		Number getHeightDiff();

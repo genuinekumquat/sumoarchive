@@ -282,8 +282,7 @@ public class RikishiDetailService {
 	 * 목록은 훑어보기 힘들어서, 그룹 자체도 접었다 펼 수 있는 인덱스 형태로 보여주기 위함
 	 * (getHeadToHead가 이미 이름순으로 정렬해서 내려주므로 여기서는 그대로 묶기만 하면 순서가 유지됨).
 	 */
-	public List<HeadToHeadGroupDTO> getHeadToHeadGrouped(Integer rikishiId) {
-		List<HeadToHeadDTO> flat = getHeadToHead(rikishiId);
+	public List<HeadToHeadGroupDTO> groupHeadToHead(List<HeadToHeadDTO> flat) {
 		if (flat.isEmpty()) {
 			return List.of();
 		}
@@ -300,7 +299,7 @@ public class RikishiDetailService {
 
 	/**
 	 * 상대 선수별 통산 승패 집계. 상대 이름 가나다순으로 정렬해서 반환
-	 * (getHeadToHeadGrouped에서 초성별로 묶어쓰기 편하도록).
+	 * (groupHeadToHead에서 초성별로 묶어쓰기 편하도록).
 	 */
 	public List<HeadToHeadDTO> getHeadToHead(Integer rikishiId) {
 		List<TorikumiEntity> matches = torikumiRepository.findAllRegularByRikishi(rikishiId);
@@ -363,7 +362,8 @@ public class RikishiDetailService {
 			kimariteKr = "-";
 		}
 
-		return new HeadToHeadBoutDTO(bashoLabel, bashoLabelKr, t.getDay(), win, kimarite, kimariteKr);
+		return new HeadToHeadBoutDTO(bashoLabel, bashoLabelKr, t.getDay(), win,
+				t.getResultType() == ResultType.FUZEN, kimarite, kimariteKr);
 	}
 
 	/**

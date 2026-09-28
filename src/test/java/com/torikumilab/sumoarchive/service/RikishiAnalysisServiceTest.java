@@ -1,5 +1,8 @@
 package com.torikumilab.sumoarchive.service;
 
+import com.torikumilab.sumoarchive.domain.dto.HeadToHeadBoutDTO;
+import com.torikumilab.sumoarchive.domain.dto.HeadToHeadDTO;
+import com.torikumilab.sumoarchive.domain.dto.HeadToHeadHighlightsDTO;
 import com.torikumilab.sumoarchive.domain.dto.LossTypeSummaryDTO;
 import com.torikumilab.sumoarchive.domain.dto.LossTypeSummaryDTO.Verdict;
 import com.torikumilab.sumoarchive.domain.dto.OpponentConditionDTO;
@@ -172,7 +175,63 @@ class RikishiAnalysisServiceTest {
 		assertThat(result.byHeight()).extracting(OpponentConditionDTO.Row::bouts).containsExactly(1L, 3L, 1L);
 	}
 
+	@Test
+	@DisplayName("상대전적 요약 - 평소 승률로 예상한 것보다 유독 지거나 이긴 상대만, 부전·3전 미만 제외")
+	void headToHeadHighlights() {
+		// 본인 70%. 비슷한 강자 A(73%)에게 1승 5패 → 예상 약 2.8승보다 1.8승 적음 → 천적
+		//           강자 B(74%)에게 4승 0패 → 예상 약 1.8승보다 2.2승 많음 → 강한 상대
+		//           C에게 3승 2패 (예상과 비슷) / D는 2전뿐 / E는 3전 중 1전이 부전이라 실제 2전
+		List<HeadToHeadDTO> h2h = List.of(
+				h2h(2, "A", 1, 5, 0),
+				h2h(3, "B", 4, 0, 0),
+				h2h(4, "C", 3, 2, 0),
+				h2h(5, "D", 0, 2, 0),
+				h2h(6, "E", 0, 2, 1));
+		given(torikumiRepository.findWinRates(List.of(ID, 2, 3, 4))).willReturn(List.of(
+				winRate(ID, 100, 70), winRate(2, 100, 73), winRate(3, 100, 74), winRate(4, 100, 60)));
+
+		HeadToHeadHighlightsDTO result = service.getHeadToHeadHighlights(ID, h2h);
+
+		assertThat(result.tough()).extracting(HeadToHeadHighlightsDTO.Row::opponentShikonaKr).containsExactly("A");
+		assertThat(result.tough().get(0).diff()).isEqualTo(-1.8);
+		assertThat(result.favorable()).extracting(HeadToHeadHighlightsDTO.Row::opponentShikonaKr).containsExactly("B");
+		assertThat(result.favorable().get(0).diff()).isEqualTo(2.2);
+	}
+
+	@Test
+	@DisplayName("상대전적 요약 - 평범한 선수가 요코즈나에게 3전 전패해도 원래 예상이 낮아 천적이 아님")
+	void losingToMuchStrongerIsNotTough() {
+		List<HeadToHeadDTO> h2h = List.of(h2h(2, "요코즈나", 0, 3, 0));
+		given(torikumiRepository.findWinRates(List.of(ID, 2))).willReturn(List.of(
+				winRate(ID, 100, 50), winRate(2, 100, 80)));
+
+		HeadToHeadHighlightsDTO result = service.getHeadToHeadHighlights(ID, h2h);
+
+		assertThat(result.isEmpty()).isTrue();
+	}
+
 	// ===== helpers =====
+
+	/** 부전 경기는 wins/losses와 별개로 fusenLosses만큼 부전패를 덧붙인다. */
+	private static HeadToHeadDTO h2h(int opponentId, String name, int wins, int losses, int fusenLosses) {
+		List<HeadToHeadBoutDTO> bouts = new ArrayList<>();
+		for (int i = 0; i < wins; i++) bouts.add(bout(true, false));
+		for (int i = 0; i < losses; i++) bouts.add(bout(false, false));
+		for (int i = 0; i < fusenLosses; i++) bouts.add(bout(false, true));
+		return new HeadToHeadDTO(opponentId, name, name, wins, losses + fusenLosses, bouts);
+	}
+
+	private static HeadToHeadBoutDTO bout(boolean win, boolean fusen) {
+		return new HeadToHeadBoutDTO("2025年01月場所", "2025년 1월 하츠바쇼", 1, win, fusen, "-", "-");
+	}
+
+	private static TorikumiRepository.WinRateRow winRate(int rikishiId, long bouts, long wins) {
+		return new TorikumiRepository.WinRateRow() {
+			public Integer getRikishiId() { return rikishiId; }
+			public Number getBouts() { return bouts; }
+			public Number getWins() { return wins; }
+		};
+	}
 
 	private static Map<String, LossTypeSummaryDTO.Row> byName(LossTypeSummaryDTO dto) {
 		return dto.rows().stream().collect(Collectors.toMap(LossTypeSummaryDTO.Row::nameKr, Function.identity()));

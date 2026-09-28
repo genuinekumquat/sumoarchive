@@ -889,6 +889,38 @@
         .h2h-bout-item .h2h-bout-mark.loss { color: var(--sumi-faint); }
         .h2h-bout-item .h2h-bout-kimarite { margin-left: auto; color: var(--sumi-faint); }
 
+        /* 상대전적 맨 위 "유독 약한/강한 상대" 요약 - 두 칸(좁으면 한 칸) */
+        .h2h-highlights {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px 24px;
+            padding-bottom: 12px;
+            margin-bottom: 12px;
+            border-bottom: 1px solid var(--sumi);
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+        }
+        @media (max-width: 620px) {
+            .h2h-highlights { grid-template-columns: 1fr; }
+        }
+        .h2h-hl-title { font-size: 12px; font-weight: 700; letter-spacing: 1px; margin-bottom: 4px; }
+        .h2h-hl-col.tough .h2h-hl-title { color: var(--shu); }
+        .h2h-hl-col.favorable .h2h-hl-title { color: var(--ai); }
+        .h2h-hl-list { list-style: none; margin: 0; padding: 0; }
+        .h2h-hl-item {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            padding: 4px 0;
+            font-size: 12.5px;
+            border-bottom: 1px dashed var(--washi-line);
+        }
+        .h2h-hl-item a { color: var(--sumi); font-weight: 700; text-decoration: none; }
+        .h2h-hl-item a:hover { color: var(--shu); }
+        .h2h-hl-record { color: var(--sumi-soft); white-space: nowrap; }
+        .h2h-hl-diff { margin-left: auto; font-size: 11px; color: var(--sumi-faint); white-space: nowrap; }
+        .h2h-hl-none { font-size: 11.5px; color: var(--sumi-faint); padding: 4px 0; }
+        .h2h-hl-note { grid-column: 1 / -1; font-size: 10.5px; color: var(--sumi-faint); }
+
         footer {
             text-align: center;
             margin-top: 30px;
@@ -1251,8 +1283,42 @@
          ja 화면에선 의미가 없어 그룹/인덱스 없이 평평하게 나열).
          상단 인덱스를 누르면 해당 초성 그룹으로 이동하고, 그룹(h2h-group)과 상대별 줄(h2h-row) 모두
          details/summary라 접었다 펼 수 있다. 상대별 줄을 펼치면 그 상대와의 개별 대전 목록이 나온다. -->
+    <!-- 상대전적 맨 위 "유독 약한/강한 상대" 요약 (ko/ja 패널 공용). 후보가 하나도 없으면 통째로 숨김.
+         한쪽만 비면 그 칸에 "해당 없음". -->
+    <th:block th:if="${false}">
+        <div class="h2h-highlights" th:fragment="h2hHighlights(hl)" th:if="${hl != null and !hl.empty}"
+             th:with="isJa=${#locale.language == 'ja'}">
+            <div class="h2h-hl-col tough">
+                <div class="h2h-hl-title" th:text="#{rikishi.h2h.tough}">유독 약한 상대 (천적)</div>
+                <ol class="h2h-hl-list" th:unless="${hl.tough.isEmpty()}">
+                    <li class="h2h-hl-item" th:each="r : ${hl.tough}">
+                        <a th:href="@{/rikishi/{id}(id=${r.opponentId})}" th:text="${isJa} ? ${r.opponentShikonaJp} : ${r.opponentShikonaKr}">아오니시키</a>
+                        <span class="h2h-hl-record" th:text="${isJa} ? (${r.wins} + '勝' + ${r.losses} + '敗') : (${r.wins} + '승 ' + ${r.losses} + '패')">1승 5패</span>
+                        <span class="h2h-hl-diff" th:text="#{rikishi.h2h.diff.less(${r.absDiff})}">예상보다 1.8승 적음</span>
+                    </li>
+                </ol>
+                <div class="h2h-hl-none" th:if="${hl.tough.isEmpty()}" th:text="#{rikishi.h2h.none}">해당 없음</div>
+            </div>
+            <div class="h2h-hl-col favorable">
+                <div class="h2h-hl-title" th:text="#{rikishi.h2h.favorable}">유독 강한 상대</div>
+                <ol class="h2h-hl-list" th:unless="${hl.favorable.isEmpty()}">
+                    <li class="h2h-hl-item" th:each="r : ${hl.favorable}">
+                        <a th:href="@{/rikishi/{id}(id=${r.opponentId})}" th:text="${isJa} ? ${r.opponentShikonaJp} : ${r.opponentShikonaKr}">오노사토</a>
+                        <span class="h2h-hl-record" th:text="${isJa} ? (${r.wins} + '勝' + ${r.losses} + '敗') : (${r.wins} + '승 ' + ${r.losses} + '패')">4승 0패</span>
+                        <span class="h2h-hl-diff" th:text="#{rikishi.h2h.diff.more(${r.absDiff})}">예상보다 2.2승 많음</span>
+                    </li>
+                </ol>
+                <div class="h2h-hl-none" th:if="${hl.favorable.isEmpty()}" th:text="#{rikishi.h2h.none}">해당 없음</div>
+            </div>
+            <div class="h2h-hl-note" th:text="#{rikishi.h2h.note(${hl.minBouts}, ${hl.minDiff})}">
+                두 선수의 평소 승률로 예상한 것보다 크게 지거나 이긴 상대 (3번 이상 대전, 차이 1.5승 이상, 부전 제외)
+            </div>
+        </div>
+    </th:block>
+
     <div class="panel h2h-panel" th:if="${headToHeadGroups != null and !headToHeadGroups.isEmpty() and #locale.language == 'ja'}">
         <div class="panel-title" th:text="${#locale.language == 'ja'} ? '対戦成績' : #{rikishi.panel.h2h}">対戦成績</div>
+        <div th:replace="~{this :: h2hHighlights(${headToHeadHighlights})}"></div>
 
         <th:block th:each="g : ${headToHeadGroups}">
             <details class="h2h-row" th:each="h : ${g.opponents}">
@@ -1273,6 +1339,7 @@
     </div>
     <div class="panel h2h-panel" th:if="${headToHeadGroups != null and !headToHeadGroups.isEmpty() and #locale.language != 'ja'}">
         <div class="panel-title" th:text="${#locale.language == 'ja'} ? '対戦成績' : #{rikishi.panel.h2h}">対戦成績</div>
+        <div th:replace="~{this :: h2hHighlights(${headToHeadHighlights})}"></div>
 
         <nav class="h2h-index">
             <a th:each="g : ${headToHeadGroups}" th:href="'#h2h-grp-' + ${g.initial}" th:text="${g.initial}">ㄱ</a>

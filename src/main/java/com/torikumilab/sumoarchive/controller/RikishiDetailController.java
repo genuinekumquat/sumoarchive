@@ -1,6 +1,7 @@
 package com.torikumilab.sumoarchive.controller;
 
 import com.torikumilab.sumoarchive.domain.dto.BashoGameLogDTO;
+import com.torikumilab.sumoarchive.domain.dto.HeadToHeadDTO;
 import com.torikumilab.sumoarchive.domain.dto.HeadToHeadGroupDTO;
 import com.torikumilab.sumoarchive.domain.dto.KimariteStatDTO;
 import com.torikumilab.sumoarchive.domain.dto.RikishiDetailDTO;
@@ -34,7 +35,9 @@ public class RikishiDetailController {
 		List<KimariteStatDTO> kimariteStats = rikishiDetailService.getKimariteStats(id, fromBasho, toBasho);
 		List<KimariteStatDTO> kimariteLossStats = rikishiDetailService.getKimariteLossStats(id, fromBasho, toBasho);
 		List<BashoGameLogDTO> gameLog = rikishiDetailService.getGameLog(id);
-		List<HeadToHeadGroupDTO> headToHeadGroups = rikishiDetailService.getHeadToHeadGrouped(id);
+		// 상대전적은 한 번만 조회해서 초성 그룹과 "유독 약한/강한 상대" 요약에 같이 쓴다.
+		List<HeadToHeadDTO> headToHead = rikishiDetailService.getHeadToHead(id);
+		List<HeadToHeadGroupDTO> headToHeadGroups = rikishiDetailService.groupHeadToHead(headToHead);
 
 		model.addAttribute("rikishi", rikishi);
 		model.addAttribute("kimariteStats", kimariteStats);
@@ -44,6 +47,7 @@ public class RikishiDetailController {
 		model.addAttribute("opponentConditions", rikishiAnalysisService.getOpponentConditions(id));
 		model.addAttribute("gameLog", gameLog);
 		model.addAttribute("headToHeadGroups", headToHeadGroups);
+		model.addAttribute("headToHeadHighlights", rikishiAnalysisService.getHeadToHeadHighlights(id, headToHead));
 		// 결정기술 차트 기간 필터 select 기본 선택값 유지용 (없으면 "전체" 옵션이 선택됨)
 		model.addAttribute("fromBasho", fromBasho);
 		model.addAttribute("toBasho", toBasho);
