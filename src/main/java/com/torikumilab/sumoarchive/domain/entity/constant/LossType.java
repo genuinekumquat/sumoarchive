@@ -21,7 +21,7 @@ public enum LossType {
 	NAGE("던져지거나 비틀림", "投げ・捻り",
 			"uwatenage", "shitatenage", "sukuinage", "kotenage", "uwatedashinage", "shitatedashinage",
 			"kubinage", "kakenage", "tottari", "sakatottari", "uwatehineri", "shitatehineri",
-			"kainahineri", "kubihineri"),
+			"kainahineri", "kubihineri", "amiuchi"),
 	OKURI("뒤를 잡힘", "後ろを取られる",
 			"okuridashi", "okuritaoshi", "okurinage", "okuritsuridashi"),
 	ETC("기타", "その他");

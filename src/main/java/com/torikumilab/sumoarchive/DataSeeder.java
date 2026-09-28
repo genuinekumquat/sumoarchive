@@ -46,7 +46,7 @@ public class DataSeeder implements CommandLineRunner {
 	private static final List<String> KIMARITE_POOL = List.of(
 			"요리키리", "오시다시", "하타키코미", "츠키다시", "요리타오시", "히키오토시",
 			"우와테나게", "시타테나게", "오시타오시", "츠리다시", "카케나게", "소토가케",
-			"우치가케", "슷타리", "요비모도시", "코테나게"
+			"우치가케", "톳타리", "요비모도시", "코테나게"
 	);
 	
 	// 더미데이터 재현성을 위해 고정 시드 사용 (앱 재기동 시에도 같은 결과)

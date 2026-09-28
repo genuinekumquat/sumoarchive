@@ -347,15 +347,23 @@ public class RikishiDetailService {
 		BashoEntity basho = t.getBashoEntity();
 		String bashoLabel = basho.getBashoYear() + "年"
 				+ String.format("%02d", basho.getBashoMonth().getMonthValue()) + "月場所";
+		String bashoLabelKr = basho.getBashoYear() + "년 " + basho.getBashoMonth().getMonthValue() + "월 "
+				+ basho.getBashoMonth().getDisplayNameKr();
 
 		String kimarite;
+		String kimariteKr;
 		if (t.getResultType() == ResultType.FUZEN) {
 			kimarite = win ? "不戦勝" : "不戦敗";
+			kimariteKr = win ? "부전승" : "부전패";
+		} else if (t.getKimarite() != null) {
+			kimarite = KimariteDisplayUtil.toJp(t.getKimarite());
+			kimariteKr = KimariteDisplayUtil.toKr(t.getKimarite());
 		} else {
-			kimarite = t.getKimarite() != null ? KimariteDisplayUtil.toJp(t.getKimarite()) : "-";
+			kimarite = "-";
+			kimariteKr = "-";
 		}
 
-		return new HeadToHeadBoutDTO(bashoLabel, t.getDay(), win, kimarite);
+		return new HeadToHeadBoutDTO(bashoLabel, bashoLabelKr, t.getDay(), win, kimarite, kimariteKr);
 	}
 
 	/**

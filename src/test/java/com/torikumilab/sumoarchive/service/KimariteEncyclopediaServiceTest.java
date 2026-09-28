@@ -73,7 +73,7 @@ class KimariteEncyclopediaServiceTest {
 	}
 
 	@Test
-	void 등록된_55개_기술_전체에_한국어_및_일본어_설명이_존재한다() {
+	void 등록된_기술_전체에_한국어_및_일본어_설명이_존재한다() {
 		List<KimariteGroupDTO> groups = service.getKimariteEncyclopedia();
 
 		for (KimariteGroupDTO group : groups) {

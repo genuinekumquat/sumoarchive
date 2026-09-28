@@ -1292,9 +1292,9 @@
                     </summary>
                     <ul class="h2h-bouts">
                         <li class="h2h-bout-item" th:each="b : ${h.bouts}">
-                            <span class="h2h-bout-basho" th:text="${b.bashoLabel} + ' ' + ${b.day} + '日目'">2026年07月場所 8日目</span>
+                            <span class="h2h-bout-basho" th:text="${b.bashoLabelKr} + ' ' + ${b.day} + '일째'">2026년 7월 나고야바쇼 8일째</span>
                             <span class="h2h-bout-mark" th:classappend="${b.win} ? 'win' : 'loss'" th:text="${b.win} ? '○' : '●'">○</span>
-                            <span class="h2h-bout-kimarite" th:text="${b.kimarite}">寄り切り</span>
+                            <span class="h2h-bout-kimarite" th:text="${b.kimariteKr}">요리키리</span>
                         </li>
                     </ul>
                 </details>
