@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -62,33 +63,25 @@ public interface TorikumiRepository extends JpaRepository<TorikumiEntity, Intege
 													 @Param("to") LocalDate to);
 
 
-	// 호시토리표(대전표)용 - 특정 바쇼에서 이 리키시가 동/서 어느 쪽으로 출전했든 전부 day 오름차순으로.
-	// 결정전(is_extra_match=true)은 다른 통계와 동일하게 여기서도 제외 (15일 정규 대전만).
+	// 호시토리표용 - 여러 바쇼의 (바쇼, 지위)별 적재된 마지막 일차를 한 번에. 결정전 제외.
+	// 행이 있으면 그 바쇼·지위 토리쿠미가 적재된 것(全休 판정), 바쇼별 MAX는 휴장 칸 채우기 상한
+	// (진행 중 바쇼의 아직 안 열린 날을 휴장으로 세지 않기 위함, 끝난 바쇼는 15).
 	@Query("""
-    SELECT t FROM TorikumiEntity t
-    JOIN FETCH t.eastRikishiEntity
-    JOIN FETCH t.westRikishiEntity
-    WHERE t.bashoEntity.id = :bashoId
-      AND (t.eastRikishiEntity.id = :rikishiId OR t.westRikishiEntity.id = :rikishiId)
+    SELECT t.bashoEntity.id AS bashoId, t.division AS division, MAX(t.day) AS lastDay
+    FROM TorikumiEntity t
+    WHERE t.bashoEntity.id IN :bashoIds
       AND t.isExtraMatch = false
-    ORDER BY t.day ASC
+    GROUP BY t.bashoEntity.id, t.division
 """)
-	List<TorikumiEntity> findMatchHistory(@Param("rikishiId") Integer rikishiId, @Param("bashoId") Integer bashoId);
+	List<LoadedDayRow> findLoadedDays(@Param("bashoIds") Collection<Integer> bashoIds);
 
-	// 호시토리표 전체 휴장(全休) 판정용 - 그 바쇼·지위(division)의 토리쿠미가 적재돼 있는지.
-	// 적재된 바쇼인데 본인 대전만 0건이면 全休, 아예 적재 전이면 "기록 없음"으로 구분하기 위함.
-	boolean existsByBashoEntityIdAndDivisionAndIsExtraMatchFalse(Integer bashoId, Division division);
+	interface LoadedDayRow {
+		Integer getBashoId();
+		Division getDivision();
+		Integer getLastDay();
+	}
 
-	// 호시토리표 휴장 칸 채우기 상한 - 그 바쇼에 적재된 마지막 일차. 진행 중 바쇼의 아직 안 열린 날을
-	// 휴장으로 세지 않기 위함 (끝난 바쇼는 15).
-	@Query("""
-    SELECT MAX(t.day) FROM TorikumiEntity t
-    WHERE t.bashoEntity.id = :bashoId
-      AND t.isExtraMatch = false
-""")
-	Integer findLastLoadedDay(@Param("bashoId") Integer bashoId);
-
-	// 상대전적(対戦成績)용 - 이 리키시가 동/서 어느 쪽으로 출전했든, 결정전 제외한 통산 전 경기를
+	// 상대전적(対戦成績)·호시토리표용 - 이 리키시가 동/서 어느 쪽으로 출전했든, 결정전 제외한 통산 전 경기를
 	// 바쇼 시작일 내림차순(최신 바쇼부터) → 같은 바쇼 안에서는 day 오름차순으로.
 	@Query("""
     SELECT t FROM TorikumiEntity t

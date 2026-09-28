@@ -234,8 +234,42 @@ public class RikishiDetailService {
 		if (banzukeHistory.isEmpty()) {
 			return List.of();
 		}
+		List<Integer> bashoIds = banzukeHistory.stream().map(b -> b.getBashoEntity().getId()).toList();
+
+		// 바쇼마다 따로 조회하면 커리어가 길수록 쿼리가 바쇼 수에 비례해 늘어나서, 필요한 걸 전부 한 번씩만
+		// 조회해 메모리에서 바쇼별로 나눈다 (본인 전 경기 / 상대들의 반즈케 / 바쇼·지위별 적재 일차).
+		// 리포지토리가 같은 바쇼 안에서는 day 오름차순으로 내려주므로 groupingBy 후에도 순서가 유지된다.
+		Map<Integer, List<TorikumiEntity>> matchesByBasho = torikumiRepository.findAllRegularByRikishi(rikishiId)
+				.stream()
+				.collect(Collectors.groupingBy(t -> t.getBashoEntity().getId()));
+
+		List<Integer> opponentIds = matchesByBasho.values().stream()
+				.flatMap(List::stream)
+				.map(t -> resolveOpponent(t, rikishiId).getId())
+				.distinct()
+				.toList();
+		Map<Integer, Map<Integer, BanzukeEntity>> opponentBanzukeByBasho = new HashMap<>();
+		if (!opponentIds.isEmpty()) {
+			for (BanzukeEntity b : banzukeRepository.findByBashoEntityIdInAndRikishiEntityIdIn(bashoIds, opponentIds)) {
+				opponentBanzukeByBasho.computeIfAbsent(b.getBashoEntity().getId(), k -> new HashMap<>())
+						.put(b.getRikishiEntity().getId(), b);
+			}
+		}
+
+		Map<Integer, Map<Division, Integer>> loadedDaysByBasho = new HashMap<>();
+		for (TorikumiRepository.LoadedDayRow row : torikumiRepository.findLoadedDays(bashoIds)) {
+			loadedDaysByBasho.computeIfAbsent(row.getBashoId(), k -> new HashMap<>())
+					.put(row.getDivision(), row.getLastDay());
+		}
+
 		return banzukeHistory.stream()
-				.map(b -> toBashoGameLog(rikishiId, b))
+				.map(b -> {
+					Integer bashoId = b.getBashoEntity().getId();
+					return toBashoGameLog(rikishiId, b,
+							matchesByBasho.getOrDefault(bashoId, List.of()),
+							opponentBanzukeByBasho.getOrDefault(bashoId, Map.of()),
+							loadedDaysByBasho.getOrDefault(bashoId, Map.of()));
+				})
 				.toList();
 	}
 	
@@ -321,15 +355,23 @@ public class RikishiDetailService {
 		return new HeadToHeadBoutDTO(bashoLabel, t.getDay(), win, kimarite);
 	}
 
-	private BashoGameLogDTO toBashoGameLog(Integer rikishiId, BanzukeEntity banzuke) {
+	/**
+	 * @param bashoMatches          이 바쇼에서 본인의 정규 대전 (day 오름차순)
+	 * @param opponentBanzukeById   이 바쇼 기준 상대 리키시 id → 반즈케
+	 * @param loadedDays            이 바쇼의 지위별 적재된 마지막 일차 (적재 전이면 비어 있음)
+	 */
+	private BashoGameLogDTO toBashoGameLog(Integer rikishiId, BanzukeEntity banzuke,
+										   List<TorikumiEntity> bashoMatches,
+										   Map<Integer, BanzukeEntity> opponentBanzukeById,
+										   Map<Division, Integer> loadedDays) {
 		BashoEntity basho = banzuke.getBashoEntity();
-		List<MatchHistoryItemDTO> matches = buildMatchHistory(rikishiId, basho.getId());
+		int lastDay = lastLoadedDay(loadedDays);
+		List<MatchHistoryItemDTO> matches = buildMatchHistory(rikishiId, bashoMatches, opponentBanzukeById, lastDay);
 		// 첫날부터 휴장하면 대진 자체가 안 짜여 부전 기록도 안 남음. 같은 바쇼·지위 토리쿠미가 적재돼 있는지로
 		// "全休"와 "아직 적재 전"을 구분하고, 全休면 적재된 일차 전부를 휴장 칸으로 채운다 (0勝0敗15休).
-		if (matches.isEmpty()
-				&& torikumiRepository.existsByBashoEntityIdAndDivisionAndIsExtraMatchFalse(basho.getId(), banzuke.getDivision())) {
+		if (matches.isEmpty() && loadedDays.containsKey(banzuke.getDivision())) {
 			matches = new ArrayList<>();
-			for (int day = 1; day <= lastLoadedDay(basho.getId()); day++) {
+			for (int day = 1; day <= lastDay; day++) {
 				matches.add(absentItem(day));
 			}
 		}
@@ -372,26 +414,16 @@ public class RikishiDetailService {
 	 *   추론하는 방식입니다. 첫 출전일 이전 공백(예: 데이터가 아직 다 안 채워진 경우)은 휴장으로
 	 *   보지 않고 그냥 표에서 생략합니다.
 	 */
-	private List<MatchHistoryItemDTO> buildMatchHistory(Integer rikishiId, Integer bashoId) {
-		List<TorikumiEntity> matches = torikumiRepository.findMatchHistory(rikishiId, bashoId);
+	private List<MatchHistoryItemDTO> buildMatchHistory(Integer rikishiId, List<TorikumiEntity> matches,
+													  Map<Integer, BanzukeEntity> opponentBanzukeByRikishiId,
+													  int lastDay) {
 		if (matches.isEmpty()) {
 			return List.of();
 		}
-		
-		List<Integer> opponentIds = matches.stream()
-				.map(t -> resolveOpponent(t, rikishiId).getId())
-				.distinct()
-				.toList();
-		
-		Map<Integer, BanzukeEntity> opponentBanzukeByRikishiId = banzukeRepository
-				.findByBashoEntityIdAndRikishiEntityIdIn(bashoId, opponentIds)
-				.stream()
-				.collect(Collectors.toMap(b -> b.getRikishiEntity().getId(), b -> b));
-		
+
 		Map<Integer, TorikumiEntity> matchByDay = matches.stream()
 				.collect(Collectors.toMap(TorikumiEntity::getDay, t -> t));
-		int firstDay = matches.get(0).getDay(); // findMatchHistory가 day ASC로 내려주므로 첫 번째가 첫 출전일
-		int lastDay = lastLoadedDay(bashoId);
+		int firstDay = matches.get(0).getDay(); // day 오름차순으로 넘어오므로 첫 번째가 첫 출전일
 
 		List<MatchHistoryItemDTO> result = new ArrayList<>();
 		for (int day = 1; day <= lastDay; day++) {
@@ -414,9 +446,11 @@ public class RikishiDetailService {
 	}
 
 	/** 휴장 칸을 채울 상한. 진행 중 바쇼는 아직 안 열린 날까지 휴장으로 채우지 않도록 적재된 마지막 일차까지 (끝난 바쇼는 15). */
-	private int lastLoadedDay(Integer bashoId) {
-		Integer lastLoadedDay = torikumiRepository.findLastLoadedDay(bashoId);
-		return (lastLoadedDay != null) ? Math.min(lastLoadedDay, 15) : 15;
+	private int lastLoadedDay(Map<Division, Integer> loadedDays) {
+		return loadedDays.values().stream()
+				.max(Integer::compare)
+				.map(d -> Math.min(d, 15))
+				.orElse(15);
 	}
 
 	private MatchHistoryItemDTO absentItem(int day) {

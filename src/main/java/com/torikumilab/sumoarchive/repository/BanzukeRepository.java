@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -37,9 +38,11 @@ public interface BanzukeRepository extends JpaRepository<BanzukeEntity, Integer>
 	);
 	
 	
-	// 최신 반즈케 확인용 (바쇼 시작일 내림차순, 서비스에서 첫 번째 요소만 사용)
+	// 최신 반즈케 확인용 (바쇼 시작일 내림차순, 서비스에서 첫 번째 요소만 사용).
+	// 호시토리표가 행마다 바쇼 정보를 읽으므로 바쇼를 같이 fetch (행마다 basho 지연 로딩 쿼리 방지).
 	@Query("""
     SELECT b FROM BanzukeEntity b
+    JOIN FETCH b.bashoEntity
     WHERE b.rikishiEntity.id = :rikishiId
     ORDER BY b.bashoEntity.startDate DESC
 """)
@@ -51,6 +54,10 @@ public interface BanzukeRepository extends JpaRepository<BanzukeEntity, Integer>
 	
 	// 호시토리표(대전표) 상대들의 그 바쇼 기준 반즈케를 한 번에 조회 (N+1 방지용 배치 조회)
 	List<BanzukeEntity> findByBashoEntityIdAndRikishiEntityIdIn(Integer bashoId, List<Integer> rikishiIds);
+
+	// 호시토리표 전 바쇼의 상대 반즈케를 한 번에 조회. (바쇼, 리키시) 조합이 실제 대전보다 넓게 잡힐 수 있어
+	// 서비스에서 (bashoId, rikishiId)로 골라 쓴다.
+	List<BanzukeEntity> findByBashoEntityIdInAndRikishiEntityIdIn(Collection<Integer> bashoIds, Collection<Integer> rikishiIds);
 
 	// 관리자 반즈케 관리: 한 리키시가 그 바쇼에 이미 등록됐는지 (uq_rikishi_basho 제약과 동일 키)
 	boolean existsByBashoEntityIdAndRikishiEntityId(Integer bashoId, Integer rikishiId);
