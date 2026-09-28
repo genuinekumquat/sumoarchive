@@ -62,6 +62,33 @@ public interface TorikumiRepository extends JpaRepository<TorikumiEntity, Intege
 													 @Param("from") LocalDate from,
 													 @Param("to") LocalDate to);
 
+	// 키마리테 분포 - 이 선수가 "진" 경기 기준 (상대가 어떤 기술로 이겼나). 부전패는 kimarite가 없어 자동 제외.
+	@Query("""
+    SELECT t.kimarite AS kimarite, COUNT(t) AS cnt
+    FROM TorikumiEntity t
+    WHERE t.loserRikishiEntity.id = :rikishiId
+      AND t.kimarite IS NOT NULL
+      AND t.isExtraMatch = false
+    GROUP BY t.kimarite
+    ORDER BY COUNT(t) DESC
+""")
+	List<KimariteCountRow> findKimariteLossStats(@Param("rikishiId") Integer rikishiId);
+
+	// 패배 키마리테 분포 - 바쇼 시작일 기간 필터 버전
+	@Query("""
+    SELECT t.kimarite AS kimarite, COUNT(t) AS cnt
+    FROM TorikumiEntity t
+    WHERE t.loserRikishiEntity.id = :rikishiId
+      AND t.kimarite IS NOT NULL
+      AND t.isExtraMatch = false
+      AND t.bashoEntity.startDate BETWEEN :from AND :to
+    GROUP BY t.kimarite
+    ORDER BY COUNT(t) DESC
+""")
+	List<KimariteCountRow> findKimariteLossStatsBetween(@Param("rikishiId") Integer rikishiId,
+														 @Param("from") LocalDate from,
+														 @Param("to") LocalDate to);
+
 
 	// 호시토리표용 - 여러 바쇼의 (바쇼, 지위)별 적재된 마지막 일차를 한 번에. 결정전 제외.
 	// 행이 있으면 그 바쇼·지위 토리쿠미가 적재된 것(全休 판정), 바쇼별 MAX는 휴장 칸 채우기 상한

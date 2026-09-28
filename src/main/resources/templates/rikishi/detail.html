@@ -331,7 +331,31 @@
         .kimarite-tools {
             display: flex;
             align-items: center;
-            justify-content: flex-end;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+        /* 승리/패배 전환 - 기간 필터 버튼과 같은 먹색 톤의 세그먼트 버튼 */
+        .kimarite-mode { display: inline-flex; }
+        .kimarite-mode-btn {
+            border: 1px solid var(--sumi);
+            background: transparent;
+            color: var(--sumi);
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 11.5px;
+            padding: 4px 12px;
+            cursor: pointer;
+        }
+        .kimarite-mode-btn + .kimarite-mode-btn { border-left: none; }
+        .kimarite-mode-btn:hover { color: var(--shu); }
+        .kimarite-mode-btn.is-active,
+        .kimarite-mode-btn.is-active:hover { background: var(--sumi); color: var(--washi); }
+        .kimarite-mode-btn:focus-visible { outline: 2px solid var(--shu); outline-offset: 1px; }
+        .kimarite-mode-caption {
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 11px;
+            color: var(--sumi-faint);
             margin-bottom: 8px;
         }
         .kimarite-toggle-label {
@@ -975,21 +999,36 @@
                    th:text="#{rikishi.filter.reset}">전체보기</a>
             </form>
 
-            <div th:if="${kimariteStats != null and !kimariteStats.isEmpty()}">
+            <!-- 승리/패배 결정기술은 둘 다 서버에서 내려두고 JS가 전환 (기간 필터·기타 통합은 두 모드 공통) -->
+            <div th:with="hasKimarite=${(kimariteStats != null and !kimariteStats.isEmpty()) or (kimariteLossStats != null and !kimariteLossStats.isEmpty())}">
+            <div th:if="${hasKimarite}">
                 <div class="kimarite-tools">
+                    <div class="kimarite-mode" role="group" th:attr="aria-label=#{rikishi.kimarite.mode}">
+                        <button type="button" class="kimarite-mode-btn is-active" data-mode="win" aria-pressed="true"
+                                th:text="#{rikishi.kimarite.win}">승리</button>
+                        <button type="button" class="kimarite-mode-btn" data-mode="loss" aria-pressed="false"
+                                th:text="#{rikishi.kimarite.loss}">패배</button>
+                    </div>
                     <label class="kimarite-toggle-label">
                         <input type="checkbox" id="groupUnder10Check">
                         <span th:text="#{rikishi.kimarite.groupunder10}">10% 미만 '기타'로 통합</span>
                     </label>
                 </div>
-                <div class="chart-wrap">
-                    <canvas id="kimariteChart"></canvas>
+                <div class="kimarite-mode-caption" id="kimariteModeCaption" th:text="#{rikishi.kimarite.caption.win}">이 선수가 이긴 결정기술</div>
+                <div id="kimariteChartBody">
+                    <div class="chart-wrap">
+                        <canvas id="kimariteChart"></canvas>
+                    </div>
+                    <div class="kimarite-legend" id="kimariteLegend"></div>
                 </div>
-                <div class="kimarite-legend" id="kimariteLegend"></div>
+                <div class="empty-note" id="kimariteModeEmpty" style="display: none;" th:text="#{rikishi.kimarite.empty.mode}">
+                    해당 기간에 기록이 없습니다.
+                </div>
                 <div class="chart-note" th:text="#{rikishi.chart.note}">※ 등록된 토리쿠미 결과 기준으로 산출됩니다</div>
             </div>
-            <div class="empty-note" th:if="${kimariteStats == null or kimariteStats.isEmpty()}" th:text="#{rikishi.empty.match}">
+            <div class="empty-note" th:unless="${hasKimarite}" th:text="#{rikishi.empty.match}">
                 아직 등록된 대전 기록이 없습니다.
+            </div>
             </div>
         </div>
 
@@ -1111,11 +1150,23 @@
 <script th:src="@{/js/comments.js}"></script>
 <script th:inline="javascript">
     /*<![CDATA[*/
-    const kimariteData = [
-        /*[# th:each="k : ${kimariteStats}"]*/
-        { name: /*[[${#locale.language == 'ja' ? k.kimariteJp : k.kimarite}]]*/ '寄り切り', count: /*[[${k.count}]]*/ 0, percent: /*[[${k.percent}]]*/ 0 },
-        /*[/]*/
-    ];
+    // win: 이 선수가 이긴 결정기술, loss: 상대가 이 선수를 이긴 결정기술
+    const kimariteDataByMode = {
+        win: [
+            /*[# th:each="k : ${kimariteStats}"]*/
+            { name: /*[[${#locale.language == 'ja' ? k.kimariteJp : k.kimarite}]]*/ '寄り切り', count: /*[[${k.count}]]*/ 0, percent: /*[[${k.percent}]]*/ 0 },
+            /*[/]*/
+        ],
+        loss: [
+            /*[# th:each="k : ${kimariteLossStats}"]*/
+            { name: /*[[${#locale.language == 'ja' ? k.kimariteJp : k.kimarite}]]*/ '押し出し', count: /*[[${k.count}]]*/ 0, percent: /*[[${k.percent}]]*/ 0 },
+            /*[/]*/
+        ]
+    };
+    const KIMARITE_CAPTION = {
+        win: /*[[#{rikishi.kimarite.caption.win}]]*/ '이 선수가 이긴 결정기술',
+        loss: /*[[#{rikishi.kimarite.caption.loss}]]*/ '상대가 이 선수를 이긴 결정기술'
+    };
     /*]]>*/
 
     // ===== 북마크 버튼 =====
@@ -1152,7 +1203,7 @@
         if (location.hash) openGroup(location.hash);
     })();
 
-    if (kimariteData.length > 0) {
+    if (document.getElementById('kimariteChart')) {
         // 프로젝트 팔레트(먹색/낙관다홍 계열 + 일본 전통색 톤 4종 추가)로 원형차트 배색.
         const PALETTE = [
             '#a3272c', '#1a1a18', '#56554e', '#c98a2e', '#7c8a6e', '#86857f',
@@ -1165,6 +1216,13 @@
         const groupCheck = document.getElementById('groupUnder10Check');
         const isJa = /*[[${#locale.language == 'ja'}]]*/ false;
         const etcLabel = isJa ? 'その他' : '기타';
+        const chartBody = document.getElementById('kimariteChartBody');
+        const modeEmpty = document.getElementById('kimariteModeEmpty');
+        const modeCaption = document.getElementById('kimariteModeCaption');
+        const modeButtons = document.querySelectorAll('.kimarite-mode-btn');
+        const MODE_KEY = 'sumo_kimarite_mode';
+        let currentMode = 'win';
+        const unitOf = mode => mode === 'loss' ? (isJa ? '敗' : '패') : (isJa ? '勝' : '승');
 
         const chartInstance = new Chart(ctx, {
             type: 'doughnut',
@@ -1190,7 +1248,7 @@
                                 const ds = context.dataset.data;
                                 const total = ds.reduce((a, b) => a + b, 0);
                                 const pct = total > 0 ? (val * 100 / total).toFixed(1) : 0;
-                                return ' ' + context.label + ': ' + val + (isJa ? '勝' : '승') + ' (' + pct + '%)';
+                                return ' ' + context.label + ': ' + val + unitOf(currentMode) + ' (' + pct + '%)';
                             }
                         }
                     }
@@ -1199,6 +1257,14 @@
         });
 
         function updateChartAndLegend(groupUnder10) {
+            const kimariteData = kimariteDataByMode[currentMode];
+            modeCaption.textContent = KIMARITE_CAPTION[currentMode];
+            // 한쪽 기록만 없을 수 있음 (예: 기간 내 무패) → 차트 대신 빈 안내
+            const empty = kimariteData.length === 0;
+            chartBody.style.display = empty ? 'none' : '';
+            modeEmpty.style.display = empty ? '' : 'none';
+            if (empty) return;
+
             let data = kimariteData;
             if (groupUnder10) {
                 const major = [];
@@ -1245,11 +1311,28 @@
                 row.innerHTML = `
                     <span class="swatch" style="background:${color}"></span>
                     <span class="kname">${k.name}</span>
-                    <span class="kpct">${k.percent}%</span>
+                    <span class="kpct">${k.count}${unitOf(currentMode)} · ${k.percent}%</span>
                 `;
                 legend.appendChild(row);
             });
         }
+
+        function setMode(mode) {
+            currentMode = mode === 'loss' ? 'loss' : 'win';
+            modeButtons.forEach(b => {
+                const on = b.dataset.mode === currentMode;
+                b.classList.toggle('is-active', on);
+                b.setAttribute('aria-pressed', on ? 'true' : 'false');
+            });
+        }
+
+        // 기간 필터 적용(페이지 이동) 후에도 보던 모드를 유지
+        try { setMode(localStorage.getItem(MODE_KEY)); } catch (e) { setMode('win'); }
+        modeButtons.forEach(b => b.addEventListener('click', function () {
+            setMode(b.dataset.mode);
+            try { localStorage.setItem(MODE_KEY, currentMode); } catch (e) { /* 저장 불가 환경은 무시 */ }
+            updateChartAndLegend(groupCheck ? groupCheck.checked : false);
+        }));
 
         if (groupCheck) {
             const savedPref = localStorage.getItem('sumo_kimarite_group_under_10') === 'true';

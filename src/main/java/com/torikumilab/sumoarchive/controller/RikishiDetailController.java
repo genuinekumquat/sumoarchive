@@ -30,11 +30,13 @@ public class RikishiDetailController {
 						  Model model) {
 		RikishiDetailDTO rikishi = rikishiDetailService.getRikishiDetail(id);
 		List<KimariteStatDTO> kimariteStats = rikishiDetailService.getKimariteStats(id, fromBasho, toBasho);
+		List<KimariteStatDTO> kimariteLossStats = rikishiDetailService.getKimariteLossStats(id, fromBasho, toBasho);
 		List<BashoGameLogDTO> gameLog = rikishiDetailService.getGameLog(id);
 		List<HeadToHeadGroupDTO> headToHeadGroups = rikishiDetailService.getHeadToHeadGrouped(id);
 
 		model.addAttribute("rikishi", rikishi);
 		model.addAttribute("kimariteStats", kimariteStats);
+		model.addAttribute("kimariteLossStats", kimariteLossStats);
 		model.addAttribute("gameLog", gameLog);
 		model.addAttribute("headToHeadGroups", headToHeadGroups);
 		// 결정기술 차트 기간 필터 select 기본 선택값 유지용 (없으면 "전체" 옵션이 선택됨)

@@ -179,17 +179,33 @@ public class RikishiDetailService {
 	 * 순서가 뒤바뀌어 들어와도(fromBasho가 더 최신) min/max로 보정해서 처리.
 	 */
 	public List<KimariteStatDTO> getKimariteStats(Integer rikishiId, Integer fromBashoId, Integer toBashoId) {
-		if (fromBashoId == null || toBashoId == null) {
+		LocalDate[] range = resolveBashoRange(fromBashoId, toBashoId);
+		if (range == null) {
 			return getKimariteStats(rikishiId);
+		}
+		return buildKimariteStats(torikumiRepository.findKimariteStatsBetween(rikishiId, range[0], range[1]));
+	}
+
+	/** getKimariteStats의 패배 버전 - 상대가 어떤 결정기술로 이 리키시를 이겼는지. 기간 필터 규칙은 동일. */
+	public List<KimariteStatDTO> getKimariteLossStats(Integer rikishiId, Integer fromBashoId, Integer toBashoId) {
+		LocalDate[] range = resolveBashoRange(fromBashoId, toBashoId);
+		if (range == null) {
+			return buildKimariteStats(torikumiRepository.findKimariteLossStats(rikishiId));
+		}
+		return buildKimariteStats(torikumiRepository.findKimariteLossStatsBetween(rikishiId, range[0], range[1]));
+	}
+
+	/** 두 바쇼 id → [이른 시작일, 늦은 시작일]. 하나라도 없거나 못 찾으면 null (= 통산). */
+	private LocalDate[] resolveBashoRange(Integer fromBashoId, Integer toBashoId) {
+		if (fromBashoId == null || toBashoId == null) {
+			return null;
 		}
 		LocalDate d1 = bashoRepository.findById(fromBashoId).map(BashoEntity::getStartDate).orElse(null);
 		LocalDate d2 = bashoRepository.findById(toBashoId).map(BashoEntity::getStartDate).orElse(null);
 		if (d1 == null || d2 == null) {
-			return getKimariteStats(rikishiId);
+			return null;
 		}
-		LocalDate from = d1.isBefore(d2) ? d1 : d2;
-		LocalDate to = d1.isBefore(d2) ? d2 : d1;
-		return buildKimariteStats(torikumiRepository.findKimariteStatsBetween(rikishiId, from, to));
+		return d1.isBefore(d2) ? new LocalDate[]{d1, d2} : new LocalDate[]{d2, d1};
 	}
 
 	private List<KimariteStatDTO> buildKimariteStats(List<KimariteCountRow> rows) {
