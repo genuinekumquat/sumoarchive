@@ -129,6 +129,10 @@ application-local.properties            # git 管理外 — 実際のDB/管理�
 | GET | `/admin/basho` | 管理者用場所一覧(番付・取組の件数を含む) |
 | GET / POST | `/admin/basho/new`, `/admin/basho` | 新規場所作成フォーム表示 / 作成(年・月の重複を防止) |
 | POST | `/admin/basho/import?fromYear=&toYear=` | sumo-api から指定年範囲の場所メタ情報をインポート(本場所6場所、未開催分はスキップ) |
+| POST | `/admin/basho/import-year?year=` | 指定年の全場所の幕内・十両の番付、取組、優勝・三賞・金星を一括インポート |
+| POST | `/admin/basho/{bashoId}/import-all` | 1場所分の全データ(番付・取組・表彰)を一括インポート |
+| POST | `/admin/basho/{bashoId}/banzuke/import?division=` , `/admin/basho/{bashoId}/torikumi/import?division=` | 場所・地位区分単位の番付 / 取組インポート(未マッチの力士はスキップ) |
+| POST | `/admin/basho/{bashoId}/awards/import` | 優勝・三賞(sumo-api)+ 金星(番付・取組から算出)を更新(再実行可) |
 | GET / POST | `/admin/basho/{bashoId}/edit`, `.../{bashoId}` , `.../{bashoId}/delete` | 場所期間編集フォーム / 初日・千秋楽の日付修正 / 削除(番付・取組が空の場合のみ削除可) |
 | GET | `/admin/basho/{bashoId}/banzuke?division=` | 場所ごとの番付管理(地位区分タブ + 行追加フォーム) |
 | POST | `/admin/basho/{bashoId}/banzuke` | 番付行の追加(力士・場所の重複を防止) |
@@ -196,9 +200,10 @@ application-local.properties            # git 管理外 — 実際のDB/管理�
   ```
   により、ローカル設定を任意で読み込む構成です。
 - **データソース**: 当初は `DataSeeder`(開発用ダミー)でデータを投入していましたが、現在は **sumo-api.com** から
-  実データを取得する方式へ移行中です。`DataSeeder` はデフォルトで無効(`app.seed-demo=false`)で、
+  実データを取得しています。`DataSeeder` はデフォルトで無効(`app.seed-demo=false`)で、
   管理者画面 `/admin/rikishi` の「ロスターインポート」ボタンが現役の部屋・力士を、`/admin/basho` の
-  「場所インポート」ボタンが指定年範囲の場所メタ情報を取得します(番付/取組のインポートは今後の作業)。
+  各インポートボタンが場所メタ情報と幕内・十両の番付・取組・表彰(優勝・三賞・金星)データを取得します。
+  2025年の全場所(1・3・5・7・9・11月)のデータはこの方法で投入済みです。
   外部 API 関連の設定: `sumo-api.base-url`, `app.seed-demo`。
 
 ### ローカルでの実行方法
@@ -212,11 +217,13 @@ cp src/main/resources/application-local.properties.example \
    src/main/resources/application-local.properties
 # → DB アカウント、任意の管理者 ID/パスワードを入力
 
-# 3. 実行(初回起動時にダミーデータを自動シーディング)
+# 3. 実行(テーブルは ddl-auto=update で自動作成、データは空の状態で起動)
 ./gradlew bootRun
+
+# 4. 管理者ログイン後、/admin/rikishi「ロスターインポート」→ /admin/basho の年一括インポートでデータを投入
 ```
 
-デフォルトの接続先: `http://localhost:8080`
+デフォルトの接続先: `http://localhost:8080`(ポートを変更する場合は `application-local.properties` に `server.port` を指定)
 管理者ログイン: `http://localhost:8080/admin/login`(ログイン成功時はコメント管理ダッシュボードへ移動)
 
 ---
@@ -230,8 +237,8 @@ cp src/main/resources/application-local.properties.example \
 - [x] 管理者用取組入力 UI(`/admin/basho/{id}/torikumi` — 日目・地位区分ごとの取組 CRUD)
 - [ ] 決まり手の詳細解説事典
 - [ ] 番付予測シミュレーター
-- [ ] 外部相撲データ API(sumo-api.com)との連携 — *進行中*: ロスター・場所のインポート完了、
-  番付/取組のインポートは実装予定
+- [x] 外部相撲データ API(sumo-api.com)との連携 — ロスター・場所・番付・取組・表彰のインポート
+  (現在は幕内・十両が対象)
 
 ---
 
