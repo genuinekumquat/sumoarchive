@@ -184,7 +184,6 @@ public class DataSeeder implements CommandLineRunner {
 				.isActive(true)
 				.fightingStyle("요츠")
 				.debutDate(LocalDate.of(2016, 3, 1))
-				.photoUrl("/images/rikishi/asanoyama.webp")
 				.build();
 		asanoyama = rikishiRepository.save(asanoyama);
 		
