@@ -675,7 +675,7 @@
         uniqueYearsDesc().forEach(y => {
             const opt = document.createElement('option');
             opt.value = y;
-            opt.textContent = y + '年';
+            opt.textContent = y + (LOCALE === 'ja' ? '年' : '년');
             yearSelect.appendChild(opt);
         });
     }
@@ -689,7 +689,7 @@
             .forEach(b => {
                 const opt = document.createElement('option');
                 opt.value = b.id;
-                opt.textContent = b.monthLabel;
+                opt.textContent = LOCALE === 'ja' ? b.monthLabel : b.monthLabelKr;
                 bashoSelect.appendChild(opt);
             });
     }

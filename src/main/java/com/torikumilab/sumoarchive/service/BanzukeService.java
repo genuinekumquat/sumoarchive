@@ -84,7 +84,8 @@ public class BanzukeService {
 						b.getBashoYear() + "年 " + b.getBashoMonth().getDisplayNameJp(),
 						b.getBashoYear(),
 						b.getBashoMonth().getMonthValue(),
-						b.getBashoMonth().getDisplayNameJp()
+						b.getBashoMonth().getDisplayNameJp(),
+						b.getBashoMonth().getDisplayNameKr()
 				))
 				.toList();
 	}
