@@ -108,6 +108,100 @@ public interface TorikumiRepository extends JpaRepository<TorikumiEntity, Intege
 		Integer getLastDay();
 	}
 
+	// ===== 리키시 프로필 분석 (패배 유형 / 상대 조건별 성적) =====
+
+	// 패배 유형용 - 이 리키시가 진 경기를 (디비전, 결정기술)별로. 부전패는 kimarite가 없어 제외.
+	@Query("""
+    SELECT t.division AS division, t.kimarite AS kimarite, COUNT(t) AS cnt
+    FROM TorikumiEntity t
+    WHERE t.loserRikishiEntity.id = :rikishiId
+      AND t.kimarite IS NOT NULL
+      AND t.isExtraMatch = false
+    GROUP BY t.division, t.kimarite
+""")
+	List<DivisionKimariteCountRow> findLossKimariteByDivision(@Param("rikishiId") Integer rikishiId);
+
+	// 위의 바쇼 시작일 기간 필터 버전
+	@Query("""
+    SELECT t.division AS division, t.kimarite AS kimarite, COUNT(t) AS cnt
+    FROM TorikumiEntity t
+    WHERE t.loserRikishiEntity.id = :rikishiId
+      AND t.kimarite IS NOT NULL
+      AND t.isExtraMatch = false
+      AND t.bashoEntity.startDate BETWEEN :from AND :to
+    GROUP BY t.division, t.kimarite
+""")
+	List<DivisionKimariteCountRow> findLossKimariteByDivisionBetween(@Param("rikishiId") Integer rikishiId,
+																	 @Param("from") LocalDate from,
+																	 @Param("to") LocalDate to);
+
+	// 패배 유형 리그 평균용 - 적재된 전 경기의 (디비전, 결정기술)별 건수
+	@Query("""
+    SELECT t.division AS division, t.kimarite AS kimarite, COUNT(t) AS cnt
+    FROM TorikumiEntity t
+    WHERE t.kimarite IS NOT NULL
+      AND t.isExtraMatch = false
+    GROUP BY t.division, t.kimarite
+""")
+	List<DivisionKimariteCountRow> findKimariteByDivision();
+
+	interface DivisionKimariteCountRow {
+		Division getDivision();
+		String getKimarite();
+		Long getCnt();
+	}
+
+	// 상대 조건별 성적용 - 이 리키시의 정규 대전 한 경기당 한 줄: 상대의 그 바쇼 계급, 체격 차(상대 - 본인, 현재 값), 승패.
+	// 결정전·부전(상대가 실제로 안 붙은 경기)·승자 미정은 제외. 상대 반즈케가 없으면 계급은 null.
+	@Query(value = """
+    SELECT ob.rank_name AS oppRankName,
+           ob.rank_value AS oppRankValue,
+           (o.weight - m.weight) AS weightDiff,
+           (o.height - m.height) AS heightDiff,
+           CASE WHEN t.winner_rikishi_id = :rikishiId THEN 1 ELSE 0 END AS win
+    FROM torikumi t
+    JOIN rikishi m ON m.id = :rikishiId
+    JOIN rikishi o ON o.id = CASE WHEN t.east_rikishi_id = :rikishiId THEN t.west_rikishi_id ELSE t.east_rikishi_id END
+    LEFT JOIN banzuke ob ON ob.basho_id = t.basho_id AND ob.rikishi_id = o.id
+    WHERE (t.east_rikishi_id = :rikishiId OR t.west_rikishi_id = :rikishiId)
+      AND t.is_extra_match = false
+      AND t.result_type <> 'FUZEN'
+      AND t.winner_rikishi_id IS NOT NULL
+""", nativeQuery = true)
+	List<OpponentBoutRow> findOpponentBouts(@Param("rikishiId") Integer rikishiId);
+
+	interface OpponentBoutRow {
+		String getOppRankName();
+		Integer getOppRankValue();
+		Number getWeightDiff();
+		Number getHeightDiff();
+		Number getWin();
+	}
+
+	// 상대 조건별 성적 리그 평균용 - 적재된 정규 대전을 (체중 차, 키 차)별로 묶어 동쪽 승수와 함께.
+	// 차이는 서쪽 - 동쪽 = 동쪽 시점의 "상대 - 본인". 서쪽 시점은 서비스에서 부호를 뒤집어 합산한다.
+	@Query(value = """
+    SELECT (w.weight - e.weight) AS weightDiff,
+           (w.height - e.height) AS heightDiff,
+           COUNT(*) AS bouts,
+           SUM(CASE WHEN t.winner_rikishi_id = t.east_rikishi_id THEN 1 ELSE 0 END) AS eastWins
+    FROM torikumi t
+    JOIN rikishi e ON e.id = t.east_rikishi_id
+    JOIN rikishi w ON w.id = t.west_rikishi_id
+    WHERE t.is_extra_match = false
+      AND t.result_type <> 'FUZEN'
+      AND t.winner_rikishi_id IS NOT NULL
+    GROUP BY weightDiff, heightDiff
+""", nativeQuery = true)
+	List<PhysiqueDiffRow> findPhysiqueDiffStats();
+
+	interface PhysiqueDiffRow {
+		Number getWeightDiff();
+		Number getHeightDiff();
+		Number getBouts();
+		Number getEastWins();
+	}
+
 	// 상대전적(対戦成績)·호시토리표용 - 이 리키시가 동/서 어느 쪽으로 출전했든, 결정전 제외한 통산 전 경기를
 	// 바쇼 시작일 내림차순(최신 바쇼부터) → 같은 바쇼 안에서는 day 오름차순으로.
 	@Query("""

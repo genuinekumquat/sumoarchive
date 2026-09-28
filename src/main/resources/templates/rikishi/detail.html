@@ -21,6 +21,7 @@
             --shu: #a3272c;
             --shu-deep: #7c1d20;
             --shu-faint: rgba(163, 39, 44, 0.10);
+            --ai: #3d5a6c; /* 쪽빛 - 분석 패널의 "강점" 표시 (약점은 --shu) */
         }
 
         * { box-sizing: border-box; }
@@ -416,6 +417,88 @@
             font-family: 'Zen Kaku Gothic New', sans-serif;
             color: var(--sumi-faint);
             font-size: 13px;
+        }
+
+        /* ===== 패배 유형 (키마리테 패널 패배 모드 아래) - 유형마다 두 줄: 이름·판정·수치 / 막대+평균선 ===== */
+        .loss-type {
+            margin-top: 16px;
+            padding-top: 12px;
+            border-top: 1px solid var(--washi-line);
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+        }
+        .loss-type-head {
+            display: flex;
+            align-items: baseline;
+            flex-wrap: wrap;
+            gap: 4px 8px;
+            margin-bottom: 2px;
+        }
+        .loss-type-title { font-size: 12.5px; font-weight: 700; color: var(--sumi); letter-spacing: 1px; }
+        .loss-type-sample {
+            font-size: 10.5px;
+            color: var(--sumi-faint);
+            border: 1px solid var(--washi-line);
+            padding: 1px 6px;
+        }
+        .loss-type-caption { font-size: 10.5px; color: var(--sumi-faint); margin-bottom: 8px; }
+        .loss-type-row { padding: 6px 0; }
+        .loss-type-row + .loss-type-row { border-top: 1px dashed var(--washi-line); }
+        .lt-line { display: flex; align-items: baseline; gap: 6px; font-size: 12px; }
+        .lt-name { color: var(--sumi-soft); }
+        .lt-verdict { font-size: 10.5px; font-weight: 700; padding: 0 5px; border: 1px solid currentColor; }
+        .lt-verdict.weak { color: var(--shu); }
+        .lt-verdict.strong { color: var(--ai); }
+        .lt-nums { margin-left: auto; color: var(--sumi-faint); font-size: 11px; white-space: nowrap; }
+        .lt-nums .lt-pct { color: var(--sumi); font-weight: 700; font-size: 12px; }
+        .lt-track { position: relative; height: 6px; margin-top: 5px; background: var(--washi-panel); }
+        .lt-bar { position: absolute; left: 0; top: 0; bottom: 0; background: var(--sumi-faint); }
+        .loss-type-row.is-weak .lt-bar { background: var(--shu); }
+        .loss-type-row.is-strong .lt-bar { background: var(--ai); }
+        .lt-avg { position: absolute; top: -3px; bottom: -3px; width: 2px; margin-left: -1px; background: var(--sumi); }
+
+        /* ===== 상대 조건별 성적 패널 ===== */
+        .opp-panel { margin-bottom: 28px; padding: 16px 20px 18px; }
+        .opp-tabs { display: inline-flex; margin-bottom: 8px; }
+        .opp-tab {
+            border: 1px solid var(--sumi);
+            background: transparent;
+            color: var(--sumi);
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 11.5px;
+            padding: 4px 12px;
+            cursor: pointer;
+        }
+        .opp-tab + .opp-tab { border-left: none; }
+        .opp-tab:hover { color: var(--shu); }
+        .opp-tab[aria-selected="true"],
+        .opp-tab[aria-selected="true"]:hover { background: var(--sumi); color: var(--washi); }
+        .opp-tab:focus-visible { outline: 2px solid var(--shu); outline-offset: 1px; }
+        .opp-caption { font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 10.5px; color: var(--sumi-faint); margin-bottom: 8px; }
+        .opp-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+        .opp-table th {
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-weight: 400;
+            font-size: 11px;
+            color: var(--sumi-faint);
+            text-align: left;
+            padding: 4px 6px;
+            border-bottom: 1px solid var(--sumi);
+        }
+        .opp-table td { padding: 7px 6px; border-bottom: 1px solid var(--washi-line); vertical-align: middle; }
+        .opp-table .num { text-align: right; white-space: nowrap; font-family: 'Zen Kaku Gothic New', sans-serif; }
+        .opp-table .opp-label { color: var(--sumi-soft); }
+        .opp-winbar { display: flex; align-items: center; gap: 8px; }
+        .opp-winbar-track { position: relative; flex: 1; min-width: 60px; height: 6px; background: var(--washi-panel); }
+        .opp-winbar-fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--sumi-soft); }
+        .opp-winbar-mid { position: absolute; left: 50%; top: -3px; bottom: -3px; width: 1px; background: var(--sumi-faint); }
+        .opp-winbar-pct { width: 3.4em; text-align: right; font-weight: 700; color: var(--sumi); font-family: 'Zen Kaku Gothic New', sans-serif; }
+        .opp-table tr.is-small td { opacity: 0.45; }
+        .opp-note { font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 10.5px; color: var(--sumi-faint); margin-top: 8px; }
+        /* 좁은 화면은 숫자(전적·승률·평균)만 남기고 막대를 뺀다 */
+        @media (max-width: 520px) {
+            .opp-winbar-track { display: none; }
+            .opp-table { font-size: 12px; }
+            .opp-table td, .opp-table th { padding-left: 4px; padding-right: 4px; }
         }
 
         /* ===== 호시토리표(星取表) - 바쇼별 가로 스트립 ===== */
@@ -1024,6 +1107,35 @@
                 <div class="empty-note" id="kimariteModeEmpty" style="display: none;" th:text="#{rikishi.kimarite.empty.mode}">
                     해당 기간에 기록이 없습니다.
                 </div>
+
+                <!-- 패배 유형 - 패배 모드에서만 보임(JS 전환). 막대 = 이 선수 비율, 세로선 = 같은 디비전 평균.
+                     막대 길이는 행들 중 최댓값(scaleMax)을 100%로 잡아 비율 차이가 눈에 띄게 한다. -->
+                <div class="loss-type" id="lossTypeBlock" style="display: none;"
+                     th:if="${lossTypes != null and lossTypes.totalLosses > 0}"
+                     th:with="isJa=${#locale.language == 'ja'}">
+                    <div class="loss-type-head">
+                        <span class="loss-type-title" th:text="#{rikishi.losstype.title(${lossTypes.totalLosses})}">패배 유형 (59패)</span>
+                        <span class="loss-type-sample" th:if="${lossTypes.smallSample}" th:text="#{rikishi.losstype.small}">표본 적음 · 약점·강점 판정 안 함</span>
+                    </div>
+                    <div class="loss-type-caption" th:text="#{rikishi.losstype.caption}">막대는 이 선수, 세로선은 같은 디비전 평균</div>
+                    <div class="loss-type-row" th:each="r : ${lossTypes.rows}"
+                         th:classappend="${r.verdict.name() == 'WEAK'} ? 'is-weak' : (${r.verdict.name() == 'STRONG'} ? 'is-strong' : '')">
+                        <div class="lt-line">
+                            <span class="lt-name" th:text="${isJa} ? ${r.nameJp} : ${r.nameKr}">앞으로 고꾸라짐</span>
+                            <span class="lt-verdict weak" th:if="${r.verdict.name() == 'WEAK'}" th:text="'▲ ' + #{rikishi.losstype.weak}">▲ 약점</span>
+                            <span class="lt-verdict strong" th:if="${r.verdict.name() == 'STRONG'}" th:text="'▼ ' + #{rikishi.losstype.strong}">▼ 강점</span>
+                            <span class="lt-nums">
+                                <span class="lt-pct" th:text="${r.percent} + '%'">42.4%</span>
+                                (<span th:text="${r.count} + (${isJa} ? '敗' : '패')">25패</span>)
+                                · <span th:text="#{rikishi.losstype.avg(${r.averagePercent})}">평균 19.4%</span>
+                            </span>
+                        </div>
+                        <div class="lt-track" aria-hidden="true">
+                            <span class="lt-bar" th:style="'width:' + ${r.percent * 100 / lossTypes.scaleMax} + '%'"></span>
+                            <span class="lt-avg" th:style="'left:' + ${r.averagePercent * 100 / lossTypes.scaleMax} + '%'"></span>
+                        </div>
+                    </div>
+                </div>
                 <div class="chart-note" th:text="#{rikishi.chart.note}">※ 등록된 토리쿠미 결과 기준으로 산출됩니다</div>
             </div>
             <div class="empty-note" th:unless="${hasKimarite}" th:text="#{rikishi.empty.match}">
@@ -1071,6 +1183,69 @@
         <div class="panel-title" th:text="${#locale.language == 'ja'} ? '星取表' : #{rikishi.panel.hoshitori}">星取表</div>
         <div class="empty-note" th:text="#{rikishi.empty.match}">아직 등록된 대전 기록이 없습니다.</div>
     </div>
+
+    <!-- ===== 상대 조건별 성적 - [상대 계급 | 체중 차 | 키 차] 탭. 통산 정규 대전(부전·결정전 제외).
+         체격 탭은 양쪽 현재 키·체중 기준이고 같은 구간의 리그 전체 승률을 같이 보여준다.
+         경기 수가 적은 줄(OpponentConditionDTO.Row.smallSample)은 흐리게. -->
+    <div class="panel opp-panel" th:if="${opponentConditions != null and !opponentConditions.byRank.isEmpty()}"
+         th:with="isJa=${#locale.language == 'ja'}">
+        <div class="panel-title" th:text="#{rikishi.panel.opponent}">상대 조건별 성적</div>
+        <div class="opp-tabs" role="tablist" th:attr="aria-label=#{rikishi.panel.opponent}">
+            <button type="button" class="opp-tab" role="tab" id="opp-tab-rank" aria-controls="opp-pane-rank"
+                    aria-selected="true" data-tab="rank" th:text="#{rikishi.opp.tab.rank}">상대 계급</button>
+            <button type="button" class="opp-tab" role="tab" id="opp-tab-weight" aria-controls="opp-pane-weight"
+                    aria-selected="false" tabindex="-1" data-tab="weight" th:text="#{rikishi.opp.tab.weight}">체중 차</button>
+            <button type="button" class="opp-tab" role="tab" id="opp-tab-height" aria-controls="opp-pane-height"
+                    aria-selected="false" tabindex="-1" data-tab="height" th:text="#{rikishi.opp.tab.height}">키 차</button>
+        </div>
+
+        <div class="opp-pane" role="tabpanel" id="opp-pane-rank" aria-labelledby="opp-tab-rank">
+            <div class="opp-caption" th:text="#{rikishi.opp.caption.rank}">그 바쇼 상대의 반즈케 기준 · 통산 (부전·결정전 제외)</div>
+            <table th:replace="~{this :: oppTable(${opponentConditions.byRank}, false)}"></table>
+        </div>
+        <div class="opp-pane" role="tabpanel" id="opp-pane-weight" aria-labelledby="opp-tab-weight" hidden>
+            <div class="opp-caption" th:text="#{rikishi.opp.caption.physique}">양쪽의 현재 키·체중 기준 · 통산 (부전·결정전 제외)</div>
+            <table th:replace="~{this :: oppTable(${opponentConditions.byWeight}, true)}"></table>
+        </div>
+        <div class="opp-pane" role="tabpanel" id="opp-pane-height" aria-labelledby="opp-tab-height" hidden>
+            <div class="opp-caption" th:text="#{rikishi.opp.caption.physique}">양쪽의 현재 키·체중 기준 · 통산 (부전·결정전 제외)</div>
+            <table th:replace="~{this :: oppTable(${opponentConditions.byHeight}, true)}"></table>
+        </div>
+        <div class="opp-note" th:text="#{rikishi.opp.small}">흐린 줄은 10경기 미만이라 참고용입니다.</div>
+    </div>
+
+    <!-- 상대 조건별 성적 표 한 장 (탭 3개가 공유). showLeague=false면 리그 평균 칸을 "—"로. -->
+    <th:block th:if="${false}">
+        <table class="opp-table" th:fragment="oppTable(rows, showLeague)" th:with="isJa=${#locale.language == 'ja'}">
+            <thead>
+            <tr>
+                <th th:text="#{rikishi.opp.col.opponent}">상대</th>
+                <th class="num" th:text="#{rikishi.opp.col.record}">전적</th>
+                <th th:text="#{rikishi.opp.col.winpct}">승률</th>
+                <th class="num" th:text="#{rikishi.opp.col.league}">리그 평균</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="r : ${rows}" th:classappend="${r.smallSample} ? 'is-small'">
+                <td class="opp-label" th:text="${isJa} ? ${r.labelJp} : ${r.labelKr}">20kg 이상 가벼운 상대</td>
+                <td class="num" th:if="${r.bouts > 0}"
+                    th:text="${isJa} ? (${r.wins} + '勝' + (${r.bouts} - ${r.wins}) + '敗') : (${r.wins} + '승 ' + (${r.bouts} - ${r.wins}) + '패')">12승 8패</td>
+                <td class="num" th:unless="${r.bouts > 0}" th:text="#{rikishi.opp.none}">경기 없음</td>
+                <td>
+                    <div class="opp-winbar" th:if="${r.winPercent != null}">
+                        <span class="opp-winbar-track" aria-hidden="true">
+                            <span class="opp-winbar-fill" th:style="'width:' + ${r.winPercent} + '%'"></span>
+                            <span class="opp-winbar-mid"></span>
+                        </span>
+                        <span class="opp-winbar-pct" th:text="${r.winPercent} + '%'">60.0%</span>
+                    </div>
+                    <span th:unless="${r.winPercent != null}">—</span>
+                </td>
+                <td class="num" th:text="${showLeague and r.leagueWinPercent != null} ? ${r.leagueWinPercent} + '%' : '—'">50.3%</td>
+            </tr>
+            </tbody>
+        </table>
+    </th:block>
 
     <!-- ===== 対戦成績(상대전적) - ko: ㄱㄴㄷ 초성 인덱스로 접어서 나열(초성은 한국어 이름 기준이라
          ja 화면에선 의미가 없어 그룹/인덱스 없이 평평하게 나열).
@@ -1203,6 +1378,32 @@
         if (location.hash) openGroup(location.hash);
     })();
 
+    // ===== 상대 조건별 성적 탭 (WAI-ARIA tabs: 클릭 + 좌우 화살표) =====
+    (function () {
+        const tabs = [...document.querySelectorAll('.opp-tab')];
+        if (tabs.length === 0) return;
+
+        function select(tab, focus) {
+            tabs.forEach(t => {
+                const on = t === tab;
+                t.setAttribute('aria-selected', on ? 'true' : 'false');
+                t.tabIndex = on ? 0 : -1;
+                document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+            });
+            if (focus) tab.focus();
+        }
+
+        tabs.forEach((tab, i) => {
+            tab.addEventListener('click', () => select(tab, false));
+            tab.addEventListener('keydown', e => {
+                if (e.key === 'ArrowRight') select(tabs[(i + 1) % tabs.length], true);
+                else if (e.key === 'ArrowLeft') select(tabs[(i - 1 + tabs.length) % tabs.length], true);
+                else return;
+                e.preventDefault();
+            });
+        });
+    })();
+
     if (document.getElementById('kimariteChart')) {
         // 프로젝트 팔레트(먹색/낙관다홍 계열 + 일본 전통색 톤 4종 추가)로 원형차트 배색.
         const PALETTE = [
@@ -1220,6 +1421,7 @@
         const modeEmpty = document.getElementById('kimariteModeEmpty');
         const modeCaption = document.getElementById('kimariteModeCaption');
         const modeButtons = document.querySelectorAll('.kimarite-mode-btn');
+        const lossTypeBlock = document.getElementById('lossTypeBlock'); // 패배가 없으면 렌더링되지 않음
         const MODE_KEY = 'sumo_kimarite_mode';
         let currentMode = 'win';
         const unitOf = mode => mode === 'loss' ? (isJa ? '敗' : '패') : (isJa ? '勝' : '승');
@@ -1259,6 +1461,7 @@
         function updateChartAndLegend(groupUnder10) {
             const kimariteData = kimariteDataByMode[currentMode];
             modeCaption.textContent = KIMARITE_CAPTION[currentMode];
+            if (lossTypeBlock) lossTypeBlock.style.display = currentMode === 'loss' ? '' : 'none';
             // 한쪽 기록만 없을 수 있음 (예: 기간 내 무패) → 차트 대신 빈 안내
             const empty = kimariteData.length === 0;
             chartBody.style.display = empty ? 'none' : '';

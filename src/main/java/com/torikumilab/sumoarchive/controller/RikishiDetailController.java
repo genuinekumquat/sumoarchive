@@ -4,6 +4,7 @@ import com.torikumilab.sumoarchive.domain.dto.BashoGameLogDTO;
 import com.torikumilab.sumoarchive.domain.dto.HeadToHeadGroupDTO;
 import com.torikumilab.sumoarchive.domain.dto.KimariteStatDTO;
 import com.torikumilab.sumoarchive.domain.dto.RikishiDetailDTO;
+import com.torikumilab.sumoarchive.service.RikishiAnalysisService;
 import com.torikumilab.sumoarchive.service.RikishiDetailService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
@@ -20,9 +21,10 @@ import java.util.List;
 @Controller
 @RequiredArgsConstructor
 public class RikishiDetailController {
-	
+
 	private final RikishiDetailService rikishiDetailService;
-	
+	private final RikishiAnalysisService rikishiAnalysisService;
+
 	@GetMapping("/rikishi/{id}")
 	public String detail(@PathVariable Integer id,
 						  @RequestParam(required = false) Integer fromBasho,
@@ -37,6 +39,9 @@ public class RikishiDetailController {
 		model.addAttribute("rikishi", rikishi);
 		model.addAttribute("kimariteStats", kimariteStats);
 		model.addAttribute("kimariteLossStats", kimariteLossStats);
+		// 패배 유형은 키마리테 차트(패배 모드) 아래에 붙으므로 같은 기간 필터를 따른다. 상대 조건별 성적은 통산.
+		model.addAttribute("lossTypes", rikishiAnalysisService.getLossTypes(id, fromBasho, toBasho));
+		model.addAttribute("opponentConditions", rikishiAnalysisService.getOpponentConditions(id));
 		model.addAttribute("gameLog", gameLog);
 		model.addAttribute("headToHeadGroups", headToHeadGroups);
 		// 결정기술 차트 기간 필터 select 기본 선택값 유지용 (없으면 "전체" 옵션이 선택됨)

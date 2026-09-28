@@ -30,4 +30,20 @@ public interface BashoRepository extends JpaRepository<BashoEntity, Integer> {
 	Optional<BashoEntity> findByExternalBashoId(String externalBashoId);
 
 	List<BashoEntity> findByBashoYearOrderByStartDateAsc(Integer bashoYear);
+
+	/**
+	 * 리키시 상세 "기간 필터"용 - 두 바쇼 id → [이른 시작일, 늦은 시작일] (순서가 뒤바뀌어 와도 보정).
+	 * 하나라도 null이거나 못 찾으면 null (= 통산).
+	 */
+	default LocalDate[] findStartDateRange(Integer fromBashoId, Integer toBashoId) {
+		if (fromBashoId == null || toBashoId == null) {
+			return null;
+		}
+		LocalDate d1 = findById(fromBashoId).map(BashoEntity::getStartDate).orElse(null);
+		LocalDate d2 = findById(toBashoId).map(BashoEntity::getStartDate).orElse(null);
+		if (d1 == null || d2 == null) {
+			return null;
+		}
+		return d1.isBefore(d2) ? new LocalDate[]{d1, d2} : new LocalDate[]{d2, d1};
+	}
 }
