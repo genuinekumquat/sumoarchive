@@ -232,6 +232,9 @@ docker exec -i sumoarchive-db mysql -u root -p<ROOT_PASS> sumo < backup_20260924
 - [x] **클라이언트 IP 위조 방지**: X-Forwarded-For는 신뢰 프록시를 거친 경우만 반영 (`server.forward-headers-strategy=native`)
 - [x] **관리자 로그인 보강**: 로그인 시 세션 ID 교체(세션 고정 방지), 일정 시간 비교, 관리자 POST에 CSRF 토큰 필수
 - [x] **Docker 노출 최소화**: 앱 포트는 `127.0.0.1:8080`에만 바인딩, `ADMIN_PASSWORD`는 기본값 없이 `.env` 필수
+- [x] **검색 노출**: 페이지 설명·OG·파비콘(`fragments/common :: seo`), 검색·즐겨찾기·에러 페이지 noindex, `/robots.txt`·`/sitemap.xml`(요청 주소 기준으로 생성 - Nginx가 `Host`·`X-Forwarded-Proto`를 넘겨야 https 도메인으로 나옴)
+- [x] **출처·면책**: 공개 페이지 푸터에 sumo-api.com 출처와 "日本相撲協会와 무관한 개인 팬 사이트" 문구 (`fragments/common :: footerNote`)
+- [ ] **배포 후 검색 등록**: Google Search Console·네이버 서치어드바이저에 사이트 등록 후 `https://도메인/sitemap.xml` 제출
 - [ ] **DB 비밀번호**: compose의 `SPRING_DATASOURCE_PASSWORD`·`MYSQL_ROOT_PASSWORD` 기본값 대신 `.env`에 강한 값 설정 (DB 포트는 외부에 열지 않음)
 - [x] **시크릿 환경변수화**: DB 및 어드민 비밀번호를 `.env` 또는 서버 환경변수로 관리
 - [x] **데이터 안전성 확보**: 로스터 임포트 시 `wipeExisting()` 제거 및 `Upsert` 전환 완료

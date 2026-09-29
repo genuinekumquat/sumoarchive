@@ -13,7 +13,11 @@ import java.util.Optional;
 
 @Repository
 public interface BanzukeRepository extends JpaRepository<BanzukeEntity, Integer> {
-	
+
+	/** sitemap.xml용: 해당 지위(마쿠우치·쥬료)로 반즈케에 한 번이라도 오른 리키시 id */
+	@Query("SELECT DISTINCT b.rikishiEntity.id FROM BanzukeEntity b WHERE b.division IN :divisions ORDER BY b.rikishiEntity.id")
+	List<Integer> findDistinctRikishiIdsByDivisionIn(@Param("divisions") Collection<Division> divisions);
+
 	@Query("""
         SELECT b FROM BanzukeEntity b
         JOIN FETCH b.rikishiEntity r
