@@ -15,6 +15,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * 1) 익명 댓글 작성: 3초 쿨다운 & 1분당 최대 5건 (도배 방지)
  * 2) 익명 댓글 삭제: 5분 내 최대 5회 비밀번호 오류 허용 (4자리 PIN 무차별 대입 방어)
+ *    + 댓글 하나당 1시간 내 10회 오류 시 그 댓글 삭제를 잠금 (IP를 바꿔 가며 시도하는 경우 방어)
  * 3) 관리자 로그인: 5분 내 최대 5회 실패 허용 (무차별 대입 방어)
  */
 @Service
@@ -22,6 +23,7 @@ public class RateLimiterService {
 
 	private final Map<String, Deque<Long>> commentPostHistory = new ConcurrentHashMap<>();
 	private final Map<String, Deque<Long>> commentDeleteFailHistory = new ConcurrentHashMap<>();
+	private final Map<Integer, Deque<Long>> commentPinFailHistory = new ConcurrentHashMap<>();
 	private final Map<String, Deque<Long>> adminLoginFailHistory = new ConcurrentHashMap<>();
 
 	private static final long COMMENT_COOLDOWN_MILLIS = 3_000;      // 3초 최소 간격
@@ -30,6 +32,12 @@ public class RateLimiterService {
 
 	private static final long FAIL_WINDOW_MILLIS = 300_000;         // 5분
 	private static final int FAIL_MAX = 5;                          // 5분 내 5회 실패
+
+	// 댓글 단위 잠금: IP 제한만으로는 IP를 여러 개 쓰거나, 자기 댓글을 지워 IP 실패 기록을 초기화하면서
+	// 1만 개 조합을 다 시도할 수 있다. 댓글 하나에는 IP와 상관없이 1시간에 10번까지만 틀릴 수 있게 한다
+	// (다 맞히려면 평균 500시간). 작성자 본인도 잠금 동안은 못 지우므로 관리자 블라인드로 처리한다.
+	private static final long COMMENT_LOCK_WINDOW_MILLIS = 3_600_000; // 1시간
+	private static final int COMMENT_LOCK_FAIL_MAX = 10;               // 1시간 내 10회 실패
 
 	// ===== 1. 댓글 작성 =====
 
@@ -58,7 +66,7 @@ public class RateLimiterService {
 
 	// ===== 2. 댓글 삭제 (PIN 무차별 대입 방어) =====
 
-	public synchronized void checkCommentDeleteAllowed(String clientIp) {
+	public synchronized void checkCommentDeleteAllowed(String clientIp, Integer commentId) {
 		long now = System.currentTimeMillis();
 		Deque<Long> fails = commentDeleteFailHistory.computeIfAbsent(clientIp, k -> new ArrayDeque<>());
 
@@ -69,12 +77,22 @@ public class RateLimiterService {
 		if (fails.size() >= FAIL_MAX) {
 			throw new RateLimitExceededException("비밀번호 입력 시도가 너무 많습니다. 5분 후 다시 시도해 주세요.");
 		}
+
+		Deque<Long> commentFails = commentPinFailHistory.computeIfAbsent(commentId, k -> new ArrayDeque<>());
+		while (!commentFails.isEmpty() && now - commentFails.peekFirst() > COMMENT_LOCK_WINDOW_MILLIS) {
+			commentFails.pollFirst();
+		}
+
+		if (commentFails.size() >= COMMENT_LOCK_FAIL_MAX) {
+			throw new RateLimitExceededException("이 댓글은 비밀번호 오류가 너무 많아 잠시 삭제할 수 없습니다. 최대 1시간 후 다시 시도해 주세요.");
+		}
 	}
 
-	public synchronized void recordCommentDeleteFailure(String clientIp) {
+	public synchronized void recordCommentDeleteFailure(String clientIp, Integer commentId) {
 		long now = System.currentTimeMillis();
 		Deque<Long> fails = commentDeleteFailHistory.computeIfAbsent(clientIp, k -> new ArrayDeque<>());
 		fails.addLast(now);
+		commentPinFailHistory.computeIfAbsent(commentId, k -> new ArrayDeque<>()).addLast(now);
 	}
 
 	public synchronized void recordCommentDeleteSuccess(String clientIp) {
@@ -113,10 +131,11 @@ public class RateLimiterService {
 		long now = System.currentTimeMillis();
 		pruneMap(commentPostHistory, now, COMMENT_POST_WINDOW_MILLIS);
 		pruneMap(commentDeleteFailHistory, now, FAIL_WINDOW_MILLIS);
+		pruneMap(commentPinFailHistory, now, COMMENT_LOCK_WINDOW_MILLIS);
 		pruneMap(adminLoginFailHistory, now, FAIL_WINDOW_MILLIS);
 	}
 
-	private void pruneMap(Map<String, Deque<Long>> map, long now, long window) {
+	private <K> void pruneMap(Map<K, Deque<Long>> map, long now, long window) {
 		map.entrySet().removeIf(entry -> {
 			Deque<Long> q = entry.getValue();
 			while (!q.isEmpty() && now - q.peekFirst() > window) {

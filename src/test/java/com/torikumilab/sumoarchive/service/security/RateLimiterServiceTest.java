@@ -36,21 +36,65 @@ class RateLimiterServiceTest {
 	@DisplayName("댓글 삭제: 5분 내 5회 비밀번호 오류 누적 시 삭제 시도 차단")
 	void commentDelete_whenFailLimitReached_blocksFurtherAttempts() {
 		String ip = "192.168.1.101";
+		Integer commentId = 1;
 
 		// 4회 실패 기록
 		for (int i = 0; i < 4; i++) {
-			rateLimiterService.recordCommentDeleteFailure(ip);
-			assertThatCode(() -> rateLimiterService.checkCommentDeleteAllowed(ip))
+			rateLimiterService.recordCommentDeleteFailure(ip, commentId);
+			assertThatCode(() -> rateLimiterService.checkCommentDeleteAllowed(ip, commentId))
 					.doesNotThrowAnyException();
 		}
 
 		// 5회째 실패 기록
-		rateLimiterService.recordCommentDeleteFailure(ip);
+		rateLimiterService.recordCommentDeleteFailure(ip, commentId);
 
-		// 이후 삭제 시도 시 차단
-		assertThatThrownBy(() -> rateLimiterService.checkCommentDeleteAllowed(ip))
+		// 이후 삭제 시도 시 차단 (다른 댓글이어도 같은 IP면 차단)
+		assertThatThrownBy(() -> rateLimiterService.checkCommentDeleteAllowed(ip, 2))
 				.isInstanceOf(RateLimitExceededException.class)
 				.hasMessageContaining("비밀번호 입력 시도가 너무 많습니다");
+	}
+
+	@Test
+	@DisplayName("댓글 삭제: IP를 바꿔 가며 한 댓글에 10회 틀리면 어느 IP에서든 그 댓글 삭제 차단")
+	void commentDelete_whenOneCommentFailsTenTimesAcrossIps_locksThatComment() {
+		Integer target = 10;
+
+		// IP 10개에서 한 번씩 (IP별 한도 5회에는 걸리지 않음)
+		for (int i = 0; i < 10; i++) {
+			String ip = "10.0.0." + i;
+			assertThatCode(() -> rateLimiterService.checkCommentDeleteAllowed(ip, target))
+					.doesNotThrowAnyException();
+			rateLimiterService.recordCommentDeleteFailure(ip, target);
+		}
+
+		// 처음 보는 IP여도 그 댓글은 잠김
+		assertThatThrownBy(() -> rateLimiterService.checkCommentDeleteAllowed("10.0.1.1", target))
+				.isInstanceOf(RateLimitExceededException.class)
+				.hasMessageContaining("이 댓글은 비밀번호 오류가 너무 많아");
+
+		// 다른 댓글은 영향 없음
+		assertThatCode(() -> rateLimiterService.checkCommentDeleteAllowed("10.0.1.1", 11))
+				.doesNotThrowAnyException();
+	}
+
+	@Test
+	@DisplayName("댓글 삭제: 자기 댓글 삭제 성공으로 IP 실패 기록을 초기화해도 댓글별 잠금은 유지")
+	void commentDelete_whenIpCounterResetBySuccess_commentLockStillApplies() {
+		String ip = "192.168.1.104";
+		Integer target = 20;
+
+		// 4회 틀리고 → 자기 댓글 삭제 성공으로 IP 기록 초기화, 를 반복해 10회 누적
+		for (int i = 0; i < 10; i++) {
+			rateLimiterService.recordCommentDeleteFailure(ip, target);
+			if (i % 4 == 3) {
+				rateLimiterService.recordCommentDeleteSuccess(ip);
+			}
+		}
+		rateLimiterService.recordCommentDeleteSuccess(ip);
+
+		assertThatThrownBy(() -> rateLimiterService.checkCommentDeleteAllowed(ip, target))
+				.isInstanceOf(RateLimitExceededException.class)
+				.hasMessageContaining("이 댓글은 비밀번호 오류가 너무 많아");
 	}
 
 	@Test

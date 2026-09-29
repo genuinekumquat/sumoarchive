@@ -47,7 +47,7 @@ public class TorikumiCommentApiController {
 		return ResponseEntity.status(HttpStatus.CREATED).body(comments);
 	}
 
-	/** 작성자 본인 삭제 (비밀번호 4자리 검증 + 무차별 대입 방어). */
+	/** 작성자 본인 삭제 (비밀번호 4자리 검증 + 무차별 대입 방어: IP별 5분 5회, 댓글별 1시간 10회). */
 	@PostMapping("/{commentId}/delete")
 	public List<CommentDTO> delete(
 			@PathVariable Integer torikumiId,
@@ -56,13 +56,13 @@ public class TorikumiCommentApiController {
 			HttpServletRequest request
 	) {
 		String clientIp = ClientIpResolver.getClientIp(request);
-		rateLimiterService.checkCommentDeleteAllowed(clientIp);
+		rateLimiterService.checkCommentDeleteAllowed(clientIp, commentId);
 		try {
 			List<CommentDTO> result = commentService.deleteByUser(torikumiId, commentId, password);
 			rateLimiterService.recordCommentDeleteSuccess(clientIp);
 			return result;
 		} catch (PasswordMismatchException e) {
-			rateLimiterService.recordCommentDeleteFailure(clientIp);
+			rateLimiterService.recordCommentDeleteFailure(clientIp, commentId);
 			throw e;
 		}
 	}
