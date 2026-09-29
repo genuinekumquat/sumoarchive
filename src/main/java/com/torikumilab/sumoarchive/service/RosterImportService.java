@@ -140,7 +140,8 @@ public class RosterImportService {
 
 		boolean isActive = (api.intai() == null || api.intai().isBlank());
 		LocalDate retired = parseIsoDate(api.intai(), api, "intai", new ArrayList<>());
-		String shikonaKr = ShikonaKrTransliterator.fromRomaji(api.shikonaEn());
+		// 은퇴자 단건 응답의 shikonaEn은 "Hakuho Sho"처럼 본명이 붙어 와서, 통째로 음차하면 "하쿠호쇼"가 된다 → 시코나 부분만.
+		String shikonaKr = ShikonaKrTransliterator.fromRomaji(firstToken(api.shikonaEn()));
 
 		RikishiEntity entity = RikishiEntity.builder()
 				.externalApiId((int) api.id())

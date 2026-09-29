@@ -108,15 +108,18 @@ public class RikishiDetailService {
 		// sumo-api 임포트 직후엔 한국어 시코나가 아직 없어서 일본어/로마자로 대체 (관리자가 채우기 전까지)
 		String shikonaKr = r.getShikonaKr() != null ? r.getShikonaKr()
 				: (r.getShikonaJp() != null ? r.getShikonaJp() : r.getShikonaEn());
+		// sumo-api에 한자 시코나가 없는 은퇴자(2019~ 과거 바쇼 임포트로 추가)는 일본어 화면에서 로마자로 대체
+		// (호시토리표·상대전적의 opponentDisplayNameJp와 같은 규칙)
+		String shikonaJp = r.getShikonaJp() != null ? r.getShikonaJp() : firstToken(r.getShikonaEn());
 
 		String fightingStyleJp = r.getFightingStyle() != null ? FIGHTING_STYLE_JP.get(r.getFightingStyle()) : null;
 
 		return RikishiDetailDTO.builder()
 				.id(r.getId())
 				.shikonaKr(shikonaKr)
-				.shikonaJp(r.getShikonaJp())
+				.shikonaJp(shikonaJp)
 				.shikonaFullKr(withGivenName(shikonaKr, r.getGivenNameKr()))
-				.shikonaFullJp(withGivenName(r.getShikonaJp(), r.getGivenNameJp()))
+				.shikonaFullJp(withGivenName(shikonaJp, r.getGivenNameJp()))
 				.name(r.getName())
 				.birthdate(r.getBirthdate())
 				.age(age)
