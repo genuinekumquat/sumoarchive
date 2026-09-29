@@ -50,11 +50,13 @@ public class RikishiDetailDTO {
 	private String oyakataNameKr;      // 오야카타 아니면 null
 	private String oyakataNameJp;      // 일본어 화면용. 오야카타 아니면 null
 
-	private String photoUrl; // 없으면 null → 화면에서 시코나 첫 글자 플레이스홀더로 대체
+	private String photoUrl; // 현재 프로필 화면엔 표시하지 않음(저작권 문제로 사진 칸 제거). 자유 라이선스 사진을 쓰게 되면 다시 사용
 
 	// 최신 반즈케 기준 표시용 (은퇴/오야카타면 null)
 	private String sideDisplay; // "東" / "西"
 	private String rankDisplay; // "前頭10枚目", "横綱" 등
+	private String sideDisplayKr; // "동" / "서" (한국어 화면용)
+	private String rankDisplayKr; // "마에가시라10", "요코즈나" 등 (한국어 화면용)
 
 	private List<ShikonaHistoryItemDTO> shikonaHistory; // 과거 시코나만, 오래된 순
 

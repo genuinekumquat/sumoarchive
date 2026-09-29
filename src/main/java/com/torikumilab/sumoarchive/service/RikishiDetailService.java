@@ -141,6 +141,8 @@ public class RikishiDetailService {
 				.photoUrl(r.getPhotoUrl())
 				.sideDisplay(latest != null ? RankDisplayUtil.sideDisplay(latest.getSide()) : null)
 				.rankDisplay(latest != null ? RankDisplayUtil.rankDisplay(latest.getRankName(), latest.getRankValue()) : null)
+				.sideDisplayKr(latest != null ? RankDisplayUtil.sideDisplayKorean(latest.getSide()) : null)
+				.rankDisplayKr(latest != null ? RankDisplayUtil.rankDisplayKorean(latest.getRankName(), latest.getRankValue()) : null)
 				.shikonaHistory(history)
 				.totalWins(wins)
 				.totalLosses(losses)

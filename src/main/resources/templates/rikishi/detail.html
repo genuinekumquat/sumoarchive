@@ -196,42 +196,42 @@
             color: var(--sumi);
         }
 
-        /* 사진 없을 때(photoUrl null) 대체 낙관 플레이스홀더 */
-        .photo-slot {
-            flex-shrink: 0;
-            width: 300px;
-            /* 고정 height 대신 옆 정보 테이블 높이에 맞춰 늘어남 (.profile-inner의 align-items: stretch) */
-            border: 1px solid var(--sumi);
-            background: var(--washi-panel);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
+        /* 핵심 요약 줄 (통산 전적 / 최근 바쇼 / 최고위) */
+        .profile-summary {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            border-top: 1px solid var(--sumi);
+            border-bottom: 1px solid var(--sumi);
+            margin-bottom: 18px;
         }
-        .photo-slot img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            object-position: top;
+        .summary-cell { padding: 12px 14px; min-width: 0; }
+        .summary-cell + .summary-cell { border-left: 1px solid var(--washi-line); }
+        .summary-label {
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 11.5px;
+            letter-spacing: 1px;
+            color: var(--sumi-faint);
+            margin-bottom: 4px;
         }
-        .photo-placeholder {
-            font-family: 'Yuji Syuku', serif;
-            font-size: 160px;
-            color: var(--shu);
-            opacity: 0.85;
+        .summary-value {
+            font-family: 'Noto Serif KR', serif;
+            font-weight: 600;
+            font-size: 19px;
+            color: var(--sumi);
         }
-        .photo-slot::before {
-            content: '';
-            position: absolute;
-            inset: 8px;
-            border: 1px solid var(--washi-line);
-            pointer-events: none;
+        .summary-value.empty { font-size: 14px; font-weight: 400; color: var(--sumi-faint); }
+        .summary-sub {
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 11.5px;
+            color: var(--sumi-soft);
+            margin-top: 3px;
         }
 
         @media (max-width: 620px) {
-            .profile-inner { flex-direction: column-reverse; align-items: stretch; }
-            .photo-slot { width: 100%; height: 280px; }
             .shikona-main { font-size: 30px; }
+            .profile-summary { grid-template-columns: 1fr; }
+            .summary-cell { padding: 10px 4px; }
+            .summary-cell + .summary-cell { border-left: none; border-top: 1px solid var(--washi-line); }
         }
 
         /* ===== 하단 2단 (커리어 레코드 / 키마리테 차트) ===== */
@@ -966,8 +966,11 @@
                     <span class="shikona-main" th:if="${#locale.language == 'ja'}" th:text="${rikishi.shikonaFullJp}">시코나</span>
                     <span class="shikona-main" th:unless="${#locale.language == 'ja'}" th:text="${rikishi.shikonaFullKr}">시코나</span>
                     <span class="rank-display"
-                          th:if="${rikishi.isActive and rikishi.rankDisplay != null}"
+                          th:if="${rikishi.isActive and rikishi.rankDisplay != null and #locale.language == 'ja'}"
                           th:text="${rikishi.sideDisplay} + ' ' + ${rikishi.rankDisplay}">東 前頭10枚目</span>
+                    <span class="rank-display"
+                          th:if="${rikishi.isActive and rikishi.rankDisplayKr != null and #locale.language != 'ja'}"
+                          th:text="${rikishi.sideDisplayKr} + ' ' + ${rikishi.rankDisplayKr}">동 마에가시라10</span>
                     <span class="rank-display" th:if="${!rikishi.isActive and #locale.language == 'ja'}"
                           th:text="${rikishi.oyakataNameJp} != null ? (${rikishi.oyakataNameJp} + #{rikishi.oyakata.label}) : #{rikishi.retired}">引退</span>
                     <span class="rank-display" th:if="${!rikishi.isActive and #locale.language != 'ja'}"
@@ -987,6 +990,34 @@
                     <span class="period">(현재)</span>
                 </div>
                 <div th:unless="${rikishi.shikonaHistory != null and !rikishi.shikonaHistory.isEmpty() and #locale.language != 'ja'}" class="shikona-spacer"></div>
+
+                <!-- 핵심 요약 줄: 통산 전적 / 최근 바쇼 / 최고위 (현재 계급은 시코나 옆에 표시) -->
+                <div class="profile-summary" th:with="ja=${#locale.language == 'ja'}, decided=${rikishi.totalWins + rikishi.totalLosses}">
+                    <div class="summary-cell">
+                        <div class="summary-label" th:text="${ja} ? '通算成績' : '통산 전적'">통산 전적</div>
+                        <div class="summary-value" th:if="${ja}"
+                             th:text="${rikishi.totalWins} + '勝' + ${rikishi.totalLosses} + '敗' + (${rikishi.totalAbsences} > 0 ? ${rikishi.totalAbsences} + '休' : '')">109勝55敗</div>
+                        <div class="summary-value" th:unless="${ja}"
+                             th:text="${rikishi.totalWins} + '승 ' + ${rikishi.totalLosses} + '패' + (${rikishi.totalAbsences} > 0 ? ' ' + ${rikishi.totalAbsences} + '휴' : '')">109승 55패</div>
+                        <div class="summary-sub" th:if="${decided > 0}"
+                             th:text="${(ja ? '勝率 ' : '승률 ') + #numbers.formatDecimal(rikishi.totalWins * 100.0 / decided, 1, 1) + '% · ' + rikishi.totalBasho + (ja ? '場所' : '바쇼')}">승률 66.5% · 11바쇼</div>
+                    </div>
+                    <div class="summary-cell">
+                        <div class="summary-label" th:text="${ja} ? '直近の場所' : '최근 바쇼'">최근 바쇼</div>
+                        <th:block th:if="${recentBasho != null}">
+                            <div class="summary-value" th:text="${ja} ? ${recentBasho.recordSummary} : ${recentBasho.recordSummaryKr}">9승 6패</div>
+                            <div class="summary-sub" th:text="${ja ? recentBasho.bashoLabel + ' · ' + recentBasho.rankDisplay : recentBasho.bashoLabelKr + ' · ' + recentBasho.rankDisplayKr}">2026년 9월 아키바쇼 · 동 오제키1</div>
+                        </th:block>
+                        <div class="summary-value empty" th:if="${recentBasho == null}" th:text="${ja} ? '記録なし' : '기록 없음'">기록 없음</div>
+                    </div>
+                    <div class="summary-cell">
+                        <div class="summary-label" th:text="#{rikishi.label.highestrank}">최고위</div>
+                        <!-- highest_rank는 관리자가 직접 입력하는 값이라 비어 있는 리키시가 많음 -->
+                        <div class="summary-value" th:if="${!#strings.isEmpty(rikishi.highestRank)}"
+                             th:text="${ja} ? ${rikishi.highestRankJp} : ${rikishi.highestRank}">오제키</div>
+                        <div class="summary-value empty" th:if="${#strings.isEmpty(rikishi.highestRank)}" th:text="${ja} ? '記録なし' : '기록 없음'">기록 없음</div>
+                    </div>
+                </div>
 
                 <table class="info-table">
                     <tr>
@@ -1027,26 +1058,11 @@
                         <th th:text="#{rikishi.label.debut}">데뷔</th>
                         <td th:text="${rikishi.debutDate} != null ? ${#temporals.format(rikishi.debutDate, 'yyyy.MM')} : #{rikishi.value.noinfo}">2016.03</td>
                     </tr>
-                    <tr>
-                        <th th:text="#{rikishi.label.highestrank}">최고위</th>
-                        <td th:if="${#locale.language == 'ja'}" th:text="${rikishi.highestRankJp}">Ozeki</td>
-                        <td th:unless="${#locale.language == 'ja'}" th:text="${rikishi.highestRank}">Ozeki</td>
-                    </tr>
                     <tr th:if="${rikishi.retiredDate != null}">
                         <th th:text="#{rikishi.label.retireddate}">은퇴</th>
                         <td th:text="${#temporals.format(rikishi.retiredDate, 'yyyy.MM.dd')}">2025.01.13</td>
                     </tr>
                 </table>
-            </div>
-
-            <!-- 사진 자리: photoUrl 있으면 <img>, 없으면 시코나 첫 글자 낙관 플레이스홀더 -->
-            <div class="photo-slot">
-                <img th:if="${rikishi.photoUrl != null}" th:src="${rikishi.photoUrl}"
-                     th:alt="${#locale.language == 'ja'} ? ${rikishi.shikonaJp} : ${rikishi.shikonaKr}">
-                <span class="photo-placeholder" th:if="${rikishi.photoUrl == null and #locale.language == 'ja'}"
-                      th:text="${#strings.substring(rikishi.shikonaJp, 0, 1)}">朝</span>
-                <span class="photo-placeholder" th:if="${rikishi.photoUrl == null and #locale.language != 'ja'}"
-                      th:text="${#strings.substring(rikishi.shikonaKr, 0, 1)}">朝</span>
             </div>
 
         </div>
