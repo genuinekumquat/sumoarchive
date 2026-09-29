@@ -235,7 +235,7 @@ docker exec -i sumoarchive-db mysql -u root -p<ROOT_PASS> sumo < backup_20260924
 - [x] **검색 노출**: 페이지 설명·OG·파비콘(`fragments/common :: seo`), 검색·즐겨찾기·에러 페이지 noindex, `/robots.txt`·`/sitemap.xml`(요청 주소 기준으로 생성 - Nginx가 `Host`·`X-Forwarded-Proto`를 넘겨야 https 도메인으로 나옴)
 - [x] **출처·면책**: 공개 페이지 푸터에 sumo-api.com 출처와 "日本相撲協会와 무관한 개인 팬 사이트" 문구 (`fragments/common :: footerNote`)
 - [ ] **배포 후 검색 등록**: Google Search Console·네이버 서치어드바이저에 사이트 등록 후 `https://도메인/sitemap.xml` 제출
-- [ ] **DB 비밀번호**: compose의 `SPRING_DATASOURCE_PASSWORD`·`MYSQL_ROOT_PASSWORD` 기본값 대신 `.env`에 강한 값 설정 (DB 포트는 외부에 열지 않음)
+- [x] **DB 비밀번호**: compose에 `SPRING_DATASOURCE_PASSWORD`·`MYSQL_ROOT_PASSWORD` 기본값 없음 - `.env`에 없으면 시작 거부 (DB 포트는 외부에 열지 않음)
 - [x] **시크릿 환경변수화**: DB 및 어드민 비밀번호를 `.env` 또는 서버 환경변수로 관리
 - [x] **데이터 안전성 확보**: 로스터 임포트 시 `wipeExisting()` 제거 및 `Upsert` 전환 완료
 - [x] **보안 가드 탑재**: 익명 댓글 3초 쿨다운 & 1분 5회 제한, 관리자 로그인 5회 실패 차단, 세션 쿠키 SameSite=Lax 및 HttpOnly 적용

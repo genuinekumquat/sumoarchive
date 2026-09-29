@@ -13,9 +13,9 @@ services:
       - PORT=8080
       - SPRING_DATASOURCE_URL=jdbc:mysql://db:3306/sumo?useSSL=false&characterEncoding=UTF-8&serverTimezone=Asia/Seoul&allowPublicKeyRetrieval=true
       - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME:-sumo}
-      - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD:-sumo_password}
+      - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD:?.env에 SPRING_DATASOURCE_PASSWORD를 설정하세요}
       - ADMIN_USERNAME=${ADMIN_USERNAME:-torikumiAdmin}
-      # 기본값 없음: .env에 ADMIN_PASSWORD가 없으면 compose가 시작을 거부한다 (공개 저장소에 적힌 비밀번호로 운영되는 것 방지)
+      # 비밀번호는 모두 기본값 없음: .env에 없으면 compose가 시작을 거부한다 (공개 저장소에 적힌 비밀번호로 운영되는 것 방지)
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:?.env에 ADMIN_PASSWORD를 설정하세요}
     depends_on:
       db:
@@ -29,8 +29,8 @@ services:
     environment:
       - MYSQL_DATABASE=sumo
       - MYSQL_USER=${SPRING_DATASOURCE_USERNAME:-sumo}
-      - MYSQL_PASSWORD=${SPRING_DATASOURCE_PASSWORD:-sumo_password}
-      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-root_password}
+      - MYSQL_PASSWORD=${SPRING_DATASOURCE_PASSWORD:?.env에 SPRING_DATASOURCE_PASSWORD를 설정하세요}
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:?.env에 MYSQL_ROOT_PASSWORD를 설정하세요}
     volumes:
       - sumo_db_data:/var/lib/mysql
     healthcheck:

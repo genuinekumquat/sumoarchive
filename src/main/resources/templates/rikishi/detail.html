@@ -1630,11 +1630,17 @@
                 const color = (k.name === '기타' || k.name === 'その他')
                     ? ETC_COLOR
                     : PALETTE[i % PALETTE.length];
-                row.innerHTML = `
-                    <span class="swatch" style="background:${color}"></span>
-                    <span class="kname">${k.name}</span>
-                    <span class="kpct">${k.count}${unitOf(currentMode)} · ${k.percent}%</span>
-                `;
+                // 기술 이름은 외부 데이터라 innerHTML 대신 textContent로 넣는다.
+                const swatch = document.createElement('span');
+                swatch.className = 'swatch';
+                swatch.style.background = color;
+                const name = document.createElement('span');
+                name.className = 'kname';
+                name.textContent = k.name;
+                const pct = document.createElement('span');
+                pct.className = 'kpct';
+                pct.textContent = `${k.count}${unitOf(currentMode)} · ${k.percent}%`;
+                row.append(swatch, name, pct);
                 legend.appendChild(row);
             });
         }
