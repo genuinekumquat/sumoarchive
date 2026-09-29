@@ -120,7 +120,33 @@ ADMIN_PASSWORD=강력한_관리자_비밀번호_입력!
 
 ---
 
-## 4. Nginx 리버스 프록시 및 SSL 설정
+## 4. 데이터베이스 스키마(Flyway)와 초기 데이터
+
+### 1) 스키마는 Flyway가 만든다
+- 마이그레이션 파일: `src/main/resources/db/migration/V{번호}__{설명}.sql`
+- 앱이 뜰 때 Flyway가 아직 적용 안 된 버전을 순서대로 실행하고, 이어서 Hibernate가 엔티티와 테이블이 맞는지 검사(`ddl-auto=validate`)한다.
+- **빈 DB**: `V1__init_schema.sql`부터 실행돼 테이블이 생성된다. 운영 DB는 별도로 CREATE TABLE 할 필요 없음.
+- **Flyway 도입 전부터 테이블이 있던 DB**(로컬 등): 첫 기동 시 "V1까지 적용됨"으로 표시(baseline)만 하고 데이터는 건드리지 않는다.
+- 엔티티에 컬럼을 추가/변경하면 반드시 `V2__add_xxx.sql` 같은 새 파일을 만든다. 이미 적용된 V 파일은 수정하지 않는다(체크섬이 달라져 기동 실패).
+
+### 2) 로컬 데이터를 운영으로 옮기기 (최초 1회)
+한국어 표기 검수, 헤야·이치몬, 과거 바쇼 임포트 결과는 로컬 DB에만 있으므로 처음 배포할 때 데이터를 덤프해서 넣는다.
+
+```bash
+# (로컬) 데이터만 덤프 - 스키마·flyway 이력·댓글 제외
+MYSQL_PWD=<로컬 비밀번호> ./scripts/export-data.sh sumo-data.sql
+
+# (서버) 앱을 한 번 띄워 Flyway가 테이블을 만들게 한 뒤, 데이터를 넣는다
+docker compose up -d
+docker exec -i sumoarchive-db mysql -u root -p<ROOT_PASS> --default-character-set=utf8mb4 sumo < sumo-data.sql
+
+# 반즈케·바쇼 목록은 캐시되므로 데이터를 넣은 뒤 앱을 재시작해야 화면에 반영된다
+docker compose restart app
+```
+
+---
+
+## 5. Nginx 리버스 프록시 및 SSL 설정
 
 ### 1) Nginx 설정 파일 (`/etc/nginx/sites-available/sumoarchive`)
 
@@ -183,7 +209,7 @@ sudo certbot --nginx -d your-domain.com -d www.your-domain.com
 
 ---
 
-## 5. 데이터베이스 백업 및 복구 팁
+## 6. 데이터베이스 백업 및 복구 팁
 
 운영 중 주기적인 데이터 백업은 필수입니다.
 
@@ -197,9 +223,10 @@ docker exec -i sumoarchive-db mysql -u root -p<ROOT_PASS> sumo < backup_20260924
 
 ---
 
-## 6. 운영 체크리스트 (배포 전 확인)
+## 7. 운영 체크리스트 (배포 전 확인)
 
 - [x] **운영 프로필 분리**: `application-prod.properties`의 `ddl-auto=validate`, `show-sql=false`, `thymeleaf.cache=true` 적용 완료
+- [x] **스키마 버전 관리**: Flyway 도입, 빈 DB는 `V1__init_schema.sql`로 생성 / 기존 DB는 baseline (4절)
 - [x] **시크릿 환경변수화**: DB 및 어드민 비밀번호를 `.env` 또는 서버 환경변수로 관리
 - [x] **데이터 안전성 확보**: 로스터 임포트 시 `wipeExisting()` 제거 및 `Upsert` 전환 완료
 - [x] **보안 가드 탑재**: 익명 댓글 3초 쿨다운 & 1분 5회 제한, 관리자 로그인 5회 실패 차단, 세션 쿠키 SameSite=Lax 및 HttpOnly 적용

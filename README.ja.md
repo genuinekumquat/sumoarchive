@@ -191,8 +191,8 @@ application-local.properties            # git 管理外 — 実際のDB/管理�
 
 ## 7. インフラ / 環境設定
 
-- **DB**: MySQL 8.0。スキーマ DDL は `docs/sumoarchive_db_schema.sql` を参照(実際には
-  `spring.jpa.hibernate.ddl-auto=update` でエンティティを基準に自動反映しながら開発しています)。
+- **DB**: MySQL 8.0。スキーマは Flyway マイグレーション(`src/main/resources/db/migration`)で管理し、
+  Hibernate は `ddl-auto=validate` でエンティティとテーブルの整合性を検査するだけです。
 - **シークレットの分離**: `application.properties` はコミットされますが実際の値は含まず、DB アカウントと
   管理者ログインアカウントは `application-local.properties`(git 管理外)でのみ管理します。
   ```properties
@@ -217,7 +217,7 @@ cp src/main/resources/application-local.properties.example \
    src/main/resources/application-local.properties
 # → DB アカウント、任意の管理者 ID/パスワードを入力
 
-# 3. 実行(テーブルは ddl-auto=update で自動作成、データは空の状態で起動)
+# 3. 実行(テーブルは Flyway が自動作成、データは空の状態で起動)
 ./gradlew bootRun
 
 # 4. 管理者ログイン後、/admin/rikishi「ロスターインポート」→ /admin/basho の年一括インポートでデータを投入

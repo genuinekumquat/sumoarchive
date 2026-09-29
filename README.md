@@ -193,8 +193,8 @@ application-local.properties            # git 제외 — 실제 DB/관리자 비
 
 ## 7. Infrastructure / 환경 설정
 
-- **DB**: MySQL 8.0. 스키마 DDL은 `docs/sumoarchive_db_schema.sql` 참고 (실제로는
-  `spring.jpa.hibernate.ddl-auto=update`로 엔티티 기준 자동 반영하며 개발 중입니다).
+- **DB**: MySQL 8.0. 스키마는 Flyway 마이그레이션(`src/main/resources/db/migration`)으로 관리하고,
+  Hibernate는 `ddl-auto=validate`로 엔티티와 테이블이 맞는지 검사만 합니다.
 - **시크릿 분리**: `application.properties`는 커밋되지만 실제 값이 없고, DB 계정과 관리자
   로그인 계정은 `application-local.properties`(git 제외)에서만 관리합니다.
   ```properties
@@ -219,7 +219,7 @@ cp src/main/resources/application-local.properties.example \
    src/main/resources/application-local.properties
 # → DB 계정, 원하는 관리자 아이디/비밀번호로 값 채우기
 
-# 3. 실행 (테이블은 ddl-auto=update로 자동 생성, 데이터는 비어 있는 상태로 시작)
+# 3. 실행 (테이블은 Flyway가 자동 생성, 데이터는 비어 있는 상태로 시작)
 ./gradlew bootRun
 
 # 4. 관리자 로그인 후 /admin/rikishi "로스터 임포트" → /admin/basho 연도 일괄 임포트로 데이터 채우기
