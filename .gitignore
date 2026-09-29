@@ -44,3 +44,6 @@ application-local.properties
 
 ### 운영 이전용 데이터 덤프 (scripts/export-data.sh 출력) ###
 sumo-data.sql
+
+### 앱 로그 파일 (prod 프로필에서 JAR 직접 실행 시 logs/에 쌓인다) ###
+logs/

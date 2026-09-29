@@ -28,8 +28,10 @@ RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 # 빌더 스테이지에서 생성된 JAR 파일 복사
 COPY --from=builder /workspace/build/libs/*.jar app.jar
 
-# 파일 소유권 변경
-RUN chown appuser:appgroup app.jar
+# 파일 소유권 변경 + 로그 폴더 생성 (appuser가 써야 하므로 소유자를 맞춘다.
+# compose의 이름 있는 볼륨은 처음 붙을 때 이 폴더의 소유권을 그대로 물려받는다)
+RUN chown appuser:appgroup app.jar \
+ && mkdir -p /app/logs && chown appuser:appgroup /app/logs
 
 USER appuser
 
@@ -39,5 +41,7 @@ EXPOSE 8080
 # JVM 메모리 및 인코딩 최적화 옵션
 ENV JAVA_OPTS="-Dfile.encoding=UTF-8 -XX:+UseG1GC -XX:MaxRAMPercentage=75.0"
 ENV SPRING_PROFILES_ACTIVE="prod"
+# 로그 파일 위치 (application-prod.properties의 logging.file.name)
+ENV LOG_FILE="/app/logs/sumoarchive.log"
 
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]

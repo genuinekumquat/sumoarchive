@@ -69,8 +69,14 @@ ADMIN_PASSWORD=강력한_관리자_비밀번호_입력!
 
 2. **로그 확인**:
    ```bash
-   docker compose logs -f app
+   docker compose logs -f app                     # 최근 콘솔 출력 (컨테이너당 10MB x 5개까지만 보관)
+   docker compose exec app ls -l /app/logs        # 앱 로그 파일 목록
+   docker compose exec app tail -n 200 /app/logs/sumoarchive.log
+   docker compose exec app zcat /app/logs/sumoarchive.log.2026-09-30.0.gz | grep ERROR   # 지난 로그 검색
    ```
+   - 앱 로그 파일은 `sumo_app_logs` 볼륨에 쌓여서 `docker compose down`·재빌드 후에도 남는다.
+   - 하루 단위·10MB 단위로 나뉘어 gzip 압축되고, 14일이 지나거나 합계 500MB를 넘으면 오래된 것부터 지워진다 (`application-prod.properties`).
+   - `docker compose down -v`는 DB와 함께 로그 볼륨도 지우므로 쓰지 않는다.
 
 3. **컨테이너 중지 / 재시작**:
    ```bash
@@ -107,6 +113,7 @@ ADMIN_PASSWORD=강력한_관리자_비밀번호_입력!
 
    java -jar -Dfile.encoding=UTF-8 -XX:+UseG1GC -XX:MaxRAMPercentage=75.0 build/libs/sumoarchive-0.0.1-SNAPSHOT.jar
    ```
+   로그 파일은 실행한 폴더의 `logs/sumoarchive.log`에 쌓인다 (`LOG_FILE` 환경변수로 경로 변경 가능).
 
 3. **systemd 서비스 등록 예시 (`/etc/systemd/system/sumoarchive.service`)**:
    ```ini
@@ -275,4 +282,5 @@ docker compose start app
 - [x] **에러 페이지 완성**: 404(`不見当`) 및 500(`物言い`) 맞춤형 에러 페이지 탑재
 - [x] **헬스체크**: Actuator `/actuator/health`만 노출(세부 정보 숨김), compose app healthcheck 적용
 - [x] **DB 자동 백업**: `scripts/backup-db.sh` + cron, 14일 보관 (6절)
+- [x] **로그 보존**: docker logs 컨테이너당 10MB x 5개 제한, 앱 로그는 `sumo_app_logs` 볼륨에 파일로 저장(14일·500MB, 날짜·10MB 단위 gzip)
 - [ ] **백업 외부 보관 / 업타임 모니터 등록**: 백업 폴더를 서버 밖으로 복사, `/actuator/health`를 외부 모니터에 등록
