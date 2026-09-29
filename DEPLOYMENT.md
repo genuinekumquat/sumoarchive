@@ -78,6 +78,14 @@ ADMIN_PASSWORD=강력한_관리자_비밀번호_입력!
    docker compose restart app
    ```
 
+4. **상태 확인 (헬스체크)**:
+   ```bash
+   docker compose ps                          # app이 (healthy)로 표시되면 정상
+   curl http://127.0.0.1:8080/actuator/health # {"status":"UP"} - DB 연결까지 확인
+   ```
+   외부 업타임 모니터(UptimeRobot 등)에는 `https://도메인/actuator/health`를 등록해 두면, 앱이나 DB가 죽었을 때 알림을 받을 수 있다.
+   노출되는 actuator 엔드포인트는 `health` 하나뿐이고 세부 정보는 표시하지 않는다.
+
 ---
 
 ### 방법 B: 단일 JAR 파일 직접 실행 (Standalone)
@@ -213,14 +221,36 @@ sudo certbot --nginx -d your-domain.com -d www.your-domain.com
 
 ## 6. 데이터베이스 백업 및 복구 팁
 
-운영 중 주기적인 데이터 백업은 필수입니다.
+관리자가 손으로 채운 데이터(최고위·한국어 표기 검수 등)와 댓글은 sumo-api에서 다시 받아올 수 없으므로 매일 자동으로 백업한다.
+
+### 1) 자동 백업 (`scripts/backup-db.sh`)
+- DB 전체(스키마·flyway 이력·댓글 포함)를 `/var/backups/sumoarchive/sumo_YYYYMMDD_HHMMSS.sql.gz`로 저장하고, 14일이 지난 파일은 지운다.
+- 비밀번호는 컨테이너 안의 `MYSQL_ROOT_PASSWORD`를 환경변수로 넘긴다 (`-p<비밀번호>`는 `ps`로 누구나 볼 수 있어 쓰지 않는다).
+- 덤프가 중간에 끊기면 파일을 남기지 않고 exit 1로 끝난다.
+- 경로·보관 기간은 `BACKUP_DIR`, `KEEP_DAYS` 환경변수로 바꿀 수 있다.
 
 ```bash
-# 1. 백업 (덤프)
-docker exec -i sumoarchive-db mysqldump -u root -p<ROOT_PASS> sumo > backup_$(date +%Y%m%d).sql
+# 한 번 수동 실행해서 확인
+sudo ./scripts/backup-db.sh
 
-# 2. 복원
-docker exec -i sumoarchive-db mysql -u root -p<ROOT_PASS> sumo < backup_20260924.sql
+# cron 등록 (sudo crontab -e) - 매일 새벽 4시
+0 4 * * * /home/ubuntu/sumoarchive/scripts/backup-db.sh >> /var/log/sumoarchive-backup.log 2>&1
+```
+
+> 서버 디스크가 통째로 날아가면 백업도 같이 사라진다. 백업 폴더를 주기적으로 서버 밖(오브젝트 스토리지, 다른 PC 등)으로도 복사해 두자.
+> 예: `rclone copy /var/backups/sumoarchive remote:sumoarchive-backup`
+
+### 2) 복원
+```bash
+# 복원 중 앱이 쓰기를 하지 않도록 앱을 먼저 멈춘다
+docker compose stop app
+
+# 백업 파일에 CREATE DATABASE/USE가 들어 있으므로 DB 이름은 따로 지정하지 않는다
+gunzip -c /var/backups/sumoarchive/sumo_20260930_040000.sql.gz \
+  | docker exec -i sumoarchive-db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" exec mysql -u root --default-character-set=utf8mb4'
+
+# 캐시(반즈케·바쇼 목록)를 비우기 위해 앱을 다시 띄운다
+docker compose start app
 ```
 
 ---
@@ -242,3 +272,6 @@ docker exec -i sumoarchive-db mysql -u root -p<ROOT_PASS> sumo < backup_20260924
 - [x] **캐싱 최적화**: 바쇼 목록, 반즈케 데이터, 키마리테 백과사전에 Spring Cache 적용 완료
 - [x] **이미지 핫링크 방어**: 템플릿 메타 태그 `<meta name="referrer" content="no-referrer">` 적용 완료
 - [x] **에러 페이지 완성**: 404(`不見当`) 및 500(`物言い`) 맞춤형 에러 페이지 탑재
+- [x] **헬스체크**: Actuator `/actuator/health`만 노출(세부 정보 숨김), compose app healthcheck 적용
+- [x] **DB 자동 백업**: `scripts/backup-db.sh` + cron, 14일 보관 (6절)
+- [ ] **백업 외부 보관 / 업타임 모니터 등록**: 백업 폴더를 서버 밖으로 복사, `/actuator/health`를 외부 모니터에 등록
