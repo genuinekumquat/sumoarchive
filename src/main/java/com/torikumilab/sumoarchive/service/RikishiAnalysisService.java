@@ -1,5 +1,7 @@
 package com.torikumilab.sumoarchive.service;
 
+import com.torikumilab.sumoarchive.domain.dto.BashoGameLogDTO;
+import com.torikumilab.sumoarchive.domain.dto.CareerSummaryDTO;
 import com.torikumilab.sumoarchive.domain.dto.HeadToHeadDTO;
 import com.torikumilab.sumoarchive.domain.dto.HeadToHeadHighlightsDTO;
 import com.torikumilab.sumoarchive.domain.dto.LossTypeSummaryDTO;
@@ -56,6 +58,10 @@ public class RikishiAnalysisService {
 	/** 실제 승수와 예상 승수의 차이가 이 이상이어야 "유독" 약하거나 강하다고 본다. */
 	static final double H2H_MIN_DIFF = 1.5;
 	static final int H2H_TOP = 3;
+
+	// ===== 커리어 요약 (세키토리 15일 기준) =====
+	static final int KACHIKOSHI_WINS = 8;
+	static final int DOUBLE_DIGIT_WINS = 10;
 
 	private final TorikumiRepository torikumiRepository;
 	private final BashoRepository bashoRepository;
@@ -242,6 +248,39 @@ public class RikishiAnalysisService {
 				.limit(H2H_TOP)
 				.toList();
 		return new HeadToHeadHighlightsDTO(H2H_MIN_BOUTS, H2H_MIN_DIFF, tough, favorable);
+	}
+
+	/**
+	 * "바쇼별 성적" 패널 맨 위 커리어 요약. 끝난 마쿠우치·쥬료 바쇼만 센다 (CareerSummaryDTO 참고).
+	 * 휴장이 낀 바쇼도 8승이 안 되면 마케코시 (예: 7승 5패 3휴), 全休도 분모에 포함 - 반즈케에서도 마케코시 취급.
+	 *
+	 * @param gameLog RikishiDetailService.getGameLog 결과 (최신 바쇼부터, 재조회 없이 그대로 사용)
+	 */
+	public CareerSummaryDTO getCareerSummary(List<BashoGameLogDTO> gameLog) {
+		int basho = 0, kachikoshi = 0, doubleDigit = 0, absence = 0, zenkyu = 0;
+		BashoGameLogDTO best = null;
+		for (BashoGameLogDTO g : gameLog) {
+			if (!g.completed() || (g.division() != Division.Makuuchi && g.division() != Division.Juryo)) {
+				continue;
+			}
+			basho++;
+			if (g.wins() >= KACHIKOSHI_WINS) {
+				kachikoshi++;
+			}
+			if (g.wins() >= DOUBLE_DIGIT_WINS) {
+				doubleDigit++;
+			}
+			if (g.absences() > 0) {
+				absence++;
+			}
+			if (g.wins() == 0 && g.losses() == 0) {
+				zenkyu++;
+			} else if (best == null || g.wins() > best.wins()) {
+				// 최신 바쇼부터 돌기 때문에 승수가 같으면 먼저 본(최근) 바쇼가 남는다.
+				best = g;
+			}
+		}
+		return new CareerSummaryDTO(basho, kachikoshi, doubleDigit, absence, zenkyu, best);
 	}
 
 	private <B extends Enum<B>> List<OpponentConditionDTO.Row> physiqueRows(B[] buckets, Map<B, Tally> mine,

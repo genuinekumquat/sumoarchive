@@ -1,5 +1,7 @@
 package com.torikumilab.sumoarchive.domain.dto;
 
+import com.torikumilab.sumoarchive.domain.entity.constant.Division;
+
 import java.util.List;
 
 /**
@@ -14,6 +16,12 @@ public record BashoGameLogDTO(
 		String rankDisplayKr,   // "동 마에가시라10" 등
 		String recordSummary,   // "9勝6敗" 형태 (그 바쇼에 등록된 토리쿠미 기준. 全休면 "0勝0敗15休", 등록이 없으면 "-")
 		String recordSummaryKr, // "9승 6패" 형태 (휴장 있으면 "9승 3패 3휴")
-		List<MatchHistoryItemDTO> matches // day 오름차순, 가로 요약 줄(호시토리표)용. 全休면 전 일차가 휴장(ABSENT)
+		List<MatchHistoryItemDTO> matches, // day 오름차순, 가로 요약 줄(호시토리표)용. 全休면 전 일차가 휴장(ABSENT)
+		// 아래는 커리어 요약(가치코시 수 등) 계산용 숫자
+		Division division,      // 그 바쇼의 반즈케 지위
+		int wins,
+		int losses,
+		int absences,
+		boolean completed       // 15일째까지 적재된 바쇼 (진행 중 바쇼·적재 전 바쇼는 false)
 ) {
 }

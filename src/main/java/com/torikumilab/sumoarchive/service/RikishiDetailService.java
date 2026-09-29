@@ -414,7 +414,12 @@ public class RikishiDetailService {
 						RankDisplayUtil.rankDisplayKorean(banzuke.getRankName(), banzuke.getRankValue())),
 				recordSummary,
 				recordSummaryKr,
-				matches
+				matches,
+				banzuke.getDivision(),
+				(int) wins,
+				(int) losses,
+				(int) absences,
+				!matches.isEmpty() && lastDay >= 15
 		);
 	}
 	

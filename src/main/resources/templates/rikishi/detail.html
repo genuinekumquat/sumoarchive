@@ -220,6 +220,16 @@
             color: var(--sumi);
         }
         .summary-value.empty { font-size: 14px; font-weight: 400; color: var(--sumi-faint); }
+        /* 호시토리표 패널 위 커리어 요약 (프로필 요약 줄과 같은 모양, 4칸) */
+        /* 패널 제목 밑줄과 겹치지 않게 윗선은 뺀다 */
+        .profile-summary.career-summary { grid-template-columns: repeat(4, 1fr); border-top: none; margin-bottom: 6px; }
+        .career-summary-note {
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 11px;
+            color: var(--sumi-faint);
+            text-align: right;
+            margin-bottom: 16px;
+        }
         .summary-sub {
             font-family: 'Zen Kaku Gothic New', sans-serif;
             font-size: 11.5px;
@@ -229,7 +239,7 @@
 
         @media (max-width: 620px) {
             .shikona-main { font-size: 30px; }
-            .profile-summary { grid-template-columns: 1fr; }
+            .profile-summary, .profile-summary.career-summary { grid-template-columns: 1fr; }
             .summary-cell { padding: 10px 4px; }
             .summary-cell + .summary-cell { border-left: none; border-top: 1px solid var(--washi-line); }
         }
@@ -1198,6 +1208,37 @@
          칸을 클릭하면 옆에서 상세 패널(.match-panel)이 슬라이드로 열림. -->
     <div class="panel match-history-panel" th:if="${gameLog != null and !gameLog.isEmpty()}">
         <div class="panel-title" th:text="${#locale.language == 'ja'} ? '星取表' : #{rikishi.panel.hoshitori}">星取表</div>
+
+        <!-- 커리어 요약: 끝난 마쿠우치·쥬료 바쇼 기준 (CareerSummaryDTO) -->
+        <th:block th:if="${careerSummary != null and !careerSummary.isEmpty()}"
+                  th:with="ja=${#locale.language == 'ja'}, cs=${careerSummary}">
+            <div class="profile-summary career-summary">
+                <div class="summary-cell">
+                    <div class="summary-label" th:text="${ja} ? '勝ち越し' : '가치코시'">가치코시</div>
+                    <div class="summary-value" th:text="${cs.kachikoshi} + ' / ' + ${cs.basho} + (${ja} ? '場所' : '바쇼')">7 / 11바쇼</div>
+                    <div class="summary-sub" th:text="${cs.kachikoshiPercent()} + '%'">64%</div>
+                </div>
+                <div class="summary-cell">
+                    <div class="summary-label" th:text="${ja} ? '二桁勝利' : '두 자릿수 승리'">두 자릿수 승리</div>
+                    <div class="summary-value" th:text="${cs.doubleDigit} + (${ja} ? '場所' : '바쇼')">3바쇼</div>
+                </div>
+                <div class="summary-cell">
+                    <div class="summary-label" th:text="${ja} ? '最高成績' : '최고 성적'">최고 성적</div>
+                    <th:block th:if="${cs.best != null}">
+                        <div class="summary-value" th:text="${ja} ? ${cs.best.recordSummary} : ${cs.best.recordSummaryKr}">12승 3패</div>
+                        <div class="summary-sub" th:text="${ja ? cs.best.bashoLabel + ' · ' + cs.best.rankDisplay : cs.best.bashoLabelKr + ' · ' + cs.best.rankDisplayKr}">2025년 5월 나쓰바쇼 · 동 마에가시라3</div>
+                    </th:block>
+                    <div class="summary-value empty" th:if="${cs.best == null}" th:text="${ja} ? '記録なし' : '기록 없음'">기록 없음</div>
+                </div>
+                <div class="summary-cell">
+                    <div class="summary-label" th:text="${ja} ? '休場' : '휴장'">휴장</div>
+                    <div class="summary-value" th:text="${cs.absence} + (${ja} ? '場所' : '바쇼')">1바쇼</div>
+                    <div class="summary-sub" th:if="${cs.zenkyu > 0}" th:text="(${ja} ? '全休 ' : '전체 휴장 ') + ${cs.zenkyu}">전체 휴장 1</div>
+                </div>
+            </div>
+            <div class="career-summary-note"
+                 th:text="${ja} ? '記録された幕内・十両の場所のみ（開催中の場所を除く）' : '기록된 마쿠우치·쥬료 바쇼 기준 (진행 중 바쇼 제외)'">기록된 마쿠우치·쥬료 바쇼 기준 (진행 중 바쇼 제외)</div>
+        </th:block>
 
         <div class="game-log-row" th:each="g, iter : ${gameLog}">
             <div class="game-log-meta">

@@ -1,5 +1,7 @@
 package com.torikumilab.sumoarchive.service;
 
+import com.torikumilab.sumoarchive.domain.dto.BashoGameLogDTO;
+import com.torikumilab.sumoarchive.domain.dto.CareerSummaryDTO;
 import com.torikumilab.sumoarchive.domain.dto.HeadToHeadBoutDTO;
 import com.torikumilab.sumoarchive.domain.dto.HeadToHeadDTO;
 import com.torikumilab.sumoarchive.domain.dto.HeadToHeadHighlightsDTO;
@@ -235,6 +237,46 @@ class RikishiAnalysisServiceTest {
 
 	private static Map<String, LossTypeSummaryDTO.Row> byName(LossTypeSummaryDTO dto) {
 		return dto.rows().stream().collect(Collectors.toMap(LossTypeSummaryDTO.Row::nameKr, Function.identity()));
+	}
+
+	@Test
+	@DisplayName("커리어 요약 - 휴장 낀 7승은 마케코시, 全休는 분모 포함, 진행 중·마쿠시타 바쇼 제외")
+	void careerSummary() {
+		// 최신 바쇼부터 (getGameLog 순서)
+		List<BashoGameLogDTO> gameLog = List.of(
+				log(9, 6, 2, 0, Division.Makuuchi, false),   // 진행 중 (6승 2패 시점) - 제외
+				log(8, 12, 3, 0, Division.Makuuchi, true),   // 가치코시 + 두 자릿수, 최고 성적 후보(최근)
+				log(7, 7, 5, 3, Division.Makuuchi, true),    // 휴장 낀 7승 → 마케코시
+				log(6, 0, 0, 15, Division.Juryo, true),      // 全休
+				log(5, 12, 3, 0, Division.Juryo, true),      // 12승 동률이지만 더 예전 바쇼
+				log(4, 5, 2, 0, Division.Makushita, true),   // 마쿠시타 - 제외
+				log(3, 0, 0, 0, Division.Juryo, false));     // 적재 전 ("-") - 제외
+
+		CareerSummaryDTO result = service.getCareerSummary(gameLog);
+
+		assertThat(result.basho()).isEqualTo(4);
+		assertThat(result.kachikoshi()).isEqualTo(2);
+		assertThat(result.kachikoshiPercent()).isEqualTo(50);
+		assertThat(result.doubleDigit()).isEqualTo(2);
+		assertThat(result.absence()).isEqualTo(2);
+		assertThat(result.zenkyu()).isEqualTo(1);
+		assertThat(result.best().bashoId()).isEqualTo(8);
+	}
+
+	@Test
+	@DisplayName("커리어 요약 - 끝난 세키토리 바쇼가 없으면 비어 있음, 全休뿐이면 최고 성적 없음")
+	void careerSummaryEmpty() {
+		assertThat(service.getCareerSummary(List.of(log(1, 3, 1, 0, Division.Juryo, false))).isEmpty()).isTrue();
+
+		CareerSummaryDTO allAbsent = service.getCareerSummary(List.of(log(1, 0, 0, 15, Division.Juryo, true)));
+		assertThat(allAbsent.basho()).isEqualTo(1);
+		assertThat(allAbsent.kachikoshiPercent()).isZero();
+		assertThat(allAbsent.best()).isNull();
+	}
+
+	private static BashoGameLogDTO log(int bashoId, int wins, int losses, int absences, Division division, boolean completed) {
+		return new BashoGameLogDTO(bashoId, null, null, null, null, null, null, List.of(),
+				division, wins, losses, absences, completed);
 	}
 
 	private static DivisionKimariteCountRow row(Division division, String kimarite, long cnt) {

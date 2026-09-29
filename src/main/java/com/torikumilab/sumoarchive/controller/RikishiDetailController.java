@@ -46,6 +46,7 @@ public class RikishiDetailController {
 		model.addAttribute("lossTypes", rikishiAnalysisService.getLossTypes(id, fromBasho, toBasho));
 		model.addAttribute("opponentConditions", rikishiAnalysisService.getOpponentConditions(id));
 		model.addAttribute("gameLog", gameLog);
+		model.addAttribute("careerSummary", rikishiAnalysisService.getCareerSummary(gameLog));
 		// 프로필 상단 요약 줄의 "최근 바쇼" - 대전 기록이 적재된 가장 최근 바쇼 (적재 전 바쇼는 recordSummary가 "-")
 		model.addAttribute("recentBasho", gameLog.stream()
 				.filter(g -> !"-".equals(g.recordSummary()))
