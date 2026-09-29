@@ -7,6 +7,7 @@ import com.torikumilab.sumoarchive.repository.HeyaRepository;
 import com.torikumilab.sumoarchive.util.ShikonaKrTransliterator;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,6 +45,7 @@ public class HeyaAdminService {
 	 * 관리자가 저장해 검수된(nameKrAuto=false) 행은 건드리지 않는다.
 	 */
 	@Transactional
+	@CacheEvict(value = {"banzuke", "ichimonStructure"}, allEntries = true)
 	public HeyaNameAutofillResultDTO autofillKoreanName() {
 		List<HeyaEntity> targets = heyaRepository.findNameKrAutofillTargets();
 		int filled = 0;
@@ -67,6 +69,7 @@ public class HeyaAdminService {
 
 	/** 관리자 검수: 한 헤야의 한/일명을 저장하고 "자동" 표시를 끈다. */
 	@Transactional
+	@CacheEvict(value = {"banzuke", "ichimonStructure"}, allEntries = true)
 	public void saveNames(Integer heyaId, String nameKr, String nameJp) {
 		HeyaEntity h = heyaRepository.findById(heyaId)
 				.orElseThrow(() -> new EntityNotFoundException("헤야를 찾을 수 없습니다. id=" + heyaId));

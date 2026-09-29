@@ -18,6 +18,7 @@ import com.torikumilab.sumoarchive.repository.TorikumiRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -59,6 +60,7 @@ public class BanzukeAdminService {
 	}
 
 	@Transactional
+	@CacheEvict(value = {"bashoOptions", "banzuke", "ichimonStructure"}, allEntries = true)
 	public void createBasho(BashoCreateFormDTO form) {
 		if (form.getBashoYear() == null || form.getBashoMonth() == null) {
 			throw new IllegalArgumentException("연도와 월은 필수입니다.");
@@ -94,6 +96,7 @@ public class BanzukeAdminService {
 	}
 
 	@Transactional
+	@CacheEvict(value = {"bashoOptions", "banzuke", "ichimonStructure"}, allEntries = true)
 	public void updateBasho(Integer bashoId, BashoEditFormDTO form) {
 		BashoEntity b = findBasho(bashoId);
 		if (form.getStartDate() == null || form.getEndDate() == null) {
@@ -106,6 +109,7 @@ public class BanzukeAdminService {
 	}
 
 	@Transactional
+	@CacheEvict(value = {"bashoOptions", "banzuke", "ichimonStructure"}, allEntries = true)
 	public void deleteBasho(Integer bashoId) {
 		BashoEntity b = findBasho(bashoId);
 		long bz = banzukeRepository.countByBashoEntityId(bashoId);
@@ -146,6 +150,7 @@ public class BanzukeAdminService {
 	}
 
 	@Transactional
+	@CacheEvict(value = {"banzuke", "ichimonStructure"}, allEntries = true)
 	public void addRow(Integer bashoId, BanzukeFormDTO form) {
 		BashoEntity basho = findBasho(bashoId);
 		validatePlacement(form);
@@ -168,6 +173,7 @@ public class BanzukeAdminService {
 	}
 
 	@Transactional
+	@CacheEvict(value = {"banzuke", "ichimonStructure"}, allEntries = true)
 	public void updateRow(Integer bashoId, Integer banzukeId, BanzukeFormDTO form) {
 		validatePlacement(form);
 		BanzukeEntity row = findRowInBasho(bashoId, banzukeId);
@@ -175,6 +181,7 @@ public class BanzukeAdminService {
 	}
 
 	@Transactional
+	@CacheEvict(value = {"banzuke", "ichimonStructure"}, allEntries = true)
 	public void deleteRow(Integer bashoId, Integer banzukeId) {
 		BanzukeEntity row = findRowInBasho(bashoId, banzukeId);
 		banzukeRepository.delete(row);

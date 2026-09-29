@@ -12,6 +12,7 @@ import com.torikumilab.sumoarchive.util.RankDisplayUtil;
 import com.torikumilab.sumoarchive.util.ShikonaKrTransliterator;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -77,6 +78,7 @@ public class RikishiAdminService {
 	}
 
 	@Transactional
+	@CacheEvict(value = {"banzuke", "ichimonStructure"}, allEntries = true)
 	public void updateProfile(Integer rikishiId, RikishiEditFormDTO form) {
 		RikishiEntity r = rikishiRepository.findById(rikishiId)
 				.orElseThrow(() -> new EntityNotFoundException("리키시를 찾을 수 없습니다. id=" + rikishiId));
@@ -122,6 +124,7 @@ public class RikishiAdminService {
 	 * 채운 값은 "자동" 표시가 켜진 채라 목록에서 뱃지를 보고 다듬을 수 있다(하이브리드).
 	 */
 	@Transactional
+	@CacheEvict(value = {"banzuke", "ichimonStructure"}, allEntries = true)
 	public ShikonaAutofillResultDTO autofillKoreanShikona() {
 		List<RikishiEntity> targets = rikishiRepository.findKoreanShikonaAutofillTargets();
 		int filled = 0;

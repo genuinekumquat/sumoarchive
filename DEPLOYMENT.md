@@ -270,6 +270,7 @@ docker compose start app
 - [x] **데이터 안전성 확보**: 로스터 임포트 시 `wipeExisting()` 제거 및 `Upsert` 전환 완료
 - [x] **보안 가드 탑재**: 익명 댓글 3초 쿨다운 & 1분 5회 제한, 관리자 로그인 5회 실패 차단, 세션 쿠키 SameSite=Lax 및 HttpOnly 적용
 - [x] **캐싱 최적화**: 바쇼 목록, 반즈케 데이터, 키마리테 백과사전에 Spring Cache 적용 완료
+- [x] **관리자 수정 즉시 반영**: 바쇼·반즈케 행·리키시 프로필·헤야 이름 수정 시 관련 캐시를 커밋 직후 비움 (`config/CacheConfig`). DB에 SQL로 직접 넣은 데이터는 여전히 앱 재시작 필요
 - [x] **이미지 핫링크 방어**: 템플릿 메타 태그 `<meta name="referrer" content="no-referrer">` 적용 완료
 - [x] **에러 페이지 완성**: 404(`不見当`) 및 500(`物言い`) 맞춤형 에러 페이지 탑재
 - [x] **헬스체크**: Actuator `/actuator/health`만 노출(세부 정보 숨김), compose app healthcheck 적용
