@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
+import java.util.Locale;
 
 /**
  * SearchViewController와 동일하게 "화면(뷰) 컨트롤러"라 controller.api가 아닌 controller 패키지에 뒀습니다.
@@ -30,6 +31,7 @@ public class RikishiDetailController {
 	public String detail(@PathVariable Integer id,
 						  @RequestParam(required = false) Integer fromBasho,
 						  @RequestParam(required = false) Integer toBasho,
+						  Locale locale,
 						  Model model) {
 		RikishiDetailDTO rikishi = rikishiDetailService.getRikishiDetail(id);
 		List<KimariteStatDTO> kimariteStats = rikishiDetailService.getKimariteStats(id, fromBasho, toBasho);
@@ -37,7 +39,11 @@ public class RikishiDetailController {
 		List<BashoGameLogDTO> gameLog = rikishiDetailService.getGameLog(id);
 		// 상대전적은 한 번만 조회해서 초성 그룹과 "유독 약한/강한 상대" 요약에 같이 쓴다.
 		List<HeadToHeadDTO> headToHead = rikishiDetailService.getHeadToHead(id);
-		List<HeadToHeadGroupDTO> headToHeadGroups = rikishiDetailService.groupHeadToHead(headToHead);
+		// 한국어 화면은 ㄱㄴㄷ, 일본어 화면은 あかさたな 탭
+		boolean ja = "ja".equals(locale.getLanguage());
+		List<HeadToHeadGroupDTO> headToHeadGroups = ja
+				? rikishiDetailService.groupHeadToHeadJp(headToHead)
+				: rikishiDetailService.groupHeadToHead(headToHead);
 
 		model.addAttribute("rikishi", rikishi);
 		model.addAttribute("kimariteStats", kimariteStats);

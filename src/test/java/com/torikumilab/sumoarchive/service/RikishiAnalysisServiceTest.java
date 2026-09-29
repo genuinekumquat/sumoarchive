@@ -220,7 +220,7 @@ class RikishiAnalysisServiceTest {
 		for (int i = 0; i < wins; i++) bouts.add(bout(true, false));
 		for (int i = 0; i < losses; i++) bouts.add(bout(false, false));
 		for (int i = 0; i < fusenLosses; i++) bouts.add(bout(false, true));
-		return new HeadToHeadDTO(opponentId, name, name, wins, losses + fusenLosses, bouts);
+		return new HeadToHeadDTO(opponentId, name, name, name, wins, losses + fusenLosses, bouts);
 	}
 
 	private static HeadToHeadBoutDTO bout(boolean win, boolean fusen) {

@@ -25,6 +25,7 @@ import com.torikumilab.sumoarchive.repository.RikishiRepository;
 import com.torikumilab.sumoarchive.repository.RikishiShikonaHistoryRepository;
 import com.torikumilab.sumoarchive.repository.TorikumiRepository;
 import com.torikumilab.sumoarchive.util.HangulIndexUtil;
+import com.torikumilab.sumoarchive.util.KanaIndexUtil;
 import com.torikumilab.sumoarchive.util.KimariteDisplayUtil;
 import com.torikumilab.sumoarchive.util.OriginDisplayUtil;
 import com.torikumilab.sumoarchive.util.RankDisplayUtil;
@@ -303,6 +304,30 @@ public class RikishiDetailService {
 	}
 
 	/**
+	 * 일본어 화면 상대전적의 あかさたな 탭. 한자 시코나로는 읽는 법을 몰라 로마자 시코나로 행을 정하고(KanaIndexUtil),
+	 * 행은 あ→わ 순, 행 안은 오십음순. 로마자가 없는 상대는 맨 뒤 "#" 탭.
+	 */
+	public List<HeadToHeadGroupDTO> groupHeadToHeadJp(List<HeadToHeadDTO> flat) {
+		if (flat.isEmpty()) {
+			return List.of();
+		}
+		Map<String, List<HeadToHeadDTO>> byRow = new LinkedHashMap<>();
+		for (String row : KanaIndexUtil.ROWS) {
+			byRow.put(row, new ArrayList<>());
+		}
+		byRow.put(KanaIndexUtil.OTHER, new ArrayList<>());
+		for (HeadToHeadDTO h : flat) {
+			byRow.get(KanaIndexUtil.rowOf(h.opponentShikonaEn())).add(h);
+		}
+		Comparator<HeadToHeadDTO> gojuon = Comparator.comparing(
+				h -> h.opponentShikonaEn() == null ? "" : h.opponentShikonaEn(), KanaIndexUtil.GOJUON);
+		return byRow.entrySet().stream()
+				.filter(e -> !e.getValue().isEmpty())
+				.map(e -> new HeadToHeadGroupDTO(e.getKey(), e.getValue().stream().sorted(gojuon).toList()))
+				.toList();
+	}
+
+	/**
 	 * 상대 선수별 통산 승패 집계. 상대 이름 가나다순으로 정렬해서 반환
 	 * (groupHeadToHead에서 초성별로 묶어쓰기 편하도록).
 	 */
@@ -333,7 +358,8 @@ public class RikishiDetailService {
 					.map(t -> toHeadToHeadBout(t, rikishiId))
 					.toList();
 
-			result.add(new HeadToHeadDTO(opponent.getId(), opponentDisplayName(opponent), opponentDisplayNameJp(opponent), wins, losses, boutDtos));
+			result.add(new HeadToHeadDTO(opponent.getId(), opponentDisplayName(opponent), opponentDisplayNameJp(opponent),
+					firstToken(opponent.getShikonaEn()), wins, losses, boutDtos));
 		}
 
 		// 상대 이름 가나다순 정렬 (ㄱㄴㄷ 인덱스 그룹화 전제라 알파벳순이어야 함).
@@ -555,6 +581,7 @@ public class RikishiDetailService {
 		if (jp != null && !jp.isBlank()) {
 			return jp;
 		}
-		return opponent.getShikonaEn();
+		// 은퇴자 로마자는 "Aoiyama Kosuke"처럼 본명이 붙어 있어 시코나 부분만
+		return firstToken(opponent.getShikonaEn());
 	}
 }

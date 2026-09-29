@@ -9,6 +9,7 @@ public record HeadToHeadDTO(
 		Integer opponentId,
 		String opponentShikonaKr,
 		String opponentShikonaJp, // 일본어 화면용
+		String opponentShikonaEn, // 로마자 시코나 - 일본어 화면 あかさたな 탭 행·정렬용 (KanaIndexUtil)
 		long wins,
 		long losses,
 		List<HeadToHeadBoutDTO> bouts // 최신 바쇼부터 내림차순
