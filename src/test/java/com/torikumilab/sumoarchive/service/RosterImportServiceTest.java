@@ -140,4 +140,16 @@ class RosterImportServiceTest {
 		verify(rikishiRepository, times(1)).save(any(RikishiEntity.class));
 		verify(heyaRepository, times(1)).save(any(HeyaEntity.class));
 	}
+
+	@Test
+	@DisplayName("시코나 첫 토큰 - 뒷이름과 끝에 붙은 읽는 법(괄호)은 뗀다")
+	void firstToken_stripsGivenNameAndReading() {
+		assertThat(RosterImportService.firstToken("朝乃山 広暉")).isEqualTo("朝乃山");
+		assertThat(RosterImportService.firstToken("朝乃山　広暉")).isEqualTo("朝乃山");
+		assertThat(RosterImportService.firstToken("遠藤(えんどう)")).isEqualTo("遠藤");
+		assertThat(RosterImportService.firstToken("志摩ノ海（しまのうみ）")).isEqualTo("志摩ノ海");
+		assertThat(RosterImportService.firstToken("Hakuho Sho")).isEqualTo("Hakuho");
+		assertThat(RosterImportService.firstToken("  ")).isNull();
+		assertThat(RosterImportService.firstToken(null)).isNull();
+	}
 }

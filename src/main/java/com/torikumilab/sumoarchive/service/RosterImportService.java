@@ -251,13 +251,20 @@ public class RosterImportService {
 
 	// ===== 파싱 헬퍼 =====
 
-	/** "朝乃山 広暉"(전각공백) / "朝乃山 広暉" / "朝乃山" → 첫 토큰(시코나). */
-	private static String firstToken(String s) {
+	/**
+	 * "朝乃山 広暉"(전각공백) / "朝乃山 広暉" / "朝乃山" → 첫 토큰(시코나).
+	 * 하위 리그 선수는 "遠藤(えんどう)"처럼 읽는 법이 괄호로 붙어 오므로 끝의 괄호 부분은 뗀다.
+	 */
+	static String firstToken(String s) {
 		if (s == null) {
 			return null;
 		}
 		String stripped = s.strip();
-		return stripped.isEmpty() ? null : stripped.split("[\\s\\u3000]+", 2)[0];
+		if (stripped.isEmpty()) {
+			return null;
+		}
+		String token = stripped.split("[\\s\\u3000]+", 2)[0].replaceFirst("[(（][^)）]*[)）]$", "");
+		return token.isEmpty() ? null : token;
 	}
 
 	/** "朝乃山 広暉" → 뒷토큰 "広暉" (뒷이름). 토큰이 하나뿐이면 null. */
