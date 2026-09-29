@@ -14,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 토리쿠미 익명 댓글 API. 슬라이드 패널 / 전체 페이지 양쪽이 fetch로 호출하고,
@@ -65,6 +66,24 @@ public class TorikumiCommentApiController {
 			rateLimiterService.recordCommentDeleteFailure(clientIp, commentId);
 			throw e;
 		}
+	}
+
+	/**
+	 * 방문자 신고. 누구나 가능하고, 같은 IP의 같은 댓글 재신고는 24시간 동안 세지 않는다.
+	 * 목록 대신 안내 문구만 돌려준다 (신고는 화면의 댓글 목록을 바꾸지 않음).
+	 */
+	@PostMapping("/{commentId}/report")
+	public Map<String, String> report(
+			@PathVariable Integer torikumiId,
+			@PathVariable Integer commentId,
+			HttpServletRequest request
+	) {
+		String clientIp = ClientIpResolver.getClientIp(request);
+		if (!rateLimiterService.tryRecordCommentReport(clientIp, commentId)) {
+			return Map.of("message", "이미 신고한 댓글입니다.");
+		}
+		commentService.report(torikumiId, commentId);
+		return Map.of("message", "신고가 접수되었습니다. 관리자가 확인 후 조치합니다.");
 	}
 
 	/**

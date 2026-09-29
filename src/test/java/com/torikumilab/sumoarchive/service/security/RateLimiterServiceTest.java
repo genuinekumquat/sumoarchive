@@ -5,6 +5,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -95,6 +96,35 @@ class RateLimiterServiceTest {
 		assertThatThrownBy(() -> rateLimiterService.checkCommentDeleteAllowed(ip, target))
 				.isInstanceOf(RateLimitExceededException.class)
 				.hasMessageContaining("이 댓글은 비밀번호 오류가 너무 많아");
+	}
+
+	@Test
+	@DisplayName("댓글 신고: 같은 IP가 같은 댓글을 다시 신고하면 세지 않는다 (다른 IP·다른 댓글은 셈)")
+	void commentReport_whenSameIpReportsSameCommentAgain_isIgnored() {
+		String ip = "192.168.1.105";
+
+		assertThat(rateLimiterService.tryRecordCommentReport(ip, 30)).isTrue();
+		assertThat(rateLimiterService.tryRecordCommentReport(ip, 30)).isFalse();
+
+		assertThat(rateLimiterService.tryRecordCommentReport("192.168.1.106", 30)).isTrue();
+		assertThat(rateLimiterService.tryRecordCommentReport(ip, 31)).isTrue();
+	}
+
+	@Test
+	@DisplayName("댓글 신고: 한 IP가 10분 내 10건을 넘게 신고하면 차단")
+	void commentReport_whenOverLimit_throwsException() {
+		String ip = "192.168.1.107";
+
+		for (int i = 0; i < 10; i++) {
+			assertThat(rateLimiterService.tryRecordCommentReport(ip, 100 + i)).isTrue();
+		}
+
+		assertThatThrownBy(() -> rateLimiterService.tryRecordCommentReport(ip, 200))
+				.isInstanceOf(RateLimitExceededException.class)
+				.hasMessageContaining("신고가 너무 많습니다");
+
+		// 이미 신고한 댓글 재신고는 한도와 상관없이 조용히 무시
+		assertThat(rateLimiterService.tryRecordCommentReport(ip, 100)).isFalse();
 	}
 
 	@Test

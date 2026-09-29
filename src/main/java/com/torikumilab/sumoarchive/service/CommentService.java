@@ -116,10 +116,36 @@ public class CommentService {
 		return getComments(torikumiId);
 	}
 
+	/**
+	 * 방문자 신고 1건 반영. 중복·도배 확인은 컨트롤러가 RateLimiterService로 먼저 끝낸다.
+	 * 이미 지워진(본인삭제·블라인드) 댓글은 처리할 게 없으므로 조용히 무시한다.
+	 * 신고가 쌓여도 자동으로 가리지 않는다 - 여럿이 짜고 멀쩡한 댓글을 가릴 수 있어서, 판단은 관리자가 한다.
+	 */
+	@Transactional
+	public void report(Integer torikumiId, Integer commentId) {
+		CommentEntity comment = loadCommentOfTorikumi(torikumiId, commentId);
+		if (comment.isDeleted()) {
+			return;
+		}
+		commentRepository.incrementReportCount(commentId, LocalDateTime.now());
+	}
+
 	/** 관리자 댓글 관리 대시보드(/admin/comments) - 사이트 전체 댓글을 최신순으로. */
 	@Transactional(readOnly = true)
 	public Page<AdminCommentDTO> getAllCommentsForAdmin(Pageable pageable) {
 		return commentRepository.findAllForAdmin(pageable).map(CommentService::toAdminDto);
+	}
+
+	/** 관리자 대시보드 "신고된 댓글" 필터 - 아직 처리 안 된 신고 댓글을 신고 많은 순으로. */
+	@Transactional(readOnly = true)
+	public Page<AdminCommentDTO> getReportedCommentsForAdmin(Pageable pageable) {
+		return commentRepository.findReportedForAdmin(pageable).map(CommentService::toAdminDto);
+	}
+
+	/** 처리 대기 중인 신고 댓글 수 (관리자 화면 필터 탭에 표시). */
+	@Transactional(readOnly = true)
+	public long countPendingReported() {
+		return commentRepository.countPendingReported();
 	}
 
 	private CommentEntity loadCommentOfTorikumi(Integer torikumiId, Integer commentId) {
@@ -157,7 +183,7 @@ public class CommentService {
 		return new AdminCommentDTO(
 				base.id(), t.getId(), matchLabelOf(t),
 				base.nickName(), base.displayContent(), base.createdAt(),
-				base.deleted(), base.blinded()
+				base.deleted(), base.blinded(), c.getReportCount()
 		);
 	}
 

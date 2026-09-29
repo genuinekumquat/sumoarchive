@@ -23,11 +23,18 @@ public class AdminCommentViewController {
 
 	private final CommentService commentService;
 
+	/** reported=true면 처리 안 된 신고 댓글만 신고 많은 순으로 (기본은 전체 최신순). */
 	@GetMapping("/admin/comments")
-	public String comments(@RequestParam(defaultValue = "0") int page, Model model) {
-		Page<AdminCommentDTO> result = commentService.getAllCommentsForAdmin(
-				PageRequest.of(page, PAGE_SIZE, Sort.unsorted()));
+	public String comments(@RequestParam(defaultValue = "0") int page,
+						   @RequestParam(defaultValue = "false") boolean reported,
+						   Model model) {
+		PageRequest pageable = PageRequest.of(page, PAGE_SIZE, Sort.unsorted());
+		Page<AdminCommentDTO> result = reported
+				? commentService.getReportedCommentsForAdmin(pageable)
+				: commentService.getAllCommentsForAdmin(pageable);
 		model.addAttribute("result", result);
+		model.addAttribute("reported", reported);
+		model.addAttribute("pendingReportedCount", commentService.countPendingReported());
 		return "admin/comments";
 	}
 }

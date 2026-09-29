@@ -39,7 +39,10 @@
 			var body = '<p class="tk-comment-body">' + esc(c.displayContent) + '</p>';
 			var actions = c.deleted
 				? ''
-				: '<div class="tk-comment-actions"><button type="button" class="js-comment-delete tk-comment-del">삭제</button></div>';
+				: '<div class="tk-comment-actions">' +
+					'<button type="button" class="js-comment-delete tk-comment-del">삭제</button>' +
+					'<button type="button" class="js-comment-report tk-comment-del">신고</button>' +
+				'</div>';
 			return (
 				'<li class="tk-comment' + (c.deleted ? ' is-deleted' : '') + '" data-comment-id="' + c.id + '">' +
 				head + body + actions +
@@ -127,9 +130,40 @@
 			});
 	}
 
+	// 신고는 목록을 바꾸지 않으므로 버튼 자리에 결과 문구만 남긴다 (같은 댓글을 연달아 누르지 않게).
+	function submitReport(li) {
+		if (!li || !confirm('이 댓글을 신고할까요? 관리자가 확인 후 조치합니다.')) return;
+		var id = li.closest('.js-comment-list').getAttribute('data-torikumi-id');
+		var commentId = li.getAttribute('data-comment-id');
+		var btn = li.querySelector('.js-comment-report');
+		if (btn) btn.disabled = true;
+
+		postForm(endpoint(id) + '/' + commentId + '/report', {})
+			.then(function (payload) {
+				showReportMessage(li, btn, payload && payload.message ? payload.message : '신고가 접수되었습니다.');
+			})
+			.catch(function (err) {
+				if (btn) btn.disabled = false;
+				showReportMessage(li, null, err.message);
+			});
+	}
+
+	function showReportMessage(li, btnToRemove, text) {
+		var msg = li.querySelector('.tk-comment-reportmsg');
+		if (!msg) {
+			msg = document.createElement('span');
+			msg.className = 'tk-comment-reportmsg';
+			li.querySelector('.tk-comment-actions').appendChild(msg);
+		}
+		msg.textContent = text;
+		if (btnToRemove) btnToRemove.remove();
+	}
+
 	function onClick(e) {
 		if (e.target.closest('.js-comment-delete')) {
 			openDeleteBox(e.target.closest('.tk-comment'));
+		} else if (e.target.closest('.js-comment-report')) {
+			submitReport(e.target.closest('.tk-comment'));
 		} else if (e.target.closest('.js-comment-del-confirm')) {
 			submitDelete(e.target.closest('.tk-comment'));
 		} else if (e.target.closest('.js-comment-del-cancel')) {

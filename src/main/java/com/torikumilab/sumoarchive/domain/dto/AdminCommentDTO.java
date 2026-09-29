@@ -12,6 +12,7 @@ public record AdminCommentDTO(
 		String displayContent,
 		String createdAt,
 		boolean deleted,
-		boolean blinded
+		boolean blinded,
+		int reportCount         // 방문자 신고 수 (0이면 신고 없음)
 ) {
 }

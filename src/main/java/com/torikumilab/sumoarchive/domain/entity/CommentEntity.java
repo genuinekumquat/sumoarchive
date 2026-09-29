@@ -42,6 +42,14 @@ public class CommentEntity {
 	@Column(name = "deleted_by", length = 10)
 	private DeletedBy deletedBy;
 
+	// 방문자 신고 수. 자동으로 가리지는 않고, 관리자 화면에서 신고된 댓글을 모아 보고 블라인드 여부를 판단한다.
+	// 동시 신고에도 누락이 없도록 값은 CommentRepository.incrementReportCount(UPDATE ... + 1)로만 올린다.
+	@Column(name = "report_count", nullable = false)
+	private int reportCount = 0;
+
+	@Column(name = "last_reported_at")
+	private LocalDateTime lastReportedAt;
+
 	@CreationTimestamp
 	@Column(name = "created_at", updatable = false)
 	private LocalDateTime createdAt;

@@ -17,6 +17,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * 2) 익명 댓글 삭제: 5분 내 최대 5회 비밀번호 오류 허용 (4자리 PIN 무차별 대입 방어)
  *    + 댓글 하나당 1시간 내 10회 오류 시 그 댓글 삭제를 잠금 (IP를 바꿔 가며 시도하는 경우 방어)
  * 3) 관리자 로그인: 5분 내 최대 5회 실패 허용 (무차별 대입 방어)
+ * 4) 댓글 신고: 같은 IP의 같은 댓글 중복 신고는 24시간 동안 무시, IP당 10분에 10건까지 (신고 도배 방지)
  */
 @Service
 public class RateLimiterService {
@@ -25,6 +26,9 @@ public class RateLimiterService {
 	private final Map<String, Deque<Long>> commentDeleteFailHistory = new ConcurrentHashMap<>();
 	private final Map<Integer, Deque<Long>> commentPinFailHistory = new ConcurrentHashMap<>();
 	private final Map<String, Deque<Long>> adminLoginFailHistory = new ConcurrentHashMap<>();
+	private final Map<String, Deque<Long>> commentReportHistory = new ConcurrentHashMap<>();
+	// "IP:댓글ID" -> 신고 시각. 신고자 정보는 DB에 남기지 않으므로 중복 신고는 여기서만 막는다(재시작 시 초기화).
+	private final Map<String, Long> reportedByIp = new ConcurrentHashMap<>();
 
 	private static final long COMMENT_COOLDOWN_MILLIS = 3_000;      // 3초 최소 간격
 	private static final long COMMENT_POST_WINDOW_MILLIS = 60_000;  // 1분
@@ -38,6 +42,10 @@ public class RateLimiterService {
 	// (다 맞히려면 평균 500시간). 작성자 본인도 잠금 동안은 못 지우므로 관리자 블라인드로 처리한다.
 	private static final long COMMENT_LOCK_WINDOW_MILLIS = 3_600_000; // 1시간
 	private static final int COMMENT_LOCK_FAIL_MAX = 10;               // 1시간 내 10회 실패
+
+	private static final long REPORT_WINDOW_MILLIS = 600_000;          // 10분
+	private static final int REPORT_MAX = 10;                          // 10분당 10건
+	private static final long REPORT_DEDUP_MILLIS = 86_400_000;        // 같은 댓글 재신고 무시 24시간
 
 	// ===== 1. 댓글 작성 =====
 
@@ -124,6 +132,34 @@ public class RateLimiterService {
 		adminLoginFailHistory.remove(clientIp);
 	}
 
+	// ===== 4. 댓글 신고 (중복·도배 방지) =====
+
+	/**
+	 * 신고를 받아도 되는지 확인하고 받으면 기록한다.
+	 * @return 새 신고면 true, 같은 IP가 이미 신고한 댓글이면 false (조용히 무시할 신고)
+	 * @throws RateLimitExceededException IP당 신고 한도 초과
+	 */
+	public synchronized boolean tryRecordCommentReport(String clientIp, Integer commentId) {
+		long now = System.currentTimeMillis();
+		String key = clientIp + ":" + commentId;
+		Long reportedAt = reportedByIp.get(key);
+		if (reportedAt != null && now - reportedAt <= REPORT_DEDUP_MILLIS) {
+			return false;
+		}
+
+		Deque<Long> history = commentReportHistory.computeIfAbsent(clientIp, k -> new ArrayDeque<>());
+		while (!history.isEmpty() && now - history.peekFirst() > REPORT_WINDOW_MILLIS) {
+			history.pollFirst();
+		}
+		if (history.size() >= REPORT_MAX) {
+			throw new RateLimitExceededException("신고가 너무 많습니다. 잠시 후 다시 시도해 주세요.");
+		}
+
+		history.addLast(now);
+		reportedByIp.put(key, now);
+		return true;
+	}
+
 	// ===== 주기적 메모리 청소 (10분마다 실행) =====
 
 	@Scheduled(fixedRate = 600_000)
@@ -133,6 +169,8 @@ public class RateLimiterService {
 		pruneMap(commentDeleteFailHistory, now, FAIL_WINDOW_MILLIS);
 		pruneMap(commentPinFailHistory, now, COMMENT_LOCK_WINDOW_MILLIS);
 		pruneMap(adminLoginFailHistory, now, FAIL_WINDOW_MILLIS);
+		pruneMap(commentReportHistory, now, REPORT_WINDOW_MILLIS);
+		reportedByIp.values().removeIf(at -> now - at > REPORT_DEDUP_MILLIS);
 	}
 
 	private <K> void pruneMap(Map<K, Deque<Long>> map, long now, long window) {

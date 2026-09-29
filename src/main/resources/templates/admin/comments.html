@@ -85,6 +85,18 @@
             cursor: pointer;
         }
         .blind-btn:hover { background: var(--shu); color: var(--washi); }
+        .filter-tabs { display: flex; gap: 6px; margin-bottom: 16px; font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12.5px; }
+        .filter-tabs a {
+            padding: 6px 14px;
+            border: 1px solid var(--washi-line);
+            color: var(--sumi-soft);
+            text-decoration: none;
+        }
+        .filter-tabs a:hover { border-color: var(--sumi); color: var(--sumi); }
+        .filter-tabs a.current { border-color: var(--sumi); background: var(--sumi); color: var(--washi); }
+        .filter-tabs .count { color: var(--shu); font-weight: 700; margin-left: 4px; }
+        .filter-tabs a.current .count { color: var(--washi); }
+        .badge.reported { margin-top: 4px; color: var(--shu); border-color: var(--shu); }
         .empty-note { padding: 30px 0; text-align: center; color: var(--sumi-faint); }
 
         .pager { display: flex; justify-content: center; gap: 10px; margin-top: 24px; }
@@ -106,7 +118,7 @@
         <div class="header-top">
             <div>
                 <h1>댓글 관리</h1>
-                <div class="sub">전체 토리쿠미 댓글 · 최신순</div>
+                <div class="sub" th:text="${reported} ? '처리 안 된 신고 댓글 · 신고 많은 순' : '전체 토리쿠미 댓글 · 최신순'">전체 토리쿠미 댓글 · 최신순</div>
             </div>
             <form class="logout-form" th:action="@{/admin/logout}" method="post">
                 <button type="submit">로그아웃</button>
@@ -119,6 +131,11 @@
             <a th:href="@{/admin/basho}">반즈케 관리</a>
         </nav>
     </header>
+
+    <nav class="filter-tabs">
+        <a th:href="@{/admin/comments}" th:classappend="${!reported} ? 'current' : ''">전체</a>
+        <a th:href="@{/admin/comments(reported=true)}" th:classappend="${reported} ? 'current' : ''">신고된 댓글<span class="count" th:if="${pendingReportedCount > 0}" th:text="${pendingReportedCount}">3</span></a>
+    </nav>
 
     <table th:if="${result.hasContent()}">
         <thead>
@@ -143,6 +160,7 @@
                 <span class="badge" th:if="${!c.deleted}">정상</span>
                 <span class="badge" th:if="${c.deleted and !c.blinded}">본인삭제</span>
                 <span class="badge blinded" th:if="${c.deleted and c.blinded}">블라인드</span>
+                <span class="badge reported" th:if="${c.reportCount > 0}" th:text="'신고 ' + ${c.reportCount}">신고 2</span>
             </td>
             <td>
                 <button type="button" class="blind-btn" th:if="${!c.deleted}"
@@ -151,13 +169,13 @@
         </tr>
         </tbody>
     </table>
-    <div class="empty-note" th:unless="${result.hasContent()}">등록된 댓글이 없습니다.</div>
+    <div class="empty-note" th:unless="${result.hasContent()}" th:text="${reported} ? '처리할 신고 댓글이 없습니다.' : '등록된 댓글이 없습니다.'">등록된 댓글이 없습니다.</div>
 
     <div class="pager" th:if="${result.totalPages > 1}">
-        <a th:if="${result.hasPrevious()}" th:href="@{/admin/comments(page=${result.number - 1})}">← 이전</a>
+        <a th:if="${result.hasPrevious()}" th:href="@{/admin/comments(page=${result.number - 1},reported=${reported})}">← 이전</a>
         <span th:unless="${result.hasPrevious()}" class="disabled">← 이전</span>
         <span th:text="${result.number + 1} + ' / ' + ${result.totalPages}">1 / 1</span>
-        <a th:if="${result.hasNext()}" th:href="@{/admin/comments(page=${result.number + 1})}">다음 →</a>
+        <a th:if="${result.hasNext()}" th:href="@{/admin/comments(page=${result.number + 1},reported=${reported})}">다음 →</a>
         <span th:unless="${result.hasNext()}" class="disabled">다음 →</span>
     </div>
 </div>

@@ -320,6 +320,11 @@
 	background: rgba(255, 255, 255, 0.7);
 	padding: 5px 8px;
 }
+.tk-comment-reportmsg {
+	font-family: 'Zen Kaku Gothic New', sans-serif;
+	font-size: 11px;
+	color: var(--sumi-faint, #86857f);
+}
 .tk-comment-delerr {
 	font-family: 'Zen Kaku Gothic New', sans-serif;
 	font-size: 11px;
