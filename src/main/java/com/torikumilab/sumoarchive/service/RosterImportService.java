@@ -229,7 +229,7 @@ public class RosterImportService {
 	// ===== 신규 리키시 생성 =====
 
 	private RikishiEntity toEntity(SumoApiRikishiDTO api, HeyaEntity heya, List<String> warnings) {
-		String shikonaKr = ShikonaKrTransliterator.fromRomaji(api.shikonaEn());
+		String shikonaKr = ShikonaKrTransliterator.fromRomaji(firstToken(api.shikonaEn()));
 		return RikishiEntity.builder()
 				.externalApiId((int) api.id())
 				.shikonaJp(firstToken(api.shikonaJp()))

@@ -128,7 +128,8 @@ public class RikishiAdminService {
 		List<String> samples = new ArrayList<>();
 		List<String> failed = new ArrayList<>();
 		for (RikishiEntity r : targets) {
-			String kr = ShikonaKrTransliterator.fromRomaji(r.getShikonaEn());
+			// 은퇴자는 shikonaEn에 본명이 붙어 있어("Hakuho Sho") 시코나 부분만 음차
+			String kr = ShikonaKrTransliterator.fromRomaji(RosterImportService.firstToken(r.getShikonaEn()));
 			if (kr == null || kr.isBlank()) {
 				failed.add(r.getShikonaEn() != null && !r.getShikonaEn().isBlank()
 						? r.getShikonaEn() : ("id=" + r.getId()));

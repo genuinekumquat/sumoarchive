@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- 블라인드 API(fetch)용 관리자 CSRF 토큰 (AdminCsrf) -->
+    <meta name="csrf-token" th:content="${session.adminCsrfToken}">
     <title>스모아카이브 관리자</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -167,7 +169,11 @@
             var commentId = btn.dataset.commentId;
             if (!confirm('이 댓글을 블라인드 처리할까요?')) return;
             btn.disabled = true;
-            fetch('/api/torikumi/' + torikumiId + '/comments/' + commentId + '/blind', { method: 'POST' })
+            var csrf = document.querySelector('meta[name="csrf-token"]').content;
+            fetch('/api/torikumi/' + torikumiId + '/comments/' + commentId + '/blind', {
+                method: 'POST',
+                headers: { 'X-CSRF-TOKEN': csrf }
+            })
                 .then(function (res) {
                     if (!res.ok) throw new Error('blind failed');
                     location.reload();

@@ -179,7 +179,9 @@ server {
         proxy_pass http://127.0.0.1:8080;
         proxy_http_version 1.1;
 
-        # 원본 IP 전달 (Rate Limiter 연동에 필수)
+        # 원본 IP 전달 (Rate Limiter 연동에 필수).
+        # 앱은 server.forward-headers-strategy=native로 X-Forwarded-For를 "오른쪽부터" 읽고 신뢰 프록시(사설망·localhost)만 건너뛴다.
+        # $proxy_add_x_forwarded_for는 Nginx가 본 실제 IP를 맨 뒤에 붙이므로, 클라이언트가 헤더를 위조해 앞에 넣어도 무시된다.
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -227,6 +229,10 @@ docker exec -i sumoarchive-db mysql -u root -p<ROOT_PASS> sumo < backup_20260924
 
 - [x] **운영 프로필 분리**: `application-prod.properties`의 `ddl-auto=validate`, `show-sql=false`, `thymeleaf.cache=true` 적용 완료
 - [x] **스키마 버전 관리**: Flyway 도입, 빈 DB는 `V1__init_schema.sql`로 생성 / 기존 DB는 baseline (4절)
+- [x] **클라이언트 IP 위조 방지**: X-Forwarded-For는 신뢰 프록시를 거친 경우만 반영 (`server.forward-headers-strategy=native`)
+- [x] **관리자 로그인 보강**: 로그인 시 세션 ID 교체(세션 고정 방지), 일정 시간 비교, 관리자 POST에 CSRF 토큰 필수
+- [x] **Docker 노출 최소화**: 앱 포트는 `127.0.0.1:8080`에만 바인딩, `ADMIN_PASSWORD`는 기본값 없이 `.env` 필수
+- [ ] **DB 비밀번호**: compose의 `SPRING_DATASOURCE_PASSWORD`·`MYSQL_ROOT_PASSWORD` 기본값 대신 `.env`에 강한 값 설정 (DB 포트는 외부에 열지 않음)
 - [x] **시크릿 환경변수화**: DB 및 어드민 비밀번호를 `.env` 또는 서버 환경변수로 관리
 - [x] **데이터 안전성 확보**: 로스터 임포트 시 `wipeExisting()` 제거 및 `Upsert` 전환 완료
 - [x] **보안 가드 탑재**: 익명 댓글 3초 쿨다운 & 1분 5회 제한, 관리자 로그인 5회 실패 차단, 세션 쿠키 SameSite=Lax 및 HttpOnly 적용

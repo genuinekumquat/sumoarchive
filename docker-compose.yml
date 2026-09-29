@@ -6,7 +6,8 @@ services:
     container_name: sumoarchive-app
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      # Nginx(같은 서버)만 접근하도록 localhost에만 연다. 0.0.0.0으로 열면 Nginx·HTTPS를 거치지 않는 직접 접속이 가능해진다.
+      - "127.0.0.1:8080:8080"
     environment:
       - SPRING_PROFILES_ACTIVE=prod
       - PORT=8080
@@ -14,7 +15,8 @@ services:
       - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME:-sumo}
       - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD:-sumo_password}
       - ADMIN_USERNAME=${ADMIN_USERNAME:-torikumiAdmin}
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-torikumiPass123!}
+      # 기본값 없음: .env에 ADMIN_PASSWORD가 없으면 compose가 시작을 거부한다 (공개 저장소에 적힌 비밀번호로 운영되는 것 방지)
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:?.env에 ADMIN_PASSWORD를 설정하세요}
     depends_on:
       db:
         condition: service_healthy

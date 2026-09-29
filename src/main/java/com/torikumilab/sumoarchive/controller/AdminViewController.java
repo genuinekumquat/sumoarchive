@@ -1,5 +1,6 @@
 package com.torikumilab.sumoarchive.controller;
 
+import com.torikumilab.sumoarchive.config.AdminCsrf;
 import com.torikumilab.sumoarchive.service.exception.RateLimitExceededException;
 import com.torikumilab.sumoarchive.service.security.RateLimiterService;
 import com.torikumilab.sumoarchive.util.ClientIpResolver;
@@ -49,9 +50,15 @@ public class AdminViewController {
 			return "admin/login";
 		}
 
-		if (adminUsername.equals(username) && adminPassword.equals(password)) {
+		// 아이디·비밀번호 둘 다 항상 비교 (한쪽만 틀려도 걸리는 시간이 같도록 &&로 단락시키지 않음)
+		boolean usernameOk = AdminCsrf.constantTimeEquals(adminUsername, username);
+		boolean passwordOk = AdminCsrf.constantTimeEquals(adminPassword, password);
+		if (usernameOk & passwordOk) {
 			rateLimiterService.recordAdminLoginSuccess(clientIp);
+			// 세션 고정 공격 방지: 로그인 전에 심어둔 세션 ID를 그대로 쓰지 않도록 새 ID로 바꾼다.
+			request.changeSessionId();
 			session.setAttribute("isAdmin", true);
+			AdminCsrf.issue(session);
 			return "redirect:/admin/comments";
 		}
 
