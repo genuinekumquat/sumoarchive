@@ -52,6 +52,9 @@ MYSQL_ROOT_PASSWORD=강력한_ROOT_비밀번호_입력!
 # 3. 어드민 계정
 ADMIN_USERNAME=sumoAdmin
 ADMIN_PASSWORD=강력한_관리자_비밀번호_입력!
+
+# 4. 개인정보 처리 안내(/privacy)에 공개할 문의 이메일 (없으면 앱이 시작하지 않음)
+CONTACT_EMAIL=문의용_이메일@example.com
 ```
 
 ---
@@ -224,6 +227,18 @@ sudo apt update && sudo apt install certbot python3-certbot-nginx -y
 sudo certbot --nginx -d your-domain.com -d www.your-domain.com
 ```
 
+### 3) 접속 로그 보관 기간 (14일)
+개인정보 처리 안내(`/privacy`)에 "서버 접속 기록은 14일 후 자동 삭제"라고 적었으므로 Nginx 로그 보관 기간을 맞춘다.
+Ubuntu 기본 `/etc/nginx/logrotate.d/nginx`는 보통 `daily` + `rotate 14`지만 배포판마다 다르니 확인한다.
+
+```bash
+grep -E "daily|weekly|rotate" /etc/nginx/logrotate.d/nginx   # daily / rotate 14 인지 확인
+sudo nano /etc/nginx/logrotate.d/nginx                         # 다르면 daily, rotate 14로 고친다
+sudo logrotate -d /etc/nginx/logrotate.d/nginx                 # 설정 점검 (실제로 돌리지 않음)
+```
+
+> 앱 로그(14일, `application-prod.properties`)와 DB 백업(14일, `scripts/backup-db.sh`)도 안내문과 같은 기간이다. 기간을 바꾸면 `templates/privacy.html`도 같이 고친다.
+
 ---
 
 ## 6. 데이터베이스 백업 및 복구 팁
@@ -278,6 +293,8 @@ docker compose start app
 - [x] **보안 가드 탑재**: 익명 댓글 3초 쿨다운 & 1분 5회 제한, 관리자 로그인 5회 실패 차단, 세션 쿠키 SameSite=Lax 및 HttpOnly 적용
 - [x] **댓글 PIN 댓글별 잠금**: IP와 상관없이 댓글 하나당 1시간 내 비밀번호 10회 오류 시 그 댓글 삭제 잠금 (IP 여러 개 사용·자기 댓글 삭제로 IP 기록 초기화하는 우회 방어). 인메모리라 앱 재시작 시 초기화
 - [x] **댓글 신고**: 방문자 신고 버튼(같은 IP 같은 댓글 24시간 1회, IP당 10분 10건), 자동 숨김 없이 관리자 댓글 관리의 "신고된 댓글" 탭에서 신고 많은 순으로 확인 후 블라인드. 신고자 정보는 저장하지 않음 (Flyway `V2__add_comment_report.sql`, 배포 시 자동 적용)
+- [x] **개인정보 처리 안내**: `/privacy`(한·일), 모든 페이지 푸터에서 연결. 문의 이메일은 `CONTACT_EMAIL`(필수). 본인 삭제 댓글은 원문 즉시 삭제(Flyway V3로 기존 것도 정리), YouTube는 youtube-nocookie 임베드
+- [ ] **Nginx 접속 로그 14일 보관 확인**: 안내문과 맞추기 (5절 3)
 - [x] **캐싱 최적화**: 바쇼 목록, 반즈케 데이터, 키마리테 백과사전에 Spring Cache 적용 완료
 - [x] **관리자 수정 즉시 반영**: 바쇼·반즈케 행·리키시 프로필·헤야 이름 수정 시 관련 캐시를 커밋 직후 비움 (`config/CacheConfig`). DB에 SQL로 직접 넣은 데이터는 여전히 앱 재시작 필요
 - [x] **이미지 핫링크 방어**: 템플릿 메타 태그 `<meta name="referrer" content="no-referrer">` 적용 완료

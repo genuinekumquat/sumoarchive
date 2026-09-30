@@ -25,8 +25,9 @@ public final class YoutubeUrlUtil {
 		return m.find() ? m.group(1) : null;
 	}
 
+	// 쿠키를 줄인 youtube-nocookie 도메인: 재생 버튼을 누르기 전에는 YouTube 추적 쿠키가 남지 않는다 (개인정보 처리 안내 참고)
 	public static String toEmbedUrl(String url) {
 		String id = extractVideoId(url);
-		return id == null ? null : "https://www.youtube.com/embed/" + id;
+		return id == null ? null : "https://www.youtube-nocookie.com/embed/" + id;
 	}
 }

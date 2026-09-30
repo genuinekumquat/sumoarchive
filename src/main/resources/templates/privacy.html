@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html th:lang="${#locale.language}" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="no-referrer">
+    <title th:text="#{site.title}">스모아카이브</title>
+    <th:block th:replace="~{fragments/common :: seo(#{seo.privacy.title}, #{seo.privacy.desc}, true)}"></th:block>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Yuji+Syuku&family=Noto+Serif+KR:wght@400;600;900&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --sumi: #1a1a18;
+            --sumi-soft: #56554e;
+            --sumi-faint: #86857f;
+            --washi: #f7f6f3;
+            --washi-line: rgba(26, 26, 24, 0.14);
+            --shu: #a3272c;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            background-color: var(--washi);
+            background-image:
+                    repeating-linear-gradient(90deg, rgba(26,26,24,0.022) 0px, rgba(26,26,24,0.022) 1px, transparent 1px, transparent 3px),
+                    repeating-linear-gradient(0deg, rgba(26,26,24,0.012) 0px, rgba(26,26,24,0.012) 1px, transparent 1px, transparent 5px);
+            color: var(--sumi);
+            font-family: 'Noto Serif KR', serif;
+            line-height: 1.75;
+            min-height: 100vh;
+        }
+        .page { max-width: 760px; margin: 0 auto; padding: 40px 24px 80px; }
+        a { color: inherit; }
+
+        header { position: relative; border: 3px double var(--sumi); padding: 22px 28px 18px; margin-bottom: 26px; }
+        .brand-row { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+        .brand-jp { font-family: 'Yuji Syuku', serif; font-size: 28px; letter-spacing: 3px; color: var(--sumi); text-decoration: none; }
+        .brand-kr { font-family: 'Noto Serif KR', serif; font-weight: 900; font-size: 15px; letter-spacing: 1px; color: var(--sumi-soft); }
+        .breadcrumb { margin-top: 10px; font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; letter-spacing: 1px; color: var(--sumi-faint); }
+        .breadcrumb a:hover { color: var(--shu); }
+        /* 언어 스위처 (fragments/common :: langSwitch) */
+        .lang-switch { margin-top: 10px; display: flex; align-items: center; gap: 6px; font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 11px; letter-spacing: 1px; }
+        .lang-switch a { color: var(--sumi-faint); text-decoration: none; }
+        .lang-switch a:hover { color: var(--shu); }
+        .lang-switch a.active { color: var(--sumi); font-weight: 700; }
+        .lang-switch .sep { color: var(--washi-line); }
+
+        h1 { font-size: 20px; letter-spacing: 1px; margin: 0 0 6px; }
+        .updated { font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; color: var(--sumi-faint); margin: 0 0 22px; }
+        .lead { font-size: 14.5px; margin: 0 0 26px; }
+        section { border-top: 1px solid var(--washi-line); padding: 18px 0 6px; }
+        h2 { font-size: 15.5px; margin: 0 0 10px; letter-spacing: 0.5px; }
+        p, li { font-size: 14px; }
+        ul { margin: 0 0 12px; padding-left: 20px; }
+        li { margin-bottom: 6px; }
+        table { width: 100%; border-collapse: collapse; font-size: 13.5px; margin: 4px 0 14px; }
+        th, td { text-align: left; vertical-align: top; padding: 8px 8px; border-bottom: 1px solid var(--washi-line); }
+        th { font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 11.5px; font-weight: 500; color: var(--sumi-faint); letter-spacing: 1px; border-bottom-color: var(--sumi); }
+        .mail { font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 15px; font-weight: 700; }
+        .unset { color: var(--shu); }
+        @media (max-width: 560px) {
+            table, thead, tbody, tr, th, td { display: block; }
+            thead { display: none; }
+            tr { border-bottom: 1px solid var(--washi-line); padding: 6px 0; }
+            td { border: none; padding: 2px 0; }
+        }
+
+        footer { text-align: center; margin-top: 40px; font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 11px; letter-spacing: 2px; color: var(--sumi-faint); }
+    </style>
+</head>
+<body>
+<div class="page">
+
+    <header>
+        <div class="brand-row">
+            <a class="brand-jp" th:href="@{/}">相撲archive</a>
+            <span class="brand-kr">스모아카이브</span>
+        </div>
+        <div class="breadcrumb"><a th:href="@{/}" th:text="#{common.nav.banzuke}">반즈케</a> &gt; <span th:text="#{footer.privacy}">개인정보 처리 안내</span></div>
+        <th:block th:replace="~{fragments/common :: langSwitch}"></th:block>
+    </header>
+
+    <!-- 본문은 긴 안내문이라 메시지 키로 쪼개지 않고 언어별 블록을 둔다. 내용을 바꾸면 두 블록을 같이 고친다.
+         보관 기간 숫자는 실제 설정과 맞춰야 한다: 서버 접속 로그 14일(Nginx logrotate, DEPLOYMENT 5절),
+         앱 로그 14일(application-prod), DB 백업 14일(scripts/backup-db.sh), IP 메모리 보관 최대 24시간(RateLimiterService). -->
+
+    <!-- ===================== 한국어 ===================== -->
+    <article th:unless="${#locale.language == 'ja'}">
+        <h1>개인정보 처리 안내</h1>
+        <p class="updated">시행일: 2026년 9월 30일</p>
+        <p class="lead">
+            스모아카이브(이하 "사이트")는 개인이 운영하는 비영리 스모 팬 사이트입니다. 회원가입이 없고,
+            사이트를 운영하는 데 꼭 필요한 정보만 다룹니다. 어떤 정보를 왜, 얼마 동안 보관하는지 아래에 안내합니다.
+        </p>
+
+        <section>
+            <h2>1. 다루는 정보와 목적</h2>
+            <table>
+                <thead><tr><th>정보</th><th>목적</th><th>보관 기간</th></tr></thead>
+                <tbody>
+                <tr>
+                    <td>댓글의 닉네임, 내용, 작성 시각</td>
+                    <td>댓글 게시</td>
+                    <td>댓글이 게시되어 있는 동안</td>
+                </tr>
+                <tr>
+                    <td>댓글 삭제용 비밀번호(숫자 4자리)</td>
+                    <td>작성자 본인 삭제 확인</td>
+                    <td>원래 값을 알 수 없는 형태(해시)로만 저장하며, 댓글이 게시되어 있는 동안</td>
+                </tr>
+                <tr>
+                    <td>댓글 신고 횟수와 마지막 신고 시각</td>
+                    <td>관리자의 댓글 검토</td>
+                    <td>댓글이 게시되어 있는 동안 (신고한 사람의 정보는 저장하지 않음)</td>
+                </tr>
+                <tr>
+                    <td>접속 IP 주소</td>
+                    <td>댓글 도배, 비밀번호 무차별 대입, 신고 남용 방지</td>
+                    <td>서버 메모리에만 최대 24시간 (데이터베이스에 저장하지 않음)</td>
+                </tr>
+                <tr>
+                    <td>서버 접속 기록 (IP 주소, 요청 주소, 시각, 브라우저 정보)</td>
+                    <td>보안 사고와 장애 대응</td>
+                    <td>14일 후 자동 삭제</td>
+                </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section>
+            <h2>2. 댓글 삭제와 파기</h2>
+            <ul>
+                <li>작성자가 비밀번호로 댓글을 삭제하면 닉네임, 내용, 비밀번호를 즉시 지웁니다. 목록에는 "작성자에 의해 삭제된 댓글입니다"라는 표시만 남습니다.</li>
+                <li>관리자가 가림 처리한 댓글은 신고 대응과 재발 방지를 위해 원문을 보관합니다. 아래 문의처로 요청하면 삭제합니다.</li>
+                <li>장애 복구를 위한 데이터베이스 백업은 14일간 보관되므로, 삭제한 정보도 이 기간 동안은 백업에 남아 있을 수 있습니다.</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>3. 쿠키와 브라우저 저장소</h2>
+            <ul>
+                <li><strong>세션 쿠키 (JSESSIONID)</strong>: 고른 언어(한국어/일본어)를 기억하는 데 씁니다. 브라우저를 닫으면 사라집니다.</li>
+                <li><strong>브라우저 저장소 (localStorage)</strong>: 즐겨찾기 목록과 차트 보기 설정은 방문자의 브라우저에만 저장되고 서버로 보내지 않습니다. 브라우저의 사이트 데이터 삭제로 지울 수 있습니다.</li>
+                <li>방문 분석이나 광고를 위한 쿠키는 쓰지 않습니다.</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>4. 외부 서비스</h2>
+            <p>화면을 표시하기 위해 아래 외부 서비스를 씁니다. 페이지를 열면 방문자의 브라우저가 이 서비스들에 직접 접속하므로, IP 주소와 브라우저 정보가 각 사업자에게 전달되고 각 사업자의 개인정보 처리방침이 적용됩니다.</p>
+            <ul>
+                <li><strong>Google Fonts</strong> (Google): 글꼴</li>
+                <li><strong>cdnjs</strong> (Cloudflare): 리키시 페이지의 차트 기능</li>
+                <li><strong>jsDelivr</strong>: 즐겨찾기 순서 바꾸기 기능</li>
+                <li><strong>YouTube</strong> (Google): 경기 하이라이트 영상. 쿠키를 줄인 youtube-nocookie.com 주소로 불러오며, 영상을 재생하면 YouTube의 정책이 적용됩니다.</li>
+            </ul>
+            <p>이 밖에 다루는 정보를 다른 곳에 제공하지 않습니다. 다만 법령에 따른 요청이 있으면 그에 따릅니다.</p>
+        </section>
+
+        <section>
+            <h2>5. 문의와 요청</h2>
+            <p>댓글 비밀번호를 잊어 삭제할 수 없을 때, 가림 처리된 댓글의 삭제를 원할 때, 그 밖에 개인정보 관련 문의는 아래 이메일로 보내 주세요. 댓글을 찾을 수 있도록 경기 페이지 주소와 작성 시각을 함께 알려 주시면 빠르게 처리할 수 있습니다.</p>
+            <p class="mail" th:if="${contactEmail != null}"><a th:href="'mailto:' + ${contactEmail}" th:text="${contactEmail}">contact@example.com</a></p>
+            <p class="mail unset" th:unless="${contactEmail != null}">(문의 이메일이 설정되지 않았습니다)</p>
+        </section>
+
+        <section>
+            <h2>6. 안내의 변경</h2>
+            <p>이 안내를 바꾸는 경우 이 페이지에 바뀐 내용과 시행일을 게시합니다.</p>
+        </section>
+    </article>
+
+    <!-- ===================== 日本語 ===================== -->
+    <article th:if="${#locale.language == 'ja'}">
+        <h1>個人情報の取り扱い</h1>
+        <p class="updated">施行日：2026年9月30日</p>
+        <p class="lead">
+            相撲アーカイブ（以下「本サイト」）は、個人が運営する非営利の相撲ファンサイトです。会員登録はなく、
+            運営に必要な情報だけを扱います。どの情報をなぜ、どのくらいの期間保存するかを以下にご案内します。
+        </p>
+
+        <section>
+            <h2>1. 取り扱う情報と目的</h2>
+            <table>
+                <thead><tr><th>情報</th><th>目的</th><th>保存期間</th></tr></thead>
+                <tbody>
+                <tr>
+                    <td>コメントのニックネーム・内容・投稿日時</td>
+                    <td>コメントの掲載</td>
+                    <td>コメントが掲載されている間</td>
+                </tr>
+                <tr>
+                    <td>コメント削除用の暗証番号（数字4桁）</td>
+                    <td>投稿者本人による削除の確認</td>
+                    <td>元の値を復元できない形式（ハッシュ）でのみ保存し、コメントが掲載されている間</td>
+                </tr>
+                <tr>
+                    <td>コメントの通報回数と最終通報日時</td>
+                    <td>管理者によるコメントの確認</td>
+                    <td>コメントが掲載されている間（通報した方の情報は保存しません）</td>
+                </tr>
+                <tr>
+                    <td>接続元IPアドレス</td>
+                    <td>連続投稿・暗証番号の総当たり・通報の乱用の防止</td>
+                    <td>サーバーのメモリ上でのみ最大24時間（データベースには保存しません）</td>
+                </tr>
+                <tr>
+                    <td>サーバーのアクセス記録（IPアドレス、アクセス先、日時、ブラウザ情報）</td>
+                    <td>セキュリティ事故・障害への対応</td>
+                    <td>14日後に自動削除</td>
+                </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section>
+            <h2>2. コメントの削除と廃棄</h2>
+            <ul>
+                <li>投稿者が暗証番号でコメントを削除すると、ニックネーム・内容・暗証番号をただちに消去します。一覧には「投稿者により削除されたコメントです」という表示だけが残ります。</li>
+                <li>管理者が非表示にしたコメントは、通報への対応と再発防止のため原文を保存します。下記のお問い合わせ先にご依頼いただければ削除します。</li>
+                <li>障害復旧用のデータベースのバックアップは14日間保存されるため、削除した情報もその期間はバックアップに残る場合があります。</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>3. Cookieとブラウザのストレージ</h2>
+            <ul>
+                <li><strong>セッションCookie（JSESSIONID）</strong>：選んだ表示言語（韓国語／日本語）を覚えておくために使います。ブラウザを閉じると消えます。</li>
+                <li><strong>ブラウザのストレージ（localStorage）</strong>：ごひいき一覧とグラフの表示設定は、お使いのブラウザにだけ保存され、サーバーには送信しません。ブラウザのサイトデータ削除で消去できます。</li>
+                <li>アクセス解析や広告のためのCookieは使用していません。</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>4. 外部サービス（外部送信）</h2>
+            <p>画面の表示のために以下の外部サービスを利用しています。ページを開くと、お使いのブラウザがこれらのサービスに直接接続するため、IPアドレスやブラウザ情報が各事業者に送信され、各事業者のプライバシーポリシーが適用されます。</p>
+            <ul>
+                <li><strong>Google Fonts</strong>（Google）：フォント</li>
+                <li><strong>cdnjs</strong>（Cloudflare）：力士ページのグラフ機能</li>
+                <li><strong>jsDelivr</strong>：ごひいきの並べ替え機能</li>
+                <li><strong>YouTube</strong>（Google）：取組のハイライト動画。Cookieを抑えた youtube-nocookie.com で読み込み、動画を再生するとYouTubeのポリシーが適用されます。</li>
+            </ul>
+            <p>これ以外に、取り扱う情報を第三者に提供することはありません。ただし、法令に基づく要請がある場合はそれに従います。</p>
+        </section>
+
+        <section>
+            <h2>5. お問い合わせ・ご依頼</h2>
+            <p>暗証番号を忘れてコメントを削除できない場合、非表示にされたコメントの削除を希望される場合、その他個人情報に関するお問い合わせは、下記のメールアドレスまでお送りください。コメントを特定できるよう、取組ページのアドレスと投稿日時をお知らせいただくと、早く対応できます。</p>
+            <p class="mail" th:if="${contactEmail != null}"><a th:href="'mailto:' + ${contactEmail}" th:text="${contactEmail}">contact@example.com</a></p>
+            <p class="mail unset" th:unless="${contactEmail != null}">（お問い合わせ用メールアドレスが設定されていません）</p>
+        </section>
+
+        <section>
+            <h2>6. 本案内の変更</h2>
+            <p>本案内を変更する場合は、このページに変更内容と施行日を掲載します。</p>
+        </section>
+    </article>
+
+    <footer><span th:text="#{main.footer}">SUMOARCHIVE — 韓国語で見る大相撲情報アーカイブ</span><th:block th:replace="~{fragments/common :: footerNote}"></th:block></footer>
+</div>
+</body>
+</html>

@@ -62,10 +62,17 @@ public class CommentEntity {
 		this.content = content;
 	}
 
-	/** 작성자 본인 삭제 (비밀번호 검증은 서비스에서 끝낸 뒤 호출) */
+	/**
+	 * 작성자 본인 삭제 (비밀번호 검증은 서비스에서 끝낸 뒤 호출).
+	 * 행은 "삭제된 댓글입니다" 자리 유지용으로 남기되, 닉네임·내용·비밀번호 해시는 지운다
+	 * (개인정보 처리 안내: 본인이 지운 댓글은 원문을 보관하지 않음). 컬럼이 NOT NULL이라 빈 문자열.
+	 */
 	public void softDeleteByUser() {
 		this.isDeleted = true;
 		this.deletedBy = DeletedBy.USER;
+		this.nickName = "";
+		this.content = "";
+		this.password = "";
 	}
 
 	/** 관리자 블라인드 처리 (비밀번호 검증 없이) */

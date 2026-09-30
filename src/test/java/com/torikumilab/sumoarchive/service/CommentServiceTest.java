@@ -125,8 +125,8 @@ class CommentServiceTest {
 	// ===== 본인 삭제 =====
 
 	@Test
-	@DisplayName("본인 삭제: 비밀번호가 맞으면 작성자 삭제 상태가 된다")
-	void deleteByUser_withCorrectPin_softDeletes() {
+	@DisplayName("본인 삭제: 비밀번호가 맞으면 작성자 삭제 상태가 되고, 닉네임·내용·비밀번호 해시는 지워진다")
+	void deleteByUser_withCorrectPin_softDeletesAndPurgesContent() {
 		CommentEntity c = savedComment(TORIKUMI_ID);
 		given(commentRepository.findById(COMMENT_ID)).willReturn(Optional.of(c));
 
@@ -134,6 +134,21 @@ class CommentServiceTest {
 
 		assertThat(c.isDeleted()).isTrue();
 		assertThat(c.getDeletedBy()).isEqualTo(DeletedBy.USER);
+		assertThat(c.getNickName()).isEmpty();
+		assertThat(c.getContent()).isEmpty();
+		assertThat(c.getPassword()).isEmpty();
+	}
+
+	@Test
+	@DisplayName("관리자 블라인드는 원문을 남긴다 (신고·조치 근거)")
+	void blindByAdmin_keepsOriginalContent() {
+		CommentEntity c = savedComment(TORIKUMI_ID);
+		given(commentRepository.findById(COMMENT_ID)).willReturn(Optional.of(c));
+
+		commentService.blindByAdmin(TORIKUMI_ID, COMMENT_ID);
+
+		assertThat(c.getContent()).isEqualTo("좋은 경기였다");
+		assertThat(c.getNickName()).isEqualTo("스모팬");
 	}
 
 	@Test
