@@ -30,7 +30,7 @@ class RateLimiterServiceTest {
 		// 3초 이내 즉시 두 번째 작성 시도 시 차단
 		assertThatThrownBy(() -> rateLimiterService.checkCommentPostAllowed(ip))
 				.isInstanceOf(RateLimitExceededException.class)
-				.hasMessageContaining("너무 빠르게 댓글을 작성하고 있습니다");
+				.hasMessage("comment.error.post.cooldown");
 	}
 
 	@Test
@@ -52,7 +52,7 @@ class RateLimiterServiceTest {
 		// 이후 삭제 시도 시 차단 (다른 댓글이어도 같은 IP면 차단)
 		assertThatThrownBy(() -> rateLimiterService.checkCommentDeleteAllowed(ip, 2))
 				.isInstanceOf(RateLimitExceededException.class)
-				.hasMessageContaining("비밀번호 입력 시도가 너무 많습니다");
+				.hasMessage("comment.error.delete.ip");
 	}
 
 	@Test
@@ -71,7 +71,7 @@ class RateLimiterServiceTest {
 		// 처음 보는 IP여도 그 댓글은 잠김
 		assertThatThrownBy(() -> rateLimiterService.checkCommentDeleteAllowed("10.0.1.1", target))
 				.isInstanceOf(RateLimitExceededException.class)
-				.hasMessageContaining("이 댓글은 비밀번호 오류가 너무 많아");
+				.hasMessage("comment.error.delete.locked");
 
 		// 다른 댓글은 영향 없음
 		assertThatCode(() -> rateLimiterService.checkCommentDeleteAllowed("10.0.1.1", 11))
@@ -95,7 +95,7 @@ class RateLimiterServiceTest {
 
 		assertThatThrownBy(() -> rateLimiterService.checkCommentDeleteAllowed(ip, target))
 				.isInstanceOf(RateLimitExceededException.class)
-				.hasMessageContaining("이 댓글은 비밀번호 오류가 너무 많아");
+				.hasMessage("comment.error.delete.locked");
 	}
 
 	@Test
@@ -121,7 +121,7 @@ class RateLimiterServiceTest {
 
 		assertThatThrownBy(() -> rateLimiterService.tryRecordCommentReport(ip, 200))
 				.isInstanceOf(RateLimitExceededException.class)
-				.hasMessageContaining("신고가 너무 많습니다");
+				.hasMessage("comment.error.report.limit");
 
 		// 이미 신고한 댓글 재신고는 한도와 상관없이 조용히 무시
 		assertThat(rateLimiterService.tryRecordCommentReport(ip, 100)).isFalse();

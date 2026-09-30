@@ -15,6 +15,7 @@ public record TorikumiDetailDTO(
 		String dayLabelKr,     // "3일째"
 		String dayLabelJp,     // "3日目"
 		String divisionLabel,  // "마쿠우치" 등
+		String divisionLabelJp, // "幕内" 등
 
 		// --- 동(東) ---
 		Integer eastRikishiId,

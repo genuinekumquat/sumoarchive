@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<html th:lang="${#locale.language}" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -41,6 +41,12 @@
         .brand-kr { font-family: 'Noto Serif KR', serif; font-weight: 900; font-size: 15px; letter-spacing: 1px; color: var(--sumi-soft); }
         .breadcrumb { margin-top: 10px; font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; letter-spacing: 1px; color: var(--sumi-faint); }
         .breadcrumb a:hover { color: var(--shu); }
+        /* 언어 스위처 (fragments/common :: langSwitch) */
+        .lang-switch { margin-top: 10px; display: flex; align-items: center; gap: 6px; font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 11px; letter-spacing: 1px; }
+        .lang-switch a { color: var(--sumi-faint); text-decoration: none; }
+        .lang-switch a:hover { color: var(--shu); }
+        .lang-switch a.active { color: var(--sumi); font-weight: 700; }
+        .lang-switch .sep { color: var(--washi-line); }
 
         h1 { font-size: 19px; letter-spacing: 1px; margin: 0 0 4px; }
         .hint { font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; color: var(--sumi-faint); margin-bottom: 20px; }
@@ -111,27 +117,35 @@
             <a class="brand-jp" th:href="@{/}">相撲archive</a>
             <span class="brand-kr">스모아카이브</span>
         </div>
-        <div class="breadcrumb"><a th:href="@{/}">반즈케</a> &gt; 즐겨찾기</div>
+        <div class="breadcrumb"><a th:href="@{/}" th:text="#{common.nav.banzuke}">반즈케</a> &gt; <span th:text="#{bookmark.title}">즐겨찾기</span></div>
+        <th:block th:replace="~{fragments/common :: langSwitch}"></th:block>
     </header>
 
-    <h1>★ 즐겨찾기</h1>
-    <p class="hint">이 목록은 이 브라우저에만 저장돼요 (로그인 불필요). 드래그로 순서를 바꿀 수 있어요.</p>
+    <h1 th:text="#{main.bookmark.link}">★ 즐겨찾기</h1>
+    <p class="hint" th:text="#{bookmark.hint}">이 목록은 이 브라우저에만 저장돼요 (로그인 불필요). 드래그로 순서를 바꿀 수 있어요.</p>
 
     <div id="bookmarkEmpty" hidden>
-        아직 즐겨찾기한 리키시가 없습니다.<br>
-        리키시 프로필 페이지에서 <strong>★ 북마크</strong> 버튼을 눌러보세요.
-        <div style="margin-top: 10px;"><a th:href="@{/search}">선수 검색하러 가기 →</a></div>
+        <span th:text="#{bookmark.empty}">아직 즐겨찾기한 리키시가 없습니다.</span><br>
+        <span th:text="#{bookmark.empty.before}">리키시 프로필 페이지에서</span> <strong th:text="'★ ' + #{rikishi.bookmark}">★ 북마크</strong> <span th:text="#{bookmark.empty.after}">버튼을 눌러보세요.</span>
+        <div style="margin-top: 10px;"><a th:href="@{/search}" th:text="#{bookmark.empty.search}">선수 검색하러 가기 →</a></div>
     </div>
 
     <div id="bookmarkList"></div>
 
-    <footer>SUMOARCHIVE — 韓国語で見る大相撲情報アーカイブ<th:block th:replace="~{fragments/common :: footerNote}"></th:block></footer>
+    <footer><span th:text="#{main.footer}">SUMOARCHIVE — 韓国語で見る大相撲情報アーカイブ</span><th:block th:replace="~{fragments/common :: footerNote}"></th:block></footer>
 </div>
 
 <script th:src="@{/js/bookmark.js}"></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
-<script>
+<script th:inline="javascript">
     (function () {
+        // 화면 언어 (세션의 lang) - 카드 데이터의 한·일 필드와 문구를 여기에 맞춰 고른다
+        var JA = /*[[${#locale.language == 'ja'}]]*/ false;
+        var MSG = {
+            unaffiliated: /*[[#{rikishi.value.unaffiliated}]]*/ '무소속',
+            remove: /*[[#{bookmark.remove}]]*/ '제거',
+            error: /*[[#{bookmark.error}]]*/ '즐겨찾기 목록을 불러오지 못했습니다.'
+        };
         var listEl = document.getElementById('bookmarkList');
         var emptyEl = document.getElementById('bookmarkEmpty');
 
@@ -154,9 +168,15 @@
                 var c = byId[id];
                 if (!c) return; // 삭제된 리키시 등 더 이상 존재하지 않으면 조용히 스킵
 
+                var name = JA && c.shikonaJp ? c.shikonaJp : c.shikonaKr;
+                var heya = JA ? c.heyaNameJp : c.heyaName;
+                var rank = JA ? c.highestRankJp : c.highestRank;
+                var period = JA ? c.activePeriodJp : c.activePeriod;
+                var status = JA ? c.statusLabelJp : c.statusLabel;
+
                 var photo = c.photoUrl
                     ? '<img src="' + esc(c.photoUrl) + '" alt="">'
-                    : '<span class="bm-photo-placeholder">' + esc((c.shikonaKr || '?').charAt(0)) + '</span>';
+                    : '<span class="bm-photo-placeholder">' + esc((name || '?').charAt(0)) + '</span>';
 
                 var card = document.createElement('div');
                 card.className = 'bm-card';
@@ -166,12 +186,12 @@
                     '<a class="bm-link" href="/rikishi/' + id + '">' +
                         '<span class="bm-photo">' + photo + '</span>' +
                         '<span class="bm-info">' +
-                            '<span class="bm-name">' + esc(c.shikonaKr) + '</span>' +
-                            '<span class="bm-sub">' + esc(c.heyaName || '무소속') + ' · ' + esc(c.highestRank || '-') + '</span>' +
-                            '<span class="bm-sub">' + esc(c.activePeriod) + ' · ' + esc(c.statusLabel) + '</span>' +
+                            '<span class="bm-name">' + esc(name) + '</span>' +
+                            '<span class="bm-sub">' + esc(heya || MSG.unaffiliated) + ' · ' + esc(rank || '-') + '</span>' +
+                            '<span class="bm-sub">' + esc(period) + ' · ' + esc(status) + '</span>' +
                         '</span>' +
                     '</a>' +
-                    '<button type="button" class="bm-remove" data-id="' + id + '">제거</button>';
+                    '<button type="button" class="bm-remove" data-id="' + id + '">' + esc(MSG.remove) + '</button>';
                 listEl.appendChild(card);
             });
 
@@ -208,7 +228,7 @@
                     showEmptyIfNeeded();
                 })
                 .catch(function () {
-                    listEl.innerHTML = '<p class="hint">즐겨찾기 목록을 불러오지 못했습니다.</p>';
+                    listEl.innerHTML = '<p class="hint">' + esc(MSG.error) + '</p>';
                 });
         }
     })();

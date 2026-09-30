@@ -42,8 +42,19 @@ public class RikishiSearchService {
 				RankDisplayUtil.toKorean(row.highestRank()),
 				formatPeriod(row.debutYear(), row.retirementYear()),
 				determineStatus(row),
-				row.oyakataNameKr()
+				row.oyakataNameKr(),
+				row.heyaNameJp(),
+				RankDisplayUtil.toJapanese(row.highestRank()),
+				formatPeriodJp(row.debutYear(), row.retirementYear()),
+				row.oyakataNameJp()
 		);
+	}
+
+	private String formatPeriodJp(Integer debut, Integer retirement) {
+		if (debut == null) {
+			return "-";
+		}
+		return retirement != null ? debut + " ~ " + retirement : debut + " ~ 現在";
 	}
 	
 	private String determineStatus(RikishiSearchRow row) {

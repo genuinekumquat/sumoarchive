@@ -2,6 +2,7 @@ package com.torikumilab.sumoarchive.controller.api;
 
 import com.torikumilab.sumoarchive.config.AdminCsrf;
 import com.torikumilab.sumoarchive.service.CommentService;
+import com.torikumilab.sumoarchive.service.exception.InvalidInputException;
 import com.torikumilab.sumoarchive.service.exception.PasswordMismatchException;
 import com.torikumilab.sumoarchive.service.exception.RateLimitExceededException;
 import com.torikumilab.sumoarchive.service.security.RateLimiterService;
@@ -72,6 +73,31 @@ class TorikumiCommentApiControllerTest {
 				.andExpect(status().isTooManyRequests())
 				.andExpect(jsonPath("$.message").value(containsString("너무 빠르게")));
 		verify(commentService).addComment(anyInt(), any(), any(), any()); // 첫 요청 1번뿐
+	}
+
+	@Test
+	@DisplayName("메시지 코드는 요청 언어로 바뀐다: 기본 한국어, lang=ja면 일본어, 인자({0})도 채운다")
+	void messageCode_isLocalizedByRequestLanguage() throws Exception {
+		given(commentService.addComment(anyInt(), any(), any(), any()))
+				.willThrow(new InvalidInputException("comment.error.nickname.length", 8));
+
+		mockMvc.perform(post(BASE).param("nickname", "x").param("password", "1234").param("content", "내용"))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.message").value("닉네임은 최대 8자입니다."));
+
+		mockMvc.perform(post(BASE).param("lang", "ja").param("nickname", "x").param("password", "1234").param("content", "내용"))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.message").value("ニックネームは8文字までです。"));
+	}
+
+	@Test
+	@DisplayName("신고 안내 문구도 lang=ja면 일본어")
+	void report_messageInJapanese() throws Exception {
+		given(rateLimiterService.tryRecordCommentReport(any(), any())).willReturn(true);
+
+		mockMvc.perform(post(BASE + "/7/report").param("lang", "ja"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.message").value("通報を受け付けました。管理者が確認のうえ対応します。"));
 	}
 
 	@Test

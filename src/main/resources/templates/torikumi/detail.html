@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<html th:lang="${#locale.language}" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -65,6 +65,21 @@
         }
         .breadcrumb a:hover { color: var(--shu); }
 
+        /* 언어 스위처 (fragments/common :: langSwitch) */
+        .lang-switch {
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 11px;
+            letter-spacing: 1px;
+        }
+        .lang-switch a { color: var(--sumi-faint); text-decoration: none; }
+        .lang-switch a:hover { color: var(--shu); }
+        .lang-switch a.active { color: var(--sumi); font-weight: 700; }
+        .lang-switch .sep { color: var(--washi-line); }
+
         .tk-card {
             border: 3px double var(--sumi);
             padding: 4px;
@@ -92,39 +107,44 @@
             <a class="brand-jp" th:href="@{/}">相撲archive</a>
             <span class="brand-kr">스모아카이브</span>
         </div>
-        <div class="breadcrumb">
-            <a th:href="@{/}">반즈케</a> &gt;
-            <a th:href="@{/rikishi/{id}(id=${torikumi.eastRikishiId})}" th:text="${torikumi.eastShikonaKr}">동</a>
+        <div class="breadcrumb" th:with="ja=${#locale.language == 'ja'}, t=${torikumi}">
+            <a th:href="@{/}" th:text="#{common.nav.banzuke}">반즈케</a> &gt;
+            <a th:href="@{/rikishi/{id}(id=${t.eastRikishiId})}" th:text="${ja and t.eastShikonaJp != null} ? ${t.eastShikonaJp} : ${t.eastShikonaKr}">동</a>
             <span> vs </span>
-            <a th:href="@{/rikishi/{id}(id=${torikumi.westRikishiId})}" th:text="${torikumi.westShikonaKr}">서</a>
+            <a th:href="@{/rikishi/{id}(id=${t.westRikishiId})}" th:text="${ja and t.westShikonaJp != null} ? ${t.westShikonaJp} : ${t.westShikonaKr}">서</a>
         </div>
+        <th:block th:replace="~{fragments/common :: langSwitch}"></th:block>
     </header>
 
     <div class="tk-card">
         <div class="tk-card-inner">
 
             <!-- ===== 전체 페이지 / 슬라이드 패널 공용 조각 ===== -->
-            <div th:fragment="content" class="tk">
+            <!-- 슬라이드 패널은 이 조각만 렌더링하므로 언어 판단(ja)도 여기서 한다.
+                 일본어 화면: 시코나·결정수는 일본어 표기(없으면 한국어로 대체), 바쇼·일차·디비전은 일본어만. -->
+            <div th:fragment="content" class="tk" th:with="ja=${#locale.language == 'ja'}">
 
                 <div class="tk-head">
-                    <div class="tk-basho" th:text="${torikumi.bashoTitleKr} + ' · ' + ${torikumi.bashoLabelJp}">2026년 7월 나고야바쇼 · 2026年07月場所</div>
+                    <div class="tk-basho" th:text="${ja} ? ${torikumi.bashoLabelJp} : (${torikumi.bashoTitleKr} + ' · ' + ${torikumi.bashoLabelJp})">2026년 7월 나고야바쇼 · 2026年07月場所</div>
                     <div class="tk-day">
                         <span th:text="${torikumi.dayLabelJp}">3日目</span>
-                        <span class="tk-day-sub" th:text="'· ' + ${torikumi.dayLabelKr} + ' · ' + ${torikumi.divisionLabel}">· 3일째 · 마쿠우치</span>
+                        <span class="tk-day-sub" th:text="${ja} ? ('· ' + ${torikumi.divisionLabelJp}) : ('· ' + ${torikumi.dayLabelKr} + ' · ' + ${torikumi.divisionLabel})">· 3일째 · 마쿠우치</span>
                     </div>
                 </div>
 
                 <div class="tk-matchup">
                     <div class="tk-side tk-side-east" th:classappend="${torikumi.eastWon} ? 'is-winner' : ''">
                         <span class="tk-side-tag">東</span>
-                        <a class="tk-side-name" th:href="@{/rikishi/{id}(id=${torikumi.eastRikishiId})}" th:text="${torikumi.eastShikonaKr}">동 리키시</a>
+                        <a class="tk-side-name" th:href="@{/rikishi/{id}(id=${torikumi.eastRikishiId})}"
+                           th:text="${ja and torikumi.eastShikonaJp != null} ? ${torikumi.eastShikonaJp} : ${torikumi.eastShikonaKr}">동 리키시</a>
                         <span class="tk-side-rank" th:if="${torikumi.eastRankDisplay != null}" th:text="${torikumi.eastRankDisplay}">前頭2枚目</span>
                         <span class="tk-side-mark" th:if="${torikumi.decided}" th:text="${torikumi.eastWon} ? '○ 勝' : '● 敗'">○ 勝</span>
                     </div>
                     <div class="tk-vs">取組</div>
                     <div class="tk-side tk-side-west" th:classappend="${torikumi.westWon} ? 'is-winner' : ''">
                         <span class="tk-side-tag">西</span>
-                        <a class="tk-side-name" th:href="@{/rikishi/{id}(id=${torikumi.westRikishiId})}" th:text="${torikumi.westShikonaKr}">서 리키시</a>
+                        <a class="tk-side-name" th:href="@{/rikishi/{id}(id=${torikumi.westRikishiId})}"
+                           th:text="${ja and torikumi.westShikonaJp != null} ? ${torikumi.westShikonaJp} : ${torikumi.westShikonaKr}">서 리키시</a>
                         <span class="tk-side-rank" th:if="${torikumi.westRankDisplay != null}" th:text="${torikumi.westRankDisplay}">前頭3枚目</span>
                         <span class="tk-side-mark" th:if="${torikumi.decided}" th:text="${torikumi.westWon} ? '○ 勝' : '● 敗'">● 敗</span>
                     </div>
@@ -132,52 +152,55 @@
 
                 <div class="tk-result">
                     <span class="tk-result-label">決まり手</span>
-                    <span class="tk-result-value" th:if="${torikumi.fusen}">부전승 / 부전패 (不戦)</span>
+                    <span class="tk-result-value" th:if="${torikumi.fusen}" th:text="#{torikumi.fusen}">부전승 / 부전패 (不戦)</span>
                     <span class="tk-result-value" th:if="${!torikumi.fusen and torikumi.kimariteKr != null}"
-                          th:text="${torikumi.kimariteKr} + ' (' + ${torikumi.kimariteJp} + ')'">요리키리 (寄り切り)</span>
-                    <span class="tk-result-value tk-muted" th:if="${!torikumi.fusen and torikumi.kimariteKr == null}">기록 없음</span>
+                          th:text="${ja and torikumi.kimariteJp != null} ? ${torikumi.kimariteJp} : (${torikumi.kimariteKr} + ' (' + ${torikumi.kimariteJp} + ')')">요리키리 (寄り切り)</span>
+                    <span class="tk-result-value tk-muted" th:if="${!torikumi.fusen and torikumi.kimariteKr == null}" th:text="#{torikumi.kimarite.none}">기록 없음</span>
                 </div>
 
-                <p class="tk-desc" th:if="${torikumi.descriptionKr != null and !torikumi.descriptionKr.isBlank()}"
-                   th:text="${torikumi.descriptionKr}">경기 해설 텍스트.</p>
+                <!-- 경기 해설: 화면 언어의 해설만 보여준다 (그 언어 해설이 없으면 생략) -->
+                <th:block th:with="desc=${ja} ? ${torikumi.descriptionJp} : ${torikumi.descriptionKr}">
+                    <p class="tk-desc" th:if="${desc != null and !desc.isBlank()}" th:text="${desc}">경기 해설 텍스트.</p>
+                </th:block>
 
                 <!-- 유튜브 하이라이트 -->
                 <div class="tk-media" th:if="${torikumi.youtubeEmbedUrl != null}">
                     <div class="tk-media-frame">
-                        <iframe th:src="${torikumi.youtubeEmbedUrl}" title="하이라이트 영상"
+                        <iframe th:src="${torikumi.youtubeEmbedUrl}" th:title="#{torikumi.video.title}" title="하이라이트 영상"
                                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                                 allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe>
                     </div>
                 </div>
                 <div class="tk-media tk-media-link" th:if="${torikumi.youtubeEmbedUrl == null and torikumi.youtubeUrl != null}">
-                    <a th:href="${torikumi.youtubeUrl}" target="_blank" rel="noopener noreferrer">▶ 하이라이트 영상 보기 (외부 링크)</a>
+                    <a th:href="${torikumi.youtubeUrl}" target="_blank" rel="noopener noreferrer" th:text="#{torikumi.video.link}">▶ 하이라이트 영상 보기 (외부 링크)</a>
                 </div>
-                <div class="tk-media tk-media-empty" th:if="${torikumi.youtubeUrl == null}">
+                <div class="tk-media tk-media-empty" th:if="${torikumi.youtubeUrl == null}" th:text="#{torikumi.video.none}">
                     등록된 하이라이트 영상이 없습니다.
                 </div>
 
                 <!-- ===== 익명 분석 댓글 ===== -->
+                <!-- JS(comments.js)가 다시 그리는 문구는 comments.js 안의 한·일 문구표를 쓴다 (html lang으로 판단). -->
                 <section class="tk-comments">
-                    <h3 class="tk-comments-title">분석 댓글<span class="tk-comments-count" th:text="${comments.size()}">0</span></h3>
+                    <h3 class="tk-comments-title"><span th:text="#{torikumi.comments.title}">분석 댓글</span><span class="tk-comments-count" th:text="${comments.size()}">0</span></h3>
 
                     <form class="js-comment-form tk-cform" th:attr="data-torikumi-id=${torikumi.id}" novalidate>
                         <div class="tk-cform-row">
                             <input class="tk-cform-nick" type="text" name="nickname" maxlength="8"
-                                   placeholder="닉네임 (최대 8자)" autocomplete="off" required>
+                                   th:placeholder="#{torikumi.comments.nickname}" placeholder="닉네임 (최대 8자)" autocomplete="off" required>
                             <input class="tk-cform-pw" type="text" name="password" inputmode="numeric"
-                                   pattern="\d{4}" maxlength="4" placeholder="비밀번호 4자리" autocomplete="off" required>
+                                   pattern="\d{4}" maxlength="4" th:placeholder="#{torikumi.comments.pin}" placeholder="비밀번호 4자리" autocomplete="off" required>
                         </div>
                         <textarea class="tk-cform-body" name="content" maxlength="200" rows="3"
-                                  placeholder="이 경기에 대한 생각을 남겨보세요 (최대 200자)" required></textarea>
+                                  th:placeholder="#{torikumi.comments.content}" placeholder="이 경기에 대한 생각을 남겨보세요 (최대 200자)" required></textarea>
                         <div class="tk-cform-foot">
-                            <p class="tk-cform-guide">선 넘는 비방이나 욕설은 관리자에 의해 예고 없이 가림 처리 또는 삭제될 수 있습니다.</p>
-                            <button class="tk-cform-submit" type="submit">등록</button>
+                            <p class="tk-cform-guide" th:text="#{torikumi.comments.guide}">선 넘는 비방이나 욕설은 관리자에 의해 예고 없이 가림 처리 또는 삭제될 수 있습니다.</p>
+                            <button class="tk-cform-submit" type="submit" th:text="#{torikumi.comments.submit}">등록</button>
                         </div>
                         <p class="js-comment-error tk-cform-error" role="alert" hidden></p>
                     </form>
 
                     <ul class="js-comment-list tk-clist" th:attr="data-torikumi-id=${torikumi.id}">
-                        <li class="tk-clist-empty" th:if="${comments.isEmpty()}">아직 댓글이 없습니다. 첫 댓글을 남겨보세요.</li>
+                        <li class="tk-clist-empty" th:if="${comments.isEmpty()}" th:text="#{torikumi.comments.empty}">아직 댓글이 없습니다. 첫 댓글을 남겨보세요.</li>
                         <li class="tk-comment" th:each="c : ${comments}"
                             th:attr="data-comment-id=${c.id}"
                             th:classappend="${c.deleted} ? 'is-deleted' : ''">
@@ -185,10 +208,12 @@
                                 <span class="tk-comment-nick" th:text="${c.deleted} ? '—' : ${c.nickName}">닉네임</span>
                                 <span class="tk-comment-date" th:text="${c.createdAt}">2026-09-02 14:03</span>
                             </div>
-                            <p class="tk-comment-body" th:text="${c.displayContent}">댓글 내용</p>
+                            <!-- 삭제된 댓글 안내 문구는 서버 DTO(한국어) 대신 화면 언어로 -->
+                            <p class="tk-comment-body"
+                               th:text="${!c.deleted} ? ${c.displayContent} : (${c.blinded} ? #{torikumi.comments.blinded} : #{torikumi.comments.deletedByUser})">댓글 내용</p>
                             <div class="tk-comment-actions" th:unless="${c.deleted}">
-                                <button type="button" class="js-comment-delete tk-comment-del">삭제</button>
-                                <button type="button" class="js-comment-report tk-comment-del">신고</button>
+                                <button type="button" class="js-comment-delete tk-comment-del" th:text="#{torikumi.comments.delete}">삭제</button>
+                                <button type="button" class="js-comment-report tk-comment-del" th:text="#{torikumi.comments.report}">신고</button>
                             </div>
                         </li>
                     </ul>
@@ -200,7 +225,7 @@
         </div>
     </div>
 
-    <footer>SUMOARCHIVE — 韓国語で見る大相撲情報アーカイブ<th:block th:replace="~{fragments/common :: footerNote}"></th:block></footer>
+    <footer><span th:text="#{main.footer}">SUMOARCHIVE — 韓国語で見る大相撲情報アーカイブ</span><th:block th:replace="~{fragments/common :: footerNote}"></th:block></footer>
 </div>
 
 <script th:src="@{/js/comments.js}"></script>

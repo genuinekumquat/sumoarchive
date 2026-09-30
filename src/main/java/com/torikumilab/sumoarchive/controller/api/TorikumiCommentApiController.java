@@ -9,11 +9,13 @@ import com.torikumilab.sumoarchive.util.ClientIpResolver;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -27,6 +29,7 @@ public class TorikumiCommentApiController {
 
 	private final CommentService commentService;
 	private final RateLimiterService rateLimiterService;
+	private final MessageSource messageSource;
 
 	@GetMapping
 	public List<CommentDTO> list(@PathVariable Integer torikumiId) {
@@ -76,14 +79,15 @@ public class TorikumiCommentApiController {
 	public Map<String, String> report(
 			@PathVariable Integer torikumiId,
 			@PathVariable Integer commentId,
-			HttpServletRequest request
+			HttpServletRequest request,
+			Locale locale
 	) {
 		String clientIp = ClientIpResolver.getClientIp(request);
 		if (!rateLimiterService.tryRecordCommentReport(clientIp, commentId)) {
-			return Map.of("message", "이미 신고한 댓글입니다.");
+			return Map.of("message", messageSource.getMessage("comment.report.duplicate", null, locale));
 		}
 		commentService.report(torikumiId, commentId);
-		return Map.of("message", "신고가 접수되었습니다. 관리자가 확인 후 조치합니다.");
+		return Map.of("message", messageSource.getMessage("comment.report.accepted", null, locale));
 	}
 
 	/**

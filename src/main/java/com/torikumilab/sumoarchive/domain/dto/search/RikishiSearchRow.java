@@ -15,7 +15,9 @@ public record RikishiSearchRow(
 		Integer retirementYear,
 		Boolean isActive,
 		String oyakataNameKr,
-		MatchType matchType
+		MatchType matchType,
+		String heyaNameJp,
+		String oyakataNameJp
 ) {}
 
 // DB raw 값용 DTO

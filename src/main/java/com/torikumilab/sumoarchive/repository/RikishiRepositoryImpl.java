@@ -59,7 +59,9 @@ public class RikishiRepositoryImpl implements RikishiSearchRepositoryCustom {
                    YEAR(r.retired_date) AS retirement_year,
                    r.is_active,
                    r.oyakata_name_kr,
-                   bm.match_rank
+                   bm.match_rank,
+                   he.name_jp AS heya_name_jp,
+                   r.oyakata_name_jp
             FROM rikishi r
             JOIN best_match bm ON bm.rikishi_id = r.id
             LEFT JOIN heya he ON he.id = r.heya_id
@@ -100,7 +102,9 @@ public class RikishiRepositoryImpl implements RikishiSearchRepositoryCustom {
 				row[7] != null ? ((Number) row[7]).intValue() : null,
 				toBoolean(row[8]),
 				(String) row[9],
-				MatchType.fromRank(((Number) row[10]).intValue())
+				MatchType.fromRank(((Number) row[10]).intValue()),
+				(String) row[11],
+				(String) row[12]
 		);
 	}
 	

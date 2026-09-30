@@ -85,22 +85,22 @@ class CommentServiceTest {
 	@DisplayName("작성: 닉네임 빈값·8자 초과, 비밀번호 숫자 4자리 아님, 내용 빈값·200자 초과는 거부하고 저장하지 않음")
 	void addComment_rejectsInvalidInput() {
 		String ok = "내용";
-		assertInvalid(" ", "1234", ok, "닉네임을 입력해 주세요");
-		assertInvalid(null, "1234", ok, "닉네임을 입력해 주세요");
-		assertInvalid("가나다라마바사아자", "1234", ok, "닉네임은 최대 8자");
-		assertInvalid("팬", "123", ok, "숫자 4자리");
-		assertInvalid("팬", "12345", ok, "숫자 4자리");
-		assertInvalid("팬", "abcd", ok, "숫자 4자리");
-		assertInvalid("팬", "1234", "   ", "댓글 내용을 입력해 주세요");
-		assertInvalid("팬", "1234", "가".repeat(201), "최대 200자");
+		assertInvalid(" ", "1234", ok, "comment.error.nickname.required");
+		assertInvalid(null, "1234", ok, "comment.error.nickname.required");
+		assertInvalid("가나다라마바사아자", "1234", ok, "comment.error.nickname.length");
+		assertInvalid("팬", "123", ok, "comment.error.pin.format");
+		assertInvalid("팬", "12345", ok, "comment.error.pin.format");
+		assertInvalid("팬", "abcd", ok, "comment.error.pin.format");
+		assertInvalid("팬", "1234", "   ", "comment.error.content.required");
+		assertInvalid("팬", "1234", "가".repeat(201), "comment.error.content.length");
 
 		verify(commentRepository, never()).save(any());
 	}
 
-	private void assertInvalid(String nickname, String pin, String content, String expectedMessage) {
+	private void assertInvalid(String nickname, String pin, String content, String expectedCode) {
 		assertThatThrownBy(() -> commentService.addComment(TORIKUMI_ID, nickname, pin, content))
 				.isInstanceOf(IllegalArgumentException.class)
-				.hasMessageContaining(expectedMessage);
+				.hasMessage(expectedCode);
 	}
 
 	@Test

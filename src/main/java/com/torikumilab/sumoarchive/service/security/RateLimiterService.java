@@ -11,6 +11,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 인메모리 슬라이딩 윈도우 기반 Rate Limiter (IP 쓰로틀링).
+ * 댓글 쪽 예외 메시지는 메시지 코드(comment.error.*)라 API 응답에서 요청 언어로 바뀐다.
+ * 관리자 로그인은 관리자 화면(한국어)에 바로 쓰므로 문장 그대로 둔다.
  * 외부 의존성(Redis 등) 없이 단일 인스턴스/컨테이너 환경에서 초고속으로 작동합니다.
  *
  * 1) 익명 댓글 작성: 3초 쿨다운 & 1분당 최대 5건 (도배 방지)
@@ -57,7 +59,7 @@ public class RateLimiterService {
 			long last = history.peekLast();
 			if (now - last < COMMENT_COOLDOWN_MILLIS) {
 				long waitSec = (COMMENT_COOLDOWN_MILLIS - (now - last) + 999) / 1000;
-				throw new RateLimitExceededException("너무 빠르게 댓글을 작성하고 있습니다. " + waitSec + "초 후 다시 시도해 주세요.");
+				throw new RateLimitExceededException("comment.error.post.cooldown", waitSec);
 			}
 		}
 
@@ -66,7 +68,7 @@ public class RateLimiterService {
 		}
 
 		if (history.size() >= COMMENT_POST_MAX) {
-			throw new RateLimitExceededException("댓글 작성 한도(1분당 " + COMMENT_POST_MAX + "건)를 초과했습니다. 잠시 후 다시 시도해 주세요.");
+			throw new RateLimitExceededException("comment.error.post.limit", COMMENT_POST_MAX);
 		}
 
 		history.addLast(now);
@@ -83,7 +85,7 @@ public class RateLimiterService {
 		}
 
 		if (fails.size() >= FAIL_MAX) {
-			throw new RateLimitExceededException("비밀번호 입력 시도가 너무 많습니다. 5분 후 다시 시도해 주세요.");
+			throw new RateLimitExceededException("comment.error.delete.ip");
 		}
 
 		Deque<Long> commentFails = commentPinFailHistory.computeIfAbsent(commentId, k -> new ArrayDeque<>());
@@ -92,7 +94,7 @@ public class RateLimiterService {
 		}
 
 		if (commentFails.size() >= COMMENT_LOCK_FAIL_MAX) {
-			throw new RateLimitExceededException("이 댓글은 비밀번호 오류가 너무 많아 잠시 삭제할 수 없습니다. 최대 1시간 후 다시 시도해 주세요.");
+			throw new RateLimitExceededException("comment.error.delete.locked");
 		}
 	}
 
@@ -152,7 +154,7 @@ public class RateLimiterService {
 			history.pollFirst();
 		}
 		if (history.size() >= REPORT_MAX) {
-			throw new RateLimitExceededException("신고가 너무 많습니다. 잠시 후 다시 시도해 주세요.");
+			throw new RateLimitExceededException("comment.error.report.limit");
 		}
 
 		history.addLast(now);

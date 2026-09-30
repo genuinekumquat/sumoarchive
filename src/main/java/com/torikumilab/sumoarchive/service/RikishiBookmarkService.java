@@ -47,7 +47,11 @@ public class RikishiBookmarkService {
 				RankDisplayUtil.toKorean(r.getHighestRank()),
 				formatPeriod(r.getDebutDate(), r.getRetiredDate()),
 				statusLabel(r),
-				r.getPhotoUrl()
+				r.getPhotoUrl(),
+				r.getHeyaEntity() != null ? r.getHeyaEntity().getNameJp() : null,
+				RankDisplayUtil.toJapanese(r.getHighestRank()),
+				formatPeriodJp(r.getDebutDate(), r.getRetiredDate()),
+				statusLabelJp(r)
 		);
 	}
 
@@ -59,6 +63,25 @@ public class RikishiBookmarkService {
 			return "오야카타";
 		}
 		return "은퇴";
+	}
+
+	private static String statusLabelJp(RikishiEntity r) {
+		if (r.isActive()) {
+			return "現役";
+		}
+		if (r.getOyakataNameKr() != null && !r.getOyakataNameKr().isBlank()) {
+			return "親方";
+		}
+		return "引退";
+	}
+
+	private static String formatPeriodJp(LocalDate debut, LocalDate retired) {
+		if (debut == null) {
+			return "-";
+		}
+		return retired != null
+				? debut.getYear() + " ~ " + retired.getYear()
+				: debut.getYear() + " ~ 現在";
 	}
 
 	private static String formatPeriod(LocalDate debut, LocalDate retired) {

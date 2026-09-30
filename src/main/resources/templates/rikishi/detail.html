@@ -927,11 +927,7 @@
             <a th:href="@{/}" th:text="#{rikishi.breadcrumb.banzuke}">반즈케</a> &gt;
             <span th:text="${#locale.language == 'ja'} ? ${rikishi.shikonaFullJp} : ${rikishi.shikonaFullKr}">시코나</span>
         </div>
-        <div class="lang-switch">
-            <a th:href="@{''(lang='ko')}" th:classappend="${#locale.language == 'ko'} ? 'active'" th:text="#{main.lang.ko}">한국어</a>
-            <span class="sep">/</span>
-            <a th:href="@{''(lang='ja')}" th:classappend="${#locale.language == 'ja'} ? 'active'" th:text="#{main.lang.ja}">日本語</a>
-        </div>
+        <th:block th:replace="~{fragments/common :: langSwitch}"></th:block>
     </header>
 
     <!-- ===== 기본 정보 ===== -->
@@ -1703,7 +1699,7 @@
     function openMatchPanel(torikumiId) {
         if (!torikumiId) return; // 휴장 칸 등 토리쿠미가 없는 경우
         matchPanelFull.href = '/torikumi/' + torikumiId;
-        matchPanelBody.innerHTML = '<p class="mp-loading">불러오는 중…</p>';
+        matchPanelBody.innerHTML = '<p class="mp-loading">' + /*[[#{main.table.loading}]]*/ '불러오는 중…' + '</p>';
         openPanelShell();
         history.replaceState(null, '', '#match-' + torikumiId);
 
@@ -1718,7 +1714,7 @@
                 if (window.SumoComments) window.SumoComments.bind(matchPanelBody);
             })
             .catch(() => {
-                matchPanelBody.innerHTML = '<p class="mp-error">경기 정보를 불러오지 못했습니다.</p>';
+                matchPanelBody.innerHTML = '<p class="mp-error">' + /*[[#{rikishi.panel.error}]]*/ '경기 정보를 불러오지 못했습니다.' + '</p>';
             });
     }
 

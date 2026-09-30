@@ -24,6 +24,17 @@
     <meta name="twitter:card" content="summary_large_image">
 </th:block>
 
+<!-- ===== 언어 스위처: 헤더 안에 넣는다. 고른 언어는 세션에 저장된다(WebConfig의 LocaleChangeInterceptor).
+     링크는 현재 주소 + ?lang=. 검색 결과 페이지는 검색어(keyword)가 사라지지 않게 같이 넘긴다.
+     스타일(.lang-switch)은 각 페이지 CSS에 있다. -->
+<div th:fragment="langSwitch" class="lang-switch">
+    <a th:href="${keyword != null} ? @{''(keyword=${keyword},lang='ko')} : @{''(lang='ko')}"
+       th:classappend="${#locale.language == 'ko'} ? 'active'" th:text="#{main.lang.ko}">한국어</a>
+    <span class="sep">/</span>
+    <a th:href="${keyword != null} ? @{''(keyword=${keyword},lang='ja')} : @{''(lang='ja')}"
+       th:classappend="${#locale.language == 'ja'} ? 'active'" th:text="#{main.lang.ja}">日本語</a>
+</div>
+
 <!-- ===== 푸터 공통 문구: 데이터 출처 + 면책. 각 페이지 <footer> 안, 기존 한 줄 아래에 붙인다.
      페이지마다 footer에 letter-spacing이 크게 걸려 있어 여기서는 풀어준다. -->
 <th:block th:fragment="footerNote">

@@ -8,6 +8,7 @@ import com.torikumilab.sumoarchive.domain.entity.TorikumiEntity;
 import com.torikumilab.sumoarchive.domain.entity.constant.DeletedBy;
 import com.torikumilab.sumoarchive.repository.CommentRepository;
 import com.torikumilab.sumoarchive.repository.TorikumiRepository;
+import com.torikumilab.sumoarchive.service.exception.InvalidInputException;
 import com.torikumilab.sumoarchive.service.exception.PasswordMismatchException;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +31,9 @@ import java.util.regex.Pattern;
  *
  * <p>비밀번호는 4자리 PIN이라 사실상 전수 대입이 가능하지만, 명세서가 "경량 구현"을 전제로 하므로
  * 최소한 평문 저장은 피하려고 SHA-256 해시로만 저장/대조한다.</p>
+ *
+ * <p>사용자에게 보일 오류는 문장 대신 메시지 코드(messages*.properties의 comment.error.*)로 던지고,
+ * ApiExceptionHandler가 요청 언어(한·일)로 바꾼다.</p>
  */
 @Service
 @RequiredArgsConstructor
@@ -61,23 +65,23 @@ public class CommentService {
 		String body = content == null ? "" : content.strip();
 
 		if (nick.isEmpty()) {
-			throw new IllegalArgumentException("닉네임을 입력해 주세요.");
+			throw new InvalidInputException("comment.error.nickname.required");
 		}
 		if (nick.length() > NICKNAME_MAX) {
-			throw new IllegalArgumentException("닉네임은 최대 " + NICKNAME_MAX + "자입니다.");
+			throw new InvalidInputException("comment.error.nickname.length", NICKNAME_MAX);
 		}
 		if (!PIN_4.matcher(pin).matches()) {
-			throw new IllegalArgumentException("비밀번호는 숫자 4자리로 입력해 주세요.");
+			throw new InvalidInputException("comment.error.pin.format");
 		}
 		if (body.isEmpty()) {
-			throw new IllegalArgumentException("댓글 내용을 입력해 주세요.");
+			throw new InvalidInputException("comment.error.content.required");
 		}
 		if (body.length() > CONTENT_MAX) {
-			throw new IllegalArgumentException("댓글은 최대 " + CONTENT_MAX + "자입니다.");
+			throw new InvalidInputException("comment.error.content.length", CONTENT_MAX);
 		}
 
 		TorikumiEntity torikumi = torikumiRepository.findById(torikumiId)
-				.orElseThrow(() -> new EntityNotFoundException("토리쿠미를 찾을 수 없습니다. id=" + torikumiId));
+				.orElseThrow(() -> new EntityNotFoundException("comment.error.torikumi.notfound"));
 
 		commentRepository.save(CommentEntity.builder()
 				.torikumiEntity(torikumi)
@@ -100,7 +104,7 @@ public class CommentService {
 		}
 		String pin = password == null ? "" : password.strip();
 		if (!PIN_4.matcher(pin).matches() || !comment.getPassword().equals(sha256(pin))) {
-			throw new PasswordMismatchException("비밀번호가 일치하지 않습니다.");
+			throw new PasswordMismatchException("comment.error.pin.mismatch");
 		}
 		comment.softDeleteByUser();
 		return getComments(torikumiId);
@@ -150,9 +154,9 @@ public class CommentService {
 
 	private CommentEntity loadCommentOfTorikumi(Integer torikumiId, Integer commentId) {
 		CommentEntity comment = commentRepository.findById(commentId)
-				.orElseThrow(() -> new EntityNotFoundException("댓글을 찾을 수 없습니다. id=" + commentId));
+				.orElseThrow(() -> new EntityNotFoundException("comment.error.notfound"));
 		if (!comment.getTorikumiEntity().getId().equals(torikumiId)) {
-			throw new EntityNotFoundException("해당 토리쿠미의 댓글이 아닙니다. commentId=" + commentId);
+			throw new EntityNotFoundException("comment.error.notfound");
 		}
 		return comment;
 	}

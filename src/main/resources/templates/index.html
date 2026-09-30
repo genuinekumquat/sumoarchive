@@ -516,12 +516,7 @@
             <a th:href="@{/bookmark}" th:text="#{main.bookmark.link}" style="white-space: nowrap; align-self: center; font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; color: var(--sumi-soft); text-decoration: none;">★ 즐겨찾기</a>
         </div>
 
-        <!-- 언어 스위처(시범: 메인 페이지만) - 세션에 언어를 저장해두는 LocaleChangeInterceptor(WebConfig)가 처리 -->
-        <div class="lang-switch">
-            <a th:href="@{''(lang='ko')}" th:classappend="${#locale.language == 'ko'} ? 'active'" th:text="#{main.lang.ko}">한국어</a>
-            <span class="sep">/</span>
-            <a th:href="@{''(lang='ja')}" th:classappend="${#locale.language == 'ja'} ? 'active'" th:text="#{main.lang.ja}">日本語</a>
-        </div>
+        <th:block th:replace="~{fragments/common :: langSwitch}"></th:block>
     </header>
 
     <!-- 반즈케 / 일문 탭 전환. 일문 탭은 최신 바쇼 기준으로 서버에서 통째로 렌더링해두고
@@ -537,10 +532,10 @@
             <div class="banzuke-title">
                 <span class="jp">番付</span>
                 <span class="meta">
-                    <select class="panel-select" id="year-select" aria-label="연도 선택"></select>
-                    <select class="panel-select" id="basho-select" aria-label="대회 선택"></select>
+                    <select class="panel-select" id="year-select" th:aria-label="#{main.select.year}" aria-label="연도 선택"></select>
+                    <select class="panel-select" id="basho-select" th:aria-label="#{main.select.basho}" aria-label="대회 선택"></select>
 <!--                    <span class="sep">·</span>-->
-                    <select class="panel-select" id="division-select" aria-label="계급 선택">
+                    <select class="panel-select" id="division-select" th:aria-label="#{main.select.division}" aria-label="계급 선택">
                         <option value="Makuuchi" th:text="#{main.division.makuuchi}">마쿠우치</option>
                         <option value="Juryo" th:text="#{main.division.juryo}">주료</option>
                         <option value="Makushita" th:text="#{main.division.makushita}">마쿠시타</option>
@@ -618,8 +613,8 @@
                 </summary>
                 <div class="kimarite-group-body">
                     <div class="kimarite-entry" th:each="e : ${g.entries}">
-                        <span class="ke-kr" th:text="${e.kimariteKr}">요리키리</span>
-                        <span class="ke-jp" th:text="${e.kimariteJp}">寄り切り</span>
+                        <span class="ke-kr" th:text="${#locale.language == 'ja'} ? ${e.kimariteJp} : ${e.kimariteKr}">요리키리</span>
+                        <span class="ke-jp" th:unless="${#locale.language == 'ja'}" th:text="${e.kimariteJp}">寄り切り</span>
                         <span class="ke-desc" th:if="${#locale.language == 'ja' and e.descriptionJp != null}" th:text="${e.descriptionJp}"></span>
                         <span class="ke-desc" th:if="${#locale.language != 'ja' and e.descriptionKr != null}" th:text="${e.descriptionKr}"></span>
                         <span class="ke-desc" th:if="${(#locale.language == 'ja' and e.descriptionJp == null) or (#locale.language != 'ja' and e.descriptionKr == null)}" th:text="#{main.kimarite.pending}">설명 준비 중</span>

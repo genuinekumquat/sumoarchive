@@ -63,6 +63,7 @@ public class TorikumiDetailService {
 				t.getDay() + "일째",
 				t.getDay() + "日目",
 				divisionLabel(t.getDivision()),
+				divisionLabelJp(t.getDivision()),
 
 				east.getId(),
 				displayName(east),
@@ -115,6 +116,20 @@ public class TorikumiDetailService {
 			case Sandanme -> "산단메";
 			case Jonidan -> "조니단";
 			case Jonokuchi -> "조노구치";
+		};
+	}
+
+	private static String divisionLabelJp(Division division) {
+		if (division == null) {
+			return null;
+		}
+		return switch (division) {
+			case Makuuchi -> "幕内";
+			case Juryo -> "十両";
+			case Makushita -> "幕下";
+			case Sandanme -> "三段目";
+			case Jonidan -> "序二段";
+			case Jonokuchi -> "序ノ口";
 		};
 	}
 
