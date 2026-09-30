@@ -1,5 +1,7 @@
 # 🏯 sumoarchive
 
+[![CI](https://github.com/genuinekumquat/sumoarchive/actions/workflows/ci.yml/badge.svg)](https://github.com/genuinekumquat/sumoarchive/actions/workflows/ci.yml)
+
 **한국어** | [日本語](README.ja.md)
 
 한국어로 오즈모(大相撲) 정보를 편하게 찾아보는 아카이브 웹 서비스입니다.

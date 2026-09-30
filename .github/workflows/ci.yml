@@ -1,0 +1,108 @@
+# 푸시·PR마다 빌드와 테스트, 배포 파일(Dockerfile·compose·셸 스크립트) 검증.
+# 비밀번호는 CI 안에서만 쓰는 임시값이라 GitHub Secrets가 필요 없다.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# 같은 브랜치에 새로 푸시하면 이전 실행은 취소
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: 빌드·테스트
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    # SumoarchiveApplicationTests가 앱 전체를 띄우므로 MySQL이 필요하다.
+    # 빈 DB에서 Flyway가 V1부터 전부 실행하고 Hibernate가 엔티티와 테이블을 검사한다
+    # = 운영 첫 배포와 같은 과정. 마이그레이션 파일을 빠뜨리면 여기서 실패한다.
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_DATABASE: sumo
+          MYSQL_ROOT_PASSWORD: ci_root_password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -pci_root_password"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+
+    env:
+      # application.properties 기본값(localhost:3306/sumo)과 같은 DB. 계정은 로컬 전용 파일 대신 환경변수로.
+      SPRING_DATASOURCE_URL: jdbc:mysql://127.0.0.1:3306/sumo?useSSL=false&characterEncoding=UTF-8&serverTimezone=Asia/Seoul&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ci_root_password
+      ADMIN_USERNAME: ci_admin
+      ADMIN_PASSWORD: ci_admin_password
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: 테스트
+        run: ./gradlew test --no-daemon
+
+      - name: 테스트 리포트 업로드 (실패 시)
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-report
+          path: build/reports/tests/test
+          retention-days: 7
+
+  deploy-files:
+    name: 배포 파일 검증
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: 셸 스크립트 문법
+        run: for f in scripts/*.sh; do bash -n "$f" && echo "ok: $f"; done
+
+      - name: docker compose 설정 (필수 환경변수가 있으면 통과)
+        env:
+          SPRING_DATASOURCE_PASSWORD: dummy
+          MYSQL_ROOT_PASSWORD: dummy
+          ADMIN_PASSWORD: dummy
+          CONTACT_EMAIL: ci@example.com
+        run: docker compose config --quiet
+
+      - name: docker compose 설정 (필수 환경변수가 없으면 거부)
+        run: |
+          if docker compose config --quiet 2>/dev/null; then
+            echo "필수 환경변수 없이도 compose가 통과함 - 기본값 제거가 풀렸는지 확인" >&2
+            exit 1
+          fi
+          echo "ok: 필수 환경변수 없으면 거부"
+
+      - name: Docker 이미지 빌드
+        run: docker build --tag sumoarchive:ci .
+
+      - name: 이미지 확인 (비루트 사용자, 로그 폴더 권한)
+        run: |
+          docker run --rm --entrypoint sh sumoarchive:ci -c '
+            set -e
+            test "$(id -un)" = appuser
+            test -w /app/logs
+            test "$LOG_FILE" = /app/logs/sumoarchive.log
+            echo "ok: $(id -un), /app/logs 쓰기 가능"'

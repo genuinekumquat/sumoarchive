@@ -1,5 +1,7 @@
 # 🏯 sumoarchive
 
+[![CI](https://github.com/genuinekumquat/sumoarchive/actions/workflows/ci.yml/badge.svg)](https://github.com/genuinekumquat/sumoarchive/actions/workflows/ci.yml)
+
 [한국어](README.md) | **日本語**
 
 韓国語で大相撲の情報を手軽に調べられるアーカイブWebサービスです。
