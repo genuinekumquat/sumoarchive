@@ -8,7 +8,7 @@
 #   (기본: /var/backups/sumoarchive / 14일 / sumoarchive-db / sumo)
 #
 # cron 예시 (매일 새벽 4시, DEPLOYMENT.md 6절 참고):
-#   0 4 * * * /home/ubuntu/sumoarchive/scripts/backup-db.sh >> /var/log/sumoarchive-backup.log 2>&1
+#   0 4 * * * /home/deploy/sumoarchive/scripts/backup-db.sh >> /var/log/sumoarchive-backup.log 2>&1
 #
 # 비밀번호는 컨테이너에 이미 있는 MYSQL_ROOT_PASSWORD를 MYSQL_PWD로 넘긴다.
 # -p<비밀번호>처럼 명령줄 인자로 넘기면 ps로 누구나 볼 수 있기 때문.

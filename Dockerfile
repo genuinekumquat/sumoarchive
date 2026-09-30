@@ -39,7 +39,9 @@ USER appuser
 EXPOSE 8080
 
 # JVM 메모리 및 인코딩 최적화 옵션
-ENV JAVA_OPTS="-Dfile.encoding=UTF-8 -XX:+UseG1GC -XX:MaxRAMPercentage=75.0"
+# user.timezone: 컨테이너 기본은 UTC라 댓글 작성·신고 시각(LocalDateTime.now, @CreationTimestamp)과
+# 로그 시각이 한국 시간보다 9시간 늦게 찍힌다. JVM 자체 시간대 DB를 쓰므로 alpine에 tzdata가 없어도 된다.
+ENV JAVA_OPTS="-Dfile.encoding=UTF-8 -Duser.timezone=Asia/Seoul -XX:+UseG1GC -XX:MaxRAMPercentage=75.0"
 ENV SPRING_PROFILES_ACTIVE="prod"
 # 로그 파일 위치 (application-prod.properties의 logging.file.name)
 ENV LOG_FILE="/app/logs/sumoarchive.log"

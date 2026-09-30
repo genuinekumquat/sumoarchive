@@ -106,4 +106,5 @@ jobs:
             test "$(id -un)" = appuser
             test -w /app/logs
             test "$LOG_FILE" = /app/logs/sumoarchive.log
-            echo "ok: $(id -un), /app/logs 쓰기 가능"'
+            java $JAVA_OPTS -XshowSettings:properties -version 2>&1 | grep -q "user.timezone = Asia/Seoul"
+            echo "ok: $(id -un), /app/logs 쓰기 가능, JVM 시간대 Asia/Seoul"'

@@ -1,6 +1,88 @@
 # SUMOARCHIVE 운영 서버 배포 가이드 (Production Deployment Guide)
 
 이 문서는 **SUMOARCHIVE**를 실제 운영 서버(AWS, GCP, Oracle Cloud, VPS 등)에 배포하고 운영하기 위한 실전 가이드입니다.
+처음 배포할 때는 0절을 위에서부터 순서대로 따라 하고, 자세한 내용은 각 단계에 적힌 절을 본다.
+
+---
+
+## 0. 처음 배포하기 (순서대로)
+
+### 준비할 것
+- **서버**: Ubuntu 24.04, **메모리 2GB 이상** (서버에서 Docker 이미지를 빌드할 때 Gradle 컴파일 + JVM + MySQL이 함께 돈다. 1GB면 아래 스왑 필수)
+- **도메인**과 DNS 관리 화면 접근
+- **문의 이메일** (개인정보 처리 안내 `/privacy`에 공개된다)
+- 로컬 PC: 최신 `main`, 로컬 DB(데이터 이전용), `mysqldump`
+
+### 1단계: 서버 기본 설정
+```bash
+# (서버, root 또는 sudo 사용자) 작업용 사용자 - SSH 키로 로그인되는 것을 확인한 뒤 비밀번호 로그인을 끈다
+sudo adduser deploy && sudo usermod -aG sudo deploy
+
+# 시간대: 백업 파일 이름·cron 시각이 한국 시간이 되도록 (앱 JVM은 Dockerfile에서 따로 Asia/Seoul)
+sudo timedatectl set-timezone Asia/Seoul
+
+# 방화벽: SSH·HTTP·HTTPS만 (앱 8080·DB 3306은 밖에 열지 않는다)
+sudo apt update && sudo apt install -y ufw nginx certbot python3-certbot-nginx git
+sudo ufw allow OpenSSH && sudo ufw allow 'Nginx Full' && sudo ufw enable
+
+# 메모리 1~2GB 서버면 스왑 2GB (이미지 빌드 중 메모리 부족 방지)
+sudo fallocate -l 2G /swapfile && sudo chmod 600 /swapfile && sudo mkswap /swapfile && sudo swapon /swapfile
+echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+
+# Docker + compose 플러그인, deploy 사용자가 sudo 없이 docker를 쓰도록 (다시 로그인해야 적용)
+curl -fsSL https://get.docker.com | sudo sh
+sudo usermod -aG docker deploy
+```
+
+### 2단계: 코드와 `.env` (→ 2절)
+```bash
+git clone https://github.com/genuinekumquat/sumoarchive.git ~/sumoarchive && cd ~/sumoarchive
+cp .env.example .env && chmod 600 .env
+openssl rand -base64 24     # 비밀번호가 필요할 때마다 실행해 붙여 넣는다
+nano .env                   # SPRING_DATASOURCE_PASSWORD, MYSQL_ROOT_PASSWORD, ADMIN_USERNAME, ADMIN_PASSWORD, CONTACT_EMAIL
+```
+- 비밀번호 3개(`SPRING_DATASOURCE_PASSWORD`·`MYSQL_ROOT_PASSWORD`·`ADMIN_PASSWORD`)와 `CONTACT_EMAIL` 중 하나라도 비어 있으면 compose가 시작을 거부한다 (의도된 동작).
+- `.env`의 `SPRING_DATASOURCE_URL`은 compose가 쓰지 않는다 (compose 안에서 `db:3306`으로 고정).
+
+### 3단계: 앱 기동과 데이터 이전 (→ 4절 2)
+1. (로컬) `MYSQL_PWD=<로컬 비밀번호> ./scripts/export-data.sh sumo-data.sql` → `scp`로 서버 `~/sumoarchive/`에
+2. (서버) `docker compose up -d --build` — 처음 빌드는 몇 분 걸린다. `docker compose ps`에서 app이 `(healthy)`가 될 때까지 기다린다 (Flyway가 빈 DB에 V1~ 적용)
+3. (서버) 4절 2)의 `docker exec … mysql … < sumo-data.sql`로 데이터를 넣고 `docker compose restart app`
+4. 확인: `curl -s 127.0.0.1:8080/actuator/health` → `{"status":"UP"}`, `curl -s "127.0.0.1:8080/api/banzuke?division=Makuuchi" | head -c 200`
+- 이 단계까지는 Nginx가 없어서 밖에서 사이트가 안 보인다 → 빈 화면이 공개되거나 캐시되는 일이 없다.
+
+### 4단계: 도메인과 HTTPS (→ 5절)
+1. DNS에 A 레코드(`@`, `www` → 서버 IP) 추가, `ping your-domain.com`으로 반영 확인
+2. 5절 0)의 순서: 80 포트 임시 설정 → `certbot --nginx` → 5절 1)의 최종 설정(보안 헤더, `/admin/` 300초)으로 교체
+3. 5절 3)으로 Nginx 접속 로그 14일 보관 확인
+
+### 5단계: 운영 설정 (→ 3절, 6절)
+- 백업: `sudo ./scripts/backup-db.sh` 한 번 실행해 파일이 생기는지 보고, `sudo crontab -e`로 매일 새벽 4시 등록 (6절 1)
+- 백업을 서버 밖으로도 복사 (rclone 등)
+- 업타임 모니터(UptimeRobot 등)에 `https://your-domain.com/actuator/health` 등록
+
+### 6단계: 공개 전 확인
+- [ ] `https://` 접속, `http://`는 https로 넘어감
+- [ ] 메인(반즈케·일문·키마리테 탭), 리키시 프로필, 경기 상세, 검색, 즐겨찾기 — 한국어·일본어(`?lang=ja`) 모두
+- [ ] 관리자 로그인(`/admin/login`), 댓글 작성·신고·본인 삭제, 관리자 블라인드
+- [ ] 댓글 작성 시각이 한국 시간으로 나오는지
+- [ ] `/privacy`에 실제 문의 이메일, 시행일
+- [ ] `/robots.txt`·`/sitemap.xml`의 주소가 `https://your-domain.com`으로 나오는지 (Nginx가 Host·X-Forwarded-Proto를 넘겨야 함)
+- [ ] `docker compose exec app ls -l /app/logs`에 로그 파일
+
+### 7단계: 공개 후
+- Google Search Console·네이버 서치어드바이저에 사이트 등록, `https://your-domain.com/sitemap.xml` 제출
+- 다음 바쇼 반즈케 발표 때 7절 절차대로 첫 데이터 갱신
+
+### 이후 업데이트 배포
+```bash
+cd ~/sumoarchive
+sudo ./scripts/backup-db.sh             # 먼저 백업
+git pull
+docker compose up -d --build            # 새 이미지로 교체, Flyway 새 마이그레이션은 자동 적용 (1분 안팎 중단)
+docker compose ps && curl -s 127.0.0.1:8080/actuator/health
+```
+- main에 푸시된 커밋은 GitHub Actions(CI)가 테스트·이미지 빌드를 먼저 확인한다. CI가 실패한 커밋은 배포하지 않는다.
 
 ---
 
@@ -151,22 +233,54 @@ CONTACT_EMAIL=문의용_이메일@example.com
 한국어 표기 검수, 헤야·이치몬, 과거 바쇼 임포트 결과는 로컬 DB에만 있으므로 처음 배포할 때 데이터를 덤프해서 넣는다.
 
 ```bash
-# (로컬) 데이터만 덤프 - 스키마·flyway 이력·댓글 제외
+# (로컬) 데이터만 덤프 - 스키마·flyway 이력·댓글 제외 (mysqldump가 PATH에 있어야 한다)
 MYSQL_PWD=<로컬 비밀번호> ./scripts/export-data.sh sumo-data.sql
+scp sumo-data.sql <사용자>@<서버>:~/sumoarchive/
 
-# (서버) 앱을 한 번 띄워 Flyway가 테이블을 만들게 한 뒤, 데이터를 넣는다
-docker compose up -d
-docker exec -i sumoarchive-db mysql -u root -p<ROOT_PASS> --default-character-set=utf8mb4 sumo < sumo-data.sql
+# (서버) 앱을 한 번 띄워 Flyway가 테이블을 만들게 한 뒤(healthy가 될 때까지 기다림), 데이터를 넣는다
+docker compose up -d --build
+docker compose ps                       # app이 (healthy)가 되면 다음 줄
+docker exec -i sumoarchive-db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" exec mysql -u root --default-character-set=utf8mb4 sumo' < sumo-data.sql
 
 # 반즈케·바쇼 목록은 캐시되므로 데이터를 넣은 뒤 앱을 재시작해야 화면에 반영된다
 docker compose restart app
 ```
 
+- 비밀번호는 컨테이너 안의 환경변수로 넘긴다 (`-p<비밀번호>`는 `ps`로 보이므로 쓰지 않는다).
+- 2026-09-30 로컬 리허설: 빈 DB에 V1~V3 적용 → 덤프(3.6MB) 넣기 → 바쇼 46·반즈케 3,685·대전 22,530·리키시 682·헤야 52·수상 428·킨보시 89 원본과 일치.
+
 ---
 
 ## 5. Nginx 리버스 프록시 및 SSL 설정
 
-### 1) Nginx 설정 파일 (`/etc/nginx/sites-available/sumoarchive`)
+### 0) 처음 설정 순서 — 인증서부터
+아래 1)의 최종 설정은 443 블록이 인증서 파일(`/etc/letsencrypt/live/…`)을 가리키므로, **인증서가 없을 때 넣으면 `nginx -t`가 실패해 Nginx가 뜨지 않는다.**
+처음에는 80 포트만 열고 인증서를 받은 뒤 최종 설정으로 바꾼다. (DNS A 레코드가 서버 IP를 가리키고 있어야 한다)
+
+```bash
+# 1. 80 포트만 있는 임시 설정
+sudo tee /etc/nginx/sites-available/sumoarchive > /dev/null <<'NGINX'
+server {
+    listen 80;
+    server_name your-domain.com www.your-domain.com;
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+    }
+}
+NGINX
+sudo ln -sf /etc/nginx/sites-available/sumoarchive /etc/nginx/sites-enabled/sumoarchive
+sudo rm -f /etc/nginx/sites-enabled/default
+sudo nginx -t && sudo systemctl reload nginx
+
+# 2. 인증서 발급 (자동 갱신 타이머도 같이 설치된다)
+sudo certbot --nginx -d your-domain.com -d www.your-domain.com
+
+# 3. 아래 1)의 최종 설정으로 파일을 통째로 바꾼 뒤
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+### 1) Nginx 설정 파일 (`/etc/nginx/sites-available/sumoarchive`) — 최종
 
 ```nginx
 server {
@@ -234,10 +348,11 @@ server {
 }
 ```
 
-### 2) 무료 SSL 인증서 발급 (Certbot)
+### 2) 무료 SSL 인증서 (Certbot)
+발급은 0)의 순서대로 한다. 설치와 자동 갱신 확인:
 ```bash
 sudo apt update && sudo apt install certbot python3-certbot-nginx -y
-sudo certbot --nginx -d your-domain.com -d www.your-domain.com
+sudo certbot renew --dry-run          # 90일마다 자동 갱신되는지 미리 확인
 ```
 
 ### 3) 접속 로그 보관 기간 (14일)
@@ -269,7 +384,7 @@ sudo logrotate -d /etc/nginx/logrotate.d/nginx                 # 설정 점검 (
 sudo ./scripts/backup-db.sh
 
 # cron 등록 (sudo crontab -e) - 매일 새벽 4시
-0 4 * * * /home/ubuntu/sumoarchive/scripts/backup-db.sh >> /var/log/sumoarchive-backup.log 2>&1
+0 4 * * * /home/deploy/sumoarchive/scripts/backup-db.sh >> /var/log/sumoarchive-backup.log 2>&1
 ```
 
 > 서버 디스크가 통째로 날아가면 백업도 같이 사라진다. 백업 폴더를 주기적으로 서버 밖(오브젝트 스토리지, 다른 PC 등)으로도 복사해 두자.
@@ -344,6 +459,7 @@ docker compose start app
 - [x] **개인정보 처리 안내**: `/privacy`(한·일), 모든 페이지 푸터에서 연결. 문의 이메일은 `CONTACT_EMAIL`(필수). 본인 삭제 댓글은 원문 즉시 삭제(Flyway V3로 기존 것도 정리), YouTube는 youtube-nocookie 임베드
 - [ ] **Nginx 접속 로그 14일 보관 확인**: 안내문과 맞추기 (5절 3)
 - [x] **빈 바쇼 방지**: 반즈케 없는 바쇼는 메인 드롭다운·기본 표시·일문 탭에서 제외 (바쇼만 먼저 등록돼도 메인이 비지 않음)
+- [x] **시간대**: 컨테이너 JVM `-Duser.timezone=Asia/Seoul` (댓글 작성·신고 시각, 로그), 서버는 `timedatectl set-timezone Asia/Seoul` (백업 파일명·cron) — CI가 이미지의 JVM 시간대 확인
 - [ ] **Nginx `/admin/` 제한 시간 300초**: 5절 설정 (임포트가 60초를 넘길 수 있음)
 - [ ] **첫 바쇼 리허설**: 7절 절차대로 (2026년 11월 큐슈바쇼 반즈케 발표 10/26 전후)
 - [x] **캐싱 최적화**: 바쇼 목록, 반즈케 데이터, 키마리테 백과사전에 Spring Cache 적용 완료
