@@ -77,7 +77,8 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: 셸 스크립트 문법
-        run: for f in scripts/*.sh; do bash -n "$f" && echo "ok: $f"; done
+        run: |
+          for f in scripts/*.sh; do bash -n "$f" && echo "ok: $f"; done
 
       - name: docker compose 설정 (필수 환경변수가 있으면 통과)
         env:
