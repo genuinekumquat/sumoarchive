@@ -48,7 +48,7 @@ public class BanzukeImportService {
 	private final RosterImportService rosterImportService;
 
 	@Transactional
-	@CacheEvict(value = {"banzuke", "ichimonStructure"}, allEntries = true)
+	@CacheEvict(value = {"bashoOptions", "banzuke", "ichimonStructure"}, allEntries = true)
 	public BanzukeImportResultDTO importDivision(Integer bashoId, Division division) {
 		BashoEntity basho = bashoRepository.findById(bashoId)
 				.orElseThrow(() -> new EntityNotFoundException("바쇼를 찾을 수 없습니다. id=" + bashoId));

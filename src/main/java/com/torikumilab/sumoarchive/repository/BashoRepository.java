@@ -3,6 +3,7 @@ package com.torikumilab.sumoarchive.repository;
 import com.torikumilab.sumoarchive.domain.entity.BashoEntity;
 import com.torikumilab.sumoarchive.domain.entity.constant.BashoMonth;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
@@ -15,7 +16,18 @@ public interface BashoRepository extends JpaRepository<BashoEntity, Integer> {
 	Optional<BashoEntity> findTopByStartDateLessThanEqualOrderByStartDateDesc(LocalDate today);
 
 	// 메인 화면 기본 노출용 — 시작일이 아직 안 됐어도(반즈케 발표~본장소 개최 사이) 가장 최근 바쇼를 보여준다.
-	Optional<BashoEntity> findTopByOrderByStartDateDesc();
+	// 단, 반즈케가 들어간 바쇼만. 바쇼만 먼저 등록되고(관리자 "바쇼 추가", 또는 sumo-api가 일정을 반즈케보다
+	// 먼저 공개) 반즈케가 아직 없으면 메인이 "등록된 반즈케가 없습니다"로 바뀌는 것을 막는다.
+	@Query("""
+        SELECT b FROM BashoEntity b
+        WHERE EXISTS (SELECT 1 FROM BanzukeEntity z WHERE z.bashoEntity = b)
+        ORDER BY b.startDate DESC
+    """)
+	List<BashoEntity> findAllWithBanzukeOrderByStartDateDesc();
+
+	default Optional<BashoEntity> findLatestWithBanzuke() {
+		return findAllWithBanzukeOrderByStartDateDesc().stream().findFirst();
+	}
 
 	// 관리자 바쇼 목록용. bashoMonth는 @Enumerated(STRING)이라 그걸로 정렬하면 varchar 알파벳순이
 	// 되어 월 순서가 깨진다. 생성 폼에서 시작일을 필수로 받으므로 startDate 정렬이 정확하다.

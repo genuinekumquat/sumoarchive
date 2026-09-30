@@ -33,13 +33,13 @@ public class BanzukeService {
 	private final BanzukeRepository banzukeRepository;
 	private final HeyaRepository heyaRepository;
 
-	/** 메인 화면 기본 노출: 가장 최근 바쇼(시작일 기준)의 해당 디비전 반즈케. */
+	/** 메인 화면 기본 노출: 반즈케가 있는 가장 최근 바쇼(시작일 기준)의 해당 디비전 반즈케. */
 	public List<BanzukeDTO> getLatestBanzuke(Division division) {
 		return getBanzuke(null, division);
 	}
 
 	/**
-	 * bashoId가 있으면 그 바쇼, 없으면 가장 최근 바쇼의 반즈케를 반환한다.
+	 * bashoId가 있으면 그 바쇼, 없으면 반즈케가 있는 가장 최근 바쇼의 반즈케를 반환한다.
 	 * (메인 화면에서 바쇼 선택 드롭다운으로 이전 바쇼를 조회할 때 bashoId를 넘긴다.)
 	 */
 	@Cacheable(value = "banzuke", key = "(#bashoId != null ? #bashoId : 'latest') + '-' + #division.name()")
@@ -50,7 +50,7 @@ public class BanzukeService {
 					.orElseThrow(() -> new EntityNotFoundException("바쇼를 찾을 수 없습니다. id=" + bashoId));
 		} else {
 			// 바쇼가 하나도 없으면(예: sumo-api 임포트 직후, 바쇼 임포트 전) 빈 목록으로 곱게 처리
-			basho = bashoRepository.findTopByOrderByStartDateDesc().orElse(null);
+			basho = bashoRepository.findLatestWithBanzuke().orElse(null);
 			if (basho == null) {
 				return List.of();
 			}
@@ -75,10 +75,10 @@ public class BanzukeService {
 				.toList();
 	}
 
-	/** 메인 화면 바쇼 선택 드롭다운 옵션 (최신 바쇼가 맨 앞). */
+	/** 메인 화면 바쇼 선택 드롭다운 옵션 (최신 바쇼가 맨 앞). 반즈케가 없는 바쇼(발표 전)는 빼서 기본 선택이 빈 반즈케가 되지 않게 한다. */
 	@Cacheable(value = "bashoOptions")
 	public List<BashoOptionDTO> listBashoOptions() {
-		return bashoRepository.findAllByOrderByStartDateDesc().stream()
+		return bashoRepository.findAllWithBanzukeOrderByStartDateDesc().stream()
 				.map(b -> new BashoOptionDTO(
 						b.getId(),
 						b.getBashoYear() + "年 " + b.getBashoMonth().getDisplayNameJp(),
@@ -91,13 +91,13 @@ public class BanzukeService {
 	}
 
 	/**
-	 * 메인 페이지 "일문" 탭 - 최신 바쇼 기준 일문(一門)별 헤야, 그 안에 세키토리(마쿠우치+주료) 명단.
+	 * 메인 페이지 "일문" 탭 - 반즈케가 있는 최신 바쇼 기준 일문(一門)별 헤야, 그 안에 세키토리(마쿠우치+주료) 명단.
 	 * 현재 세키토리가 없는 헤야도 목록에는 남는다(전체 헤야 구조를 보여주는 게 목적).
 	 * 이치몬이 아직 배정 안 된 헤야는 제외 - 지금은 전부 배정돼 있지만 이후 새 헤야가 생기면 비어있을 수 있음.
 	 */
 	@Cacheable(value = "ichimonStructure")
 	public List<IchimonGroupDTO> getIchimonStructure() {
-		BashoEntity basho = bashoRepository.findTopByOrderByStartDateDesc().orElse(null);
+		BashoEntity basho = bashoRepository.findLatestWithBanzuke().orElse(null);
 		if (basho == null) {
 			return List.of();
 		}

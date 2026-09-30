@@ -150,7 +150,7 @@ public class BanzukeAdminService {
 	}
 
 	@Transactional
-	@CacheEvict(value = {"banzuke", "ichimonStructure"}, allEntries = true)
+	@CacheEvict(value = {"bashoOptions", "banzuke", "ichimonStructure"}, allEntries = true) // 첫 행이 생기거나 마지막 행이 지워지면 드롭다운 목록이 바뀐다
 	public void addRow(Integer bashoId, BanzukeFormDTO form) {
 		BashoEntity basho = findBasho(bashoId);
 		validatePlacement(form);
@@ -173,7 +173,7 @@ public class BanzukeAdminService {
 	}
 
 	@Transactional
-	@CacheEvict(value = {"banzuke", "ichimonStructure"}, allEntries = true)
+	@CacheEvict(value = {"bashoOptions", "banzuke", "ichimonStructure"}, allEntries = true)
 	public void updateRow(Integer bashoId, Integer banzukeId, BanzukeFormDTO form) {
 		validatePlacement(form);
 		BanzukeEntity row = findRowInBasho(bashoId, banzukeId);
@@ -181,7 +181,7 @@ public class BanzukeAdminService {
 	}
 
 	@Transactional
-	@CacheEvict(value = {"banzuke", "ichimonStructure"}, allEntries = true)
+	@CacheEvict(value = {"bashoOptions", "banzuke", "ichimonStructure"}, allEntries = true) // 첫 행이 생기거나 마지막 행이 지워지면 드롭다운 목록이 바뀐다
 	public void deleteRow(Integer bashoId, Integer banzukeId) {
 		BanzukeEntity row = findRowInBasho(bashoId, banzukeId);
 		banzukeRepository.delete(row);
