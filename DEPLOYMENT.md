@@ -9,9 +9,30 @@
 
 ### 준비할 것
 - **서버**: Ubuntu 24.04, **메모리 2GB 이상** (서버에서 Docker 이미지를 빌드할 때 Gradle 컴파일 + JVM + MySQL이 함께 돈다. 1GB면 아래 스왑 필수)
-- **도메인**과 DNS 관리 화면 접근
+- **도메인** `torikumilab.com`과 DNS 관리 화면 접근 (스모아카이브는 `archive.torikumilab.com`, 루트는 임시로 archive로 이동 — 5절 1)
 - **문의 이메일** (개인정보 처리 안내 `/privacy`에 공개된다)
 - 로컬 PC: 최신 `main`, 로컬 DB(데이터 이전용), `mysqldump`
+
+### Oracle Cloud 무료(Always Free)로 할 때
+공식 무료 한도: ARM(Ampere A1) **2 OCPU·메모리 12GB**, 블록 스토리지 200GB, 아웃바운드 월 10TB. 이미지(`eclipse-temurin`·`mysql:8.0`)는 arm64를 지원하고, CI가 ARM에서 compose 기동까지 확인한다.
+
+1. **가입**: 카드 인증이 필요하다. **홈 리전은 나중에 못 바꾸고 무료 서버는 홈 리전에서만 만들 수 있다** → 서울(`ap-seoul-1`)·춘천(`ap-chuncheon-1`)·도쿄(`ap-tokyo-1`) 중 하나.
+2. **예산 알림**: Billing → Budgets에서 월 1달러 알림을 걸어 둔다 (실수로 유료 자원을 만들었을 때 바로 알 수 있게).
+3. **인스턴스 생성** (Compute → Instances → Create):
+   - Image: **Canonical Ubuntu 24.04** (aarch64), Shape: **VM.Standard.A1.Flex, 2 OCPU / 12GB**
+   - Networking: 공인 IP 할당, SSH 공개 키 업로드. 기본 사용자는 `ubuntu`
+   - "Out of host capacity"가 나오면 다른 가용 영역(AD)을 고르거나 시간을 두고 다시 시도 (공식 안내)
+4. **포트 열기 — 두 군데 다** (한쪽만 열면 사이트가 안 보인다):
+   - 콘솔: Networking → VCN → Security Lists → Default → Ingress Rule 추가: Source `0.0.0.0/0`, TCP, 포트 `80`, `443`
+   - 서버 안: Oracle의 Ubuntu 이미지는 iptables에 REJECT 규칙이 미리 들어 있다. **아래 1단계의 ufw 대신** 이렇게 연다
+     ```bash
+     sudo iptables -L INPUT --line-numbers            # REJECT 줄 번호 확인 (보통 마지막 쪽)
+     sudo iptables -I INPUT 5 -p tcp -m state --state NEW --dport 80 -j ACCEPT    # 5 = REJECT보다 앞 번호
+     sudo iptables -I INPUT 5 -p tcp -m state --state NEW --dport 443 -j ACCEPT
+     sudo netfilter-persistent save                   # 재부팅 후에도 유지
+     ```
+5. 메모리가 12GB라 1단계의 **스왑은 건너뛴다**.
+6. **유휴 회수 주의**: 7일간 CPU·네트워크·메모리 사용률이 **모두** 20% 미만이면 회수될 수 있다(공식 정책). 방문자가 적은 초기엔 해당될 수 있으니 서버 밖 백업(5단계)을 꼭 해 두고, 계정을 종량제(Pay As You Go)로 전환하면 회수 대상에서 빠진다고 알려져 있다 — 전환 전에 Oracle 안내를 확인할 것 (무료 한도 안에서는 요금이 나오지 않는다고 안내됨).
 
 ### 1단계: 서버 기본 설정
 ```bash
@@ -21,7 +42,7 @@ sudo adduser deploy && sudo usermod -aG sudo deploy
 # 시간대: 백업 파일 이름·cron 시각이 한국 시간이 되도록 (앱 JVM은 Dockerfile에서 따로 Asia/Seoul)
 sudo timedatectl set-timezone Asia/Seoul
 
-# 방화벽: SSH·HTTP·HTTPS만 (앱 8080·DB 3306은 밖에 열지 않는다)
+# 방화벽: SSH·HTTP·HTTPS만 (앱 8080·DB 3306은 밖에 열지 않는다) — Oracle Cloud는 ufw 대신 위 "Oracle Cloud" 4번의 iptables
 sudo apt update && sudo apt install -y ufw nginx certbot python3-certbot-nginx git
 sudo ufw allow OpenSSH && sudo ufw allow 'Nginx Full' && sudo ufw enable
 
@@ -52,26 +73,28 @@ nano .env                   # SPRING_DATASOURCE_PASSWORD, MYSQL_ROOT_PASSWORD, A
 - 이 단계까지는 Nginx가 없어서 밖에서 사이트가 안 보인다 → 빈 화면이 공개되거나 캐시되는 일이 없다.
 
 ### 4단계: 도메인과 HTTPS (→ 5절)
-1. DNS에 A 레코드(`@`, `www` → 서버 IP) 추가, `ping your-domain.com`으로 반영 확인
+1. DNS에 A 레코드 3개(`@`, `www`, `archive` → 서버 IP) 추가, `ping archive.torikumilab.com`으로 반영 확인
 2. 5절 0)의 순서: 80 포트 임시 설정 → `certbot --nginx` → 5절 1)의 최종 설정(보안 헤더, `/admin/` 300초)으로 교체
 3. 5절 3)으로 Nginx 접속 로그 14일 보관 확인
 
 ### 5단계: 운영 설정 (→ 3절, 6절)
 - 백업: `sudo ./scripts/backup-db.sh` 한 번 실행해 파일이 생기는지 보고, `sudo crontab -e`로 매일 새벽 4시 등록 (6절 1)
 - 백업을 서버 밖으로도 복사 (rclone 등)
-- 업타임 모니터(UptimeRobot 등)에 `https://your-domain.com/actuator/health` 등록
+- 업타임 모니터(UptimeRobot 등)에 `https://archive.torikumilab.com/actuator/health` 등록
 
 ### 6단계: 공개 전 확인
 - [ ] `https://` 접속, `http://`는 https로 넘어감
+- [ ] `https://torikumilab.com`·`www` 접속 시 `archive.torikumilab.com`의 같은 경로로 이동(302)
 - [ ] 메인(반즈케·일문·키마리테 탭), 리키시 프로필, 경기 상세, 검색, 즐겨찾기 — 한국어·일본어(`?lang=ja`) 모두
 - [ ] 관리자 로그인(`/admin/login`), 댓글 작성·신고·본인 삭제, 관리자 블라인드
 - [ ] 댓글 작성 시각이 한국 시간으로 나오는지
 - [ ] `/privacy`에 실제 문의 이메일, 시행일
-- [ ] `/robots.txt`·`/sitemap.xml`의 주소가 `https://your-domain.com`으로 나오는지 (Nginx가 Host·X-Forwarded-Proto를 넘겨야 함)
+- [ ] `/robots.txt`·`/sitemap.xml`의 주소가 `https://archive.torikumilab.com`으로 나오는지 (Nginx가 Host·X-Forwarded-Proto를 넘겨야 함)
 - [ ] `docker compose exec app ls -l /app/logs`에 로그 파일
 
 ### 7단계: 공개 후
-- Google Search Console·네이버 서치어드바이저에 사이트 등록, `https://your-domain.com/sitemap.xml` 제출
+- Google Search Console·네이버 서치어드바이저에 사이트 등록, `https://archive.torikumilab.com/sitemap.xml` 제출
+  (Search Console은 DNS TXT로 **도메인 속성 `torikumilab.com`**을 등록하면 앞으로 생길 서브도메인까지 한 번에 관리된다)
 - 다음 바쇼 반즈케 발표 때 7절 절차대로 첫 데이터 갱신
 
 ### 이후 업데이트 배포
@@ -174,7 +197,7 @@ CONTACT_EMAIL=문의용_이메일@example.com
    docker compose ps                          # app이 (healthy)로 표시되면 정상
    curl http://127.0.0.1:8080/actuator/health # {"status":"UP"} - DB 연결까지 확인
    ```
-   외부 업타임 모니터(UptimeRobot 등)에는 `https://도메인/actuator/health`를 등록해 두면, 앱이나 DB가 죽었을 때 알림을 받을 수 있다.
+   외부 업타임 모니터(UptimeRobot 등)에는 `https://archive.torikumilab.com/actuator/health`를 등록해 두면, 앱이나 DB가 죽었을 때 알림을 받을 수 있다.
    노출되는 actuator 엔드포인트는 `health` 하나뿐이고 세부 정보는 표시하지 않는다.
 
 ---
@@ -258,44 +281,65 @@ docker compose restart app
 처음에는 80 포트만 열고 인증서를 받은 뒤 최종 설정으로 바꾼다. (DNS A 레코드가 서버 IP를 가리키고 있어야 한다)
 
 ```bash
-# 1. 80 포트만 있는 임시 설정
-sudo tee /etc/nginx/sites-available/sumoarchive > /dev/null <<'NGINX'
+# 1. 80 포트만 있는 임시 설정 (세 주소 모두 앱으로)
+sudo tee /etc/nginx/sites-available/torikumilab > /dev/null <<'NGINX'
 server {
     listen 80;
-    server_name your-domain.com www.your-domain.com;
+    server_name torikumilab.com www.torikumilab.com archive.torikumilab.com;
     location / {
         proxy_pass http://127.0.0.1:8080;
         proxy_set_header Host $host;
     }
 }
 NGINX
-sudo ln -sf /etc/nginx/sites-available/sumoarchive /etc/nginx/sites-enabled/sumoarchive
+sudo ln -sf /etc/nginx/sites-available/torikumilab /etc/nginx/sites-enabled/torikumilab
 sudo rm -f /etc/nginx/sites-enabled/default
 sudo nginx -t && sudo systemctl reload nginx
 
-# 2. 인증서 발급 (자동 갱신 타이머도 같이 설치된다)
-sudo certbot --nginx -d your-domain.com -d www.your-domain.com
+# 2. 인증서 발급 - 세 주소를 인증서 하나로 (파일은 첫 -d 이름인 /etc/letsencrypt/live/torikumilab.com/).
+#    자동 갱신 타이머도 같이 설치된다
+sudo certbot --nginx -d torikumilab.com -d www.torikumilab.com -d archive.torikumilab.com
 
 # 3. 아래 1)의 최종 설정으로 파일을 통째로 바꾼 뒤
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
-### 1) Nginx 설정 파일 (`/etc/nginx/sites-available/sumoarchive`) — 최종
+### 1) Nginx 설정 파일 (`/etc/nginx/sites-available/torikumilab`) — 최종
+
+주소 구조: **토리쿠미 연구소** `torikumilab.com` 아래에 서비스를 서브도메인으로 둔다.
+
+| 주소 | 용도 |
+|---|---|
+| `torikumilab.com`, `www.torikumilab.com` | 토리쿠미 연구소 (소개 페이지가 생기기 전까지 스모아카이브로 임시 이동) |
+| `archive.torikumilab.com` | 스모아카이브 (이 앱) |
+| (나중에) `banzuke.torikumilab.com` 등 | 반즈케 시뮬레이터 등 새 서비스 |
 
 ```nginx
+# http → https (모든 주소)
 server {
     listen 80;
-    server_name your-domain.com www.your-domain.com;
+    server_name torikumilab.com www.torikumilab.com archive.torikumilab.com;
     return 301 https://$host$request_uri;
 }
 
+# 토리쿠미 연구소 루트: 소개 페이지가 생기기 전까지 스모아카이브로 "임시" 이동.
+# 301(영구)로 하면 브라우저·검색엔진이 기억해 나중에 소개 페이지로 바꾸기 어려우므로 302.
 server {
     listen 443 ssl http2;
-    server_name your-domain.com www.your-domain.com;
+    server_name torikumilab.com www.torikumilab.com;
+    ssl_certificate /etc/letsencrypt/live/torikumilab.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/torikumilab.com/privkey.pem;
+    return 302 https://archive.torikumilab.com$request_uri;
+}
 
-    # SSL 인증서 (Certbot / Let's Encrypt)
-    ssl_certificate /etc/letsencrypt/live/your-domain.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/your-domain.com/privkey.pem;
+# 스모아카이브
+server {
+    listen 443 ssl http2;
+    server_name archive.torikumilab.com;
+
+    # SSL 인증서 (Certbot / Let's Encrypt, 세 주소 공용)
+    ssl_certificate /etc/letsencrypt/live/torikumilab.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/torikumilab.com/privkey.pem;
 
     # 보안 헤더
     add_header X-Frame-Options "SAMEORIGIN" always;
@@ -354,6 +398,11 @@ server {
 sudo apt update && sudo apt install certbot python3-certbot-nginx -y
 sudo certbot renew --dry-run          # 90일마다 자동 갱신되는지 미리 확인
 ```
+
+**나중에 새 서비스(예: 반즈케 시뮬레이터)를 붙일 때**
+1. DNS에 `banzuke` A 레코드 추가
+2. 기존 인증서에 주소 추가: `sudo certbot --nginx --expand -d torikumilab.com -d www.torikumilab.com -d archive.torikumilab.com -d banzuke.torikumilab.com`
+3. 1) 설정의 80 블록 `server_name`에 추가하고, 443 서버 블록을 하나 더 만든다 (다른 포트의 다른 앱으로 `proxy_pass`)
 
 ### 3) 접속 로그 보관 기간 (14일)
 개인정보 처리 안내(`/privacy`)에 "서버 접속 기록은 14일 후 자동 삭제"라고 적었으므로 Nginx 로그 보관 기간을 맞춘다.
@@ -449,7 +498,7 @@ docker compose start app
 - [x] **Docker 노출 최소화**: 앱 포트는 `127.0.0.1:8080`에만 바인딩, `ADMIN_PASSWORD`는 기본값 없이 `.env` 필수
 - [x] **검색 노출**: 페이지 설명·OG·파비콘(`fragments/common :: seo`), 검색·즐겨찾기·에러 페이지 noindex, `/robots.txt`·`/sitemap.xml`(요청 주소 기준으로 생성 - Nginx가 `Host`·`X-Forwarded-Proto`를 넘겨야 https 도메인으로 나옴)
 - [x] **출처·면책**: 공개 페이지 푸터에 sumo-api.com 출처와 "日本相撲協会와 무관한 개인 팬 사이트" 문구 (`fragments/common :: footerNote`)
-- [ ] **배포 후 검색 등록**: Google Search Console·네이버 서치어드바이저에 사이트 등록 후 `https://도메인/sitemap.xml` 제출
+- [ ] **배포 후 검색 등록**: Google Search Console·네이버 서치어드바이저에 사이트 등록 후 `https://archive.torikumilab.com/sitemap.xml` 제출
 - [x] **DB 비밀번호**: compose에 `SPRING_DATASOURCE_PASSWORD`·`MYSQL_ROOT_PASSWORD` 기본값 없음 - `.env`에 없으면 시작 거부 (DB 포트는 외부에 열지 않음)
 - [x] **시크릿 환경변수화**: DB 및 어드민 비밀번호를 `.env` 또는 서버 환경변수로 관리
 - [x] **데이터 안전성 확보**: 로스터 임포트 시 `wipeExisting()` 제거 및 `Upsert` 전환 완료
@@ -462,6 +511,7 @@ docker compose start app
 - [x] **시간대**: 컨테이너 JVM `-Duser.timezone=Asia/Seoul` (댓글 작성·신고 시각, 로그), 서버는 `timedatectl set-timezone Asia/Seoul` (백업 파일명·cron) — CI가 이미지의 JVM 시간대 확인
 - [ ] **Nginx `/admin/` 제한 시간 300초**: 5절 설정 (임포트가 60초를 넘길 수 있음)
 - [ ] **첫 바쇼 리허설**: 7절 절차대로 (2026년 11월 큐슈바쇼 반즈케 발표 10/26 전후)
+- [x] **ARM(Oracle 무료) 대응**: 베이스 이미지 arm64 지원, CI가 x86·ARM 양쪽에서 이미지 빌드·compose 기동·health 확인. Oracle 전용 절차는 0절
 - [x] **캐싱 최적화**: 바쇼 목록, 반즈케 데이터, 키마리테 백과사전에 Spring Cache 적용 완료
 - [x] **관리자 수정 즉시 반영**: 바쇼·반즈케 행·리키시 프로필·헤야 이름 수정 시 관련 캐시를 커밋 직후 비움 (`config/CacheConfig`). DB에 SQL로 직접 넣은 데이터는 여전히 앱 재시작 필요
 - [x] **이미지 핫링크 방어**: 템플릿 메타 태그 `<meta name="referrer" content="no-referrer">` 적용 완료
@@ -470,3 +520,33 @@ docker compose start app
 - [x] **DB 자동 백업**: `scripts/backup-db.sh` + cron, 14일 보관 (6절)
 - [x] **로그 보존**: docker logs 컨테이너당 10MB x 5개 제한, 앱 로그는 `sumo_app_logs` 볼륨에 파일로 저장(14일·500MB, 날짜·10MB 단위 gzip)
 - [ ] **백업 외부 보관 / 업타임 모니터 등록**: 백업 폴더를 서버 밖으로 복사, `/actuator/health`를 외부 모니터에 등록
+
+---
+
+## 9. 서버 이전 (예: Oracle Cloud → AWS EC2·다른 VPS)
+
+앱은 Docker 이미지, 설정은 `.env` 하나, 데이터는 MySQL 하나, 스키마는 Flyway라 특정 클라우드 기능에 묶여 있지 않다.
+x86·ARM 모두 같은 이미지가 돈다(CI가 둘 다 확인). 멈추는 시간은 3번 구간의 몇 분뿐.
+
+1. **새 서버 준비**: 0절 1~2단계. 옛 서버의 `.env`를 그대로 복사한다 (`scp`).
+2. **DNS TTL 낮추기** (이전 하루 전): A 레코드 TTL을 300초 정도로 → 주소를 바꿀 때 빨리 반영된다.
+3. **옛 서버 멈추고 마지막 백업** — 앱을 먼저 멈춰야 그 사이 달린 댓글이 빠지지 않는다.
+   ```bash
+   # (옛 서버)
+   docker compose stop app
+   sudo ./scripts/backup-db.sh
+   scp /var/backups/sumoarchive/sumo_<최신>.sql.gz <사용자>@<새 서버>:~/
+   ```
+4. **새 서버에서 복원·기동**
+   ```bash
+   # (새 서버) DB만 먼저 띄워 복원 → 앱 기동 (백업에 flyway 이력까지 있어 마이그레이션은 이어서 진행된다)
+   docker compose up -d db
+   gunzip -c ~/sumo_<최신>.sql.gz | docker exec -i sumoarchive-db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" exec mysql -u root --default-character-set=utf8mb4'
+   docker compose up -d --build
+   docker compose ps && curl -s 127.0.0.1:8080/actuator/health
+   ```
+5. **DNS를 새 서버 IP로** → 반영 확인 후 새 서버에서 5절 0) 순서로 인증서 발급·Nginx 최종 설정, 5단계(백업 cron·모니터)
+6. **며칠 지켜본 뒤** 옛 서버 정리 (그동안은 되돌릴 수 있게 둔다: DNS만 옛 IP로 돌리고 `docker compose start app`)
+
+> 이식성을 지키려면 앱이 특정 클라우드 전용 서비스(전용 DB·큐·저장소)를 직접 쓰지 않게 한다. 백업 파일을 클라우드 저장소에 복사하는 정도는 앱과 무관해서 괜찮다.
+> AWS RDS 같은 관리형 MySQL로 옮길 때는 `docker-compose.yml`의 app `SPRING_DATASOURCE_URL`(지금은 `db:3306` 고정)을 RDS 주소로 바꾸고 `db` 서비스·`depends_on`을 빼면 된다. 코드 수정은 없다.

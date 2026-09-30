@@ -69,9 +69,18 @@ jobs:
           retention-days: 7
 
   deploy-files:
-    name: 배포 파일 검증
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
+    name: 배포 파일 검증 (${{ matrix.arch }})
+    # x86(일반 VPS·AWS)과 ARM(Oracle Cloud 무료 A1) 양쪽에서 이미지 빌드와 실제 기동까지 확인
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-latest
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 25
 
     steps:
       - uses: actions/checkout@v7
@@ -108,3 +117,44 @@ jobs:
             test "$LOG_FILE" = /app/logs/sumoarchive.log
             java $JAVA_OPTS -XshowSettings:properties -version 2>&1 | grep -q "user.timezone = Asia/Seoul"
             echo "ok: $(id -un), /app/logs 쓰기 가능, JVM 시간대 Asia/Seoul"'
+
+      # 운영 서버에서 하는 것과 같이 compose로 앱+MySQL을 띄워 본다 (빈 DB → Flyway → healthy)
+      - name: docker compose 실제 기동
+        env:
+          SPRING_DATASOURCE_PASSWORD: ci_db_password
+          MYSQL_ROOT_PASSWORD: ci_root_password
+          ADMIN_PASSWORD: ci_admin_password
+          CONTACT_EMAIL: ci@example.com
+        run: |
+          docker compose up -d --build
+          for i in $(seq 1 60); do
+            status=$(docker inspect -f '{{.State.Health.Status}}' sumoarchive-app 2>/dev/null || echo starting)
+            echo "[$i] app: $status"
+            [ "$status" = healthy ] && break
+            [ "$status" = unhealthy ] && break
+            sleep 5
+          done
+          test "$status" = healthy
+          curl -fsS http://127.0.0.1:8080/actuator/health; echo
+          curl -fsS -o /dev/null -w "메인 %{http_code}\n" http://127.0.0.1:8080/
+          curl -fsS -o /dev/null -w "개인정보 안내 %{http_code}\n" http://127.0.0.1:8080/privacy
+          echo "Flyway 버전: $(docker compose exec -T db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql -u root -N sumo -e "SELECT MAX(version) FROM flyway_schema_history WHERE success = 1"')"
+
+      # compose 파일이 필수 환경변수를 요구하므로 logs·down에도 같은 값을 준다
+      - name: 실패 시 컨테이너 로그
+        if: failure()
+        env:
+          SPRING_DATASOURCE_PASSWORD: ci_db_password
+          MYSQL_ROOT_PASSWORD: ci_root_password
+          ADMIN_PASSWORD: ci_admin_password
+          CONTACT_EMAIL: ci@example.com
+        run: docker compose logs --tail=200 app db || true
+
+      - name: 정리
+        if: always()
+        env:
+          SPRING_DATASOURCE_PASSWORD: ci_db_password
+          MYSQL_ROOT_PASSWORD: ci_root_password
+          ADMIN_PASSWORD: ci_admin_password
+          CONTACT_EMAIL: ci@example.com
+        run: docker compose down -v || true
