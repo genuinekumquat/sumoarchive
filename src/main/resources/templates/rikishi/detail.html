@@ -24,7 +24,7 @@
             --shu: #a3272c;
             --shu-deep: #7c1d20;
             --shu-faint: rgba(163, 39, 44, 0.10);
-            --ai: #3d5a6c; /* 쪽빛 - 분석 패널의 "강점" 표시 (약점은 --shu) */
+            --ai: #3d5a6c; /* 쪽빛 - 분석 패널의 "잘 안 당함" 표시 ("자주 당함"은 --shu) */
         }
 
         * { box-sizing: border-box; }
@@ -458,6 +458,7 @@
             text-align: center;
             margin-top: 8px;
         }
+        .chart-note + .chart-note { margin-top: 3px; }
 
         .empty-note {
             text-align: center;
@@ -491,9 +492,10 @@
         .loss-type-caption { font-size: 10.5px; color: var(--sumi-faint); margin-bottom: 8px; }
         .loss-type-row { padding: 6px 0; }
         .loss-type-row + .loss-type-row { border-top: 1px dashed var(--washi-line); }
-        .lt-line { display: flex; align-items: baseline; gap: 6px; font-size: 12px; }
-        .lt-name { color: var(--sumi-soft); }
-        .lt-verdict { font-size: 10.5px; font-weight: 700; padding: 0 5px; border: 1px solid currentColor; }
+        /* 좁은 화면에서는 이름·판정 배지·수치가 덩어리째 다음 줄로 (배지 글자가 쪼개지지 않게) */
+        .lt-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 6px; font-size: 12px; }
+        .lt-name { color: var(--sumi-soft); white-space: nowrap; }
+        .lt-verdict { font-size: 10.5px; font-weight: 700; padding: 0 5px; border: 1px solid currentColor; white-space: nowrap; }
         .lt-verdict.weak { color: var(--shu); }
         .lt-verdict.strong { color: var(--ai); }
         .lt-nums { margin-left: auto; color: var(--sumi-faint); font-size: 11px; white-space: nowrap; }
@@ -1182,15 +1184,15 @@
                      th:with="isJa=${#locale.language == 'ja'}">
                     <div class="loss-type-head">
                         <span class="loss-type-title" th:text="#{rikishi.losstype.title(${lossTypes.totalLosses})}">패배 유형 (59패)</span>
-                        <span class="loss-type-sample" th:if="${lossTypes.smallSample}" th:text="#{rikishi.losstype.small}">표본 적음 · 약점·강점 판정 안 함</span>
+                        <span class="loss-type-sample" th:if="${lossTypes.smallSample}" th:text="#{rikishi.losstype.small}">표본 적음 · 자주 당함/잘 안 당함 판정 안 함</span>
                     </div>
                     <div class="loss-type-caption" th:text="#{rikishi.losstype.caption}">막대는 이 선수, 세로선은 같은 디비전 평균</div>
                     <div class="loss-type-row" th:each="r : ${lossTypes.rows}"
                          th:classappend="${r.verdict.name() == 'WEAK'} ? 'is-weak' : (${r.verdict.name() == 'STRONG'} ? 'is-strong' : '')">
                         <div class="lt-line">
                             <span class="lt-name" th:text="${isJa} ? ${r.nameJp} : ${r.nameKr}">앞으로 고꾸라짐</span>
-                            <span class="lt-verdict weak" th:if="${r.verdict.name() == 'WEAK'}" th:text="'▲ ' + #{rikishi.losstype.weak}">▲ 약점</span>
-                            <span class="lt-verdict strong" th:if="${r.verdict.name() == 'STRONG'}" th:text="'▼ ' + #{rikishi.losstype.strong}">▼ 강점</span>
+                            <span class="lt-verdict weak" th:if="${r.verdict.name() == 'WEAK'}" th:text="'▲ ' + #{rikishi.losstype.weak}">▲ 자주 당함</span>
+                            <span class="lt-verdict strong" th:if="${r.verdict.name() == 'STRONG'}" th:text="'▼ ' + #{rikishi.losstype.strong}">▼ 잘 안 당함</span>
                             <span class="lt-nums">
                                 <span class="lt-pct" th:text="${r.percent} + '%'">42.4%</span>
                                 (<span th:text="${r.count} + (${isJa} ? '敗' : '패')">25패</span>)
@@ -1204,6 +1206,7 @@
                     </div>
                 </div>
                 <div class="chart-note" th:text="#{rikishi.chart.note}">※ 등록된 토리쿠미 결과 기준으로 산출됩니다</div>
+                <div class="chart-note" th:text="#{rikishi.chart.context}">※ 키마리테는 승부가 갈린 마지막 순간의 기술만 기록합니다. 실제 경기의 맥락 전체가 반영되지 않으니, 실제 경기 영상으로 확인해야 정확합니다.</div>
             </div>
             <div class="empty-note" th:unless="${hasKimarite}" th:text="#{rikishi.empty.match}">
                 아직 등록된 대전 기록이 없습니다.
