@@ -244,6 +244,17 @@ class RikishiAnalysisServiceTest {
 		assertThat(result.tough().get(0).diff()).isEqualTo(-1.4);
 	}
 
+	@Test
+	@DisplayName("상대전적 요약 - 예상보다 크게 밀려도 실제 전적이 비등하면(7승 8패, 승률 40% 초과) 천적이 아님")
+	void evenRecordIsNotTough() {
+		// 본인 70% vs 약한 상대 40%: 예상 약 11.6승인데 7승 8패 → 예상 대비 -4.6승이지만 실제로는 비등
+		List<HeadToHeadDTO> h2h = List.of(h2h(2, "비등", 7, 8, 0));
+		given(torikumiRepository.findWinRates(List.of(ID, 2))).willReturn(List.of(
+				winRate(ID, 100, 70), winRate(2, 100, 40)));
+
+		assertThat(service.getHeadToHeadHighlights(ID, h2h).isEmpty()).isTrue();
+	}
+
 	// ===== helpers =====
 
 	/** 부전 경기는 wins/losses와 별개로 fusenLosses만큼 부전패를 덧붙인다. */

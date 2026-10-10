@@ -63,6 +63,12 @@ public class RikishiAnalysisService {
 	 */
 	static final int H2H_RATE_MIN_BOUTS = 5;
 	static final double H2H_MIN_RATE_GAP = 0.20;
+	/**
+	 * 그리고 실제 전적도 확실히 한쪽으로 기울어야 한다 - 예상 대비만 보면 7승 8패처럼 비등한 전적도
+	 * 상대가 약하면 "천적"이 돼 버려서. 약한 상대는 승률 40% 이하, 강한 상대는 60% 이상.
+	 */
+	static final double H2H_TOUGH_MAX_RATE = 0.40;
+	static final double H2H_FAVORABLE_MIN_RATE = 0.60;
 	static final int H2H_TOP = 3;
 
 	// ===== 커리어 요약 =====
@@ -246,9 +252,11 @@ public class RikishiAnalysisService {
 			double oppRate = smoothedRate(tally.get(c.h().opponentId()), c.sekitori());
 			double expected = myRate * (1 - oppRate) / (myRate * (1 - oppRate) + oppRate * (1 - myRate));
 			double diff = c.wins() - c.bouts() * expected;
-			double rateGap = (double) c.wins() / c.bouts() - expected;
+			double actualRate = (double) c.wins() / c.bouts();
+			double rateGap = actualRate - expected;
 			boolean byRate = c.bouts() >= H2H_RATE_MIN_BOUTS && Math.abs(rateGap) >= H2H_MIN_RATE_GAP;
-			if (Math.abs(diff) >= H2H_MIN_DIFF || byRate) {
+			boolean lopsided = diff < 0 ? actualRate <= H2H_TOUGH_MAX_RATE : actualRate >= H2H_FAVORABLE_MIN_RATE;
+			if ((Math.abs(diff) >= H2H_MIN_DIFF || byRate) && lopsided) {
 				rows.add(new HeadToHeadHighlightsDTO.Row(c.h().opponentId(), c.h().opponentShikonaKr(),
 						c.h().opponentShikonaJp(), c.wins(), c.bouts() - c.wins(), round1(diff)));
 			}
