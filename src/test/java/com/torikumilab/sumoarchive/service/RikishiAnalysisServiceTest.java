@@ -212,6 +212,38 @@ class RikishiAnalysisServiceTest {
 		assertThat(result.isEmpty()).isTrue();
 	}
 
+	@Test
+	@DisplayName("상대전적 요약 - 세키토리 맞대결이면 평소 승률도 세키토리 경기로 (하위 리그 시절 고승률이 섞이면 천적이 묻힘)")
+	void sekitoriMatchupUsesSekitoriRates() {
+		// 세키토리 승률은 둘 다 60%로 같은데 1승 5패 → 예상 3승보다 2승 적음 → 천적.
+		// 상대의 하위 리그 100전 95승을 섞으면 상대 승률이 77%로 부풀어 예상이 1.9승으로 내려가 천적에서 빠진다.
+		List<HeadToHeadDTO> h2h = List.of(h2h(2, "급성장", 1, 5, 0));
+		given(torikumiRepository.findWinRates(List.of(ID, 2))).willReturn(List.of(
+				winRate(ID, 100, 60), winRate(2, 100, 60), lowerWinRate(2, 100, 95)));
+
+		HeadToHeadHighlightsDTO result = service.getHeadToHeadHighlights(ID, h2h);
+
+		assertThat(result.tough()).extracting(HeadToHeadHighlightsDTO.Row::opponentShikonaKr).containsExactly("급성장");
+		assertThat(result.tough().get(0).diff()).isEqualTo(-2.0);
+	}
+
+	@Test
+	@DisplayName("상대전적 요약 - 승수 차이가 1.5에 못 미쳐도 5전 이상·승률 20%p 이상 차이면 포함, 4전 이하는 비율로 안 잡음")
+	void rateGapCriterion() {
+		// 강자(평소 69%)에게 1승 5패: 예상 승률 약 40.5% → 예상 2.4승, 차이 -1.4승(기준 미달)이지만 승률 차 -24%p → 천적
+		// 비슷한 상대에게 1승 3패: 차이 -1승, 승률 차 -25%p지만 4전뿐이라 제외
+		List<HeadToHeadDTO> h2h = List.of(
+				h2h(2, "강자", 1, 5, 0),
+				h2h(3, "비슷", 1, 3, 0));
+		given(torikumiRepository.findWinRates(List.of(ID, 2, 3))).willReturn(List.of(
+				winRate(ID, 100, 60), winRate(2, 100, 69), winRate(3, 100, 60)));
+
+		HeadToHeadHighlightsDTO result = service.getHeadToHeadHighlights(ID, h2h);
+
+		assertThat(result.tough()).extracting(HeadToHeadHighlightsDTO.Row::opponentShikonaKr).containsExactly("강자");
+		assertThat(result.tough().get(0).diff()).isEqualTo(-1.4);
+	}
+
 	// ===== helpers =====
 
 	/** 부전 경기는 wins/losses와 별개로 fusenLosses만큼 부전패를 덧붙인다. */
@@ -224,12 +256,23 @@ class RikishiAnalysisServiceTest {
 	}
 
 	private static HeadToHeadBoutDTO bout(boolean win, boolean fusen) {
-		return new HeadToHeadBoutDTO("2025年01月場所", "2025년 1월 하츠바쇼", 1, win, fusen, "-", "-");
+		return new HeadToHeadBoutDTO("2025年01月場所", "2025년 1월 하츠바쇼", 1, win, fusen, "-", "-", true);
 	}
 
+	/** 세키토리 경기 승률 행 */
 	private static TorikumiRepository.WinRateRow winRate(int rikishiId, long bouts, long wins) {
+		return winRateRow(rikishiId, 1, bouts, wins);
+	}
+
+	/** 마쿠시타 이하 경기 승률 행 */
+	private static TorikumiRepository.WinRateRow lowerWinRate(int rikishiId, long bouts, long wins) {
+		return winRateRow(rikishiId, 0, bouts, wins);
+	}
+
+	private static TorikumiRepository.WinRateRow winRateRow(int rikishiId, int sekitori, long bouts, long wins) {
 		return new TorikumiRepository.WinRateRow() {
 			public Integer getRikishiId() { return rikishiId; }
+			public Number getSekitori() { return sekitori; }
 			public Number getBouts() { return bouts; }
 			public Number getWins() { return wins; }
 		};
@@ -240,7 +283,7 @@ class RikishiAnalysisServiceTest {
 	}
 
 	@Test
-	@DisplayName("커리어 요약 - 휴장 낀 7승은 마케코시, 全休는 분모 포함, 진행 중·마쿠시타 바쇼 제외")
+	@DisplayName("커리어 요약 - 카치코시는 과반 승리(세키토리 8승·하위 4승), 全休는 분모 포함, 진행 중 제외, 두 자릿수·최고 성적은 세키토리만")
 	void careerSummary() {
 		// 최신 바쇼부터 (getGameLog 순서)
 		List<BashoGameLogDTO> gameLog = List.of(
@@ -249,22 +292,36 @@ class RikishiAnalysisServiceTest {
 				log(7, 7, 5, 3, Division.Makuuchi, true),    // 휴장 낀 7승 → 마케코시
 				log(6, 0, 0, 15, Division.Juryo, true),      // 全休
 				log(5, 12, 3, 0, Division.Juryo, true),      // 12승 동률이지만 더 예전 바쇼
-				log(4, 5, 2, 0, Division.Makushita, true),   // 마쿠시타 - 제외
-				log(3, 0, 0, 0, Division.Juryo, false));     // 적재 전 ("-") - 제외
+				log(4, 4, 3, 0, Division.Makushita, true),   // 마쿠시타 4승 3패 → 카치코시 (최고 성적 후보는 아님)
+				log(3, 3, 4, 0, Division.Sandanme, true),    // 3승 4패 → 마케코시
+				log(2, 0, 0, 7, Division.Makushita, true),   // 마쿠시타 全休
+				log(1, 0, 0, 0, Division.Juryo, false));     // 적재 전 ("-") - 제외
 
 		CareerSummaryDTO result = service.getCareerSummary(gameLog);
 
-		assertThat(result.basho()).isEqualTo(4);
-		assertThat(result.kachikoshi()).isEqualTo(2);
-		assertThat(result.kachikoshiPercent()).isEqualTo(50);
+		assertThat(result.basho()).isEqualTo(7);
+		assertThat(result.kachikoshi()).isEqualTo(3);
+		assertThat(result.kachikoshiPercent()).isEqualTo(43);
 		assertThat(result.doubleDigit()).isEqualTo(2);
-		assertThat(result.absence()).isEqualTo(2);
-		assertThat(result.zenkyu()).isEqualTo(1);
+		assertThat(result.absence()).isEqualTo(3);
+		assertThat(result.zenkyu()).isEqualTo(2);
 		assertThat(result.best().bashoId()).isEqualTo(8);
 	}
 
 	@Test
-	@DisplayName("커리어 요약 - 끝난 세키토리 바쇼가 없으면 비어 있음, 全休뿐이면 최고 성적 없음")
+	@DisplayName("커리어 요약 - 하위 리그 바쇼뿐이면 최고 성적 없음 (하위 리그 7승을 세키토리 성적과 같은 잣대로 보지 않음)")
+	void careerSummaryLowerOnly() {
+		CareerSummaryDTO result = service.getCareerSummary(List.of(
+				log(2, 6, 1, 0, Division.Jonidan, true),
+				log(1, 7, 0, 0, Division.Jonokuchi, true)));
+		assertThat(result.basho()).isEqualTo(2);
+		assertThat(result.kachikoshi()).isEqualTo(2);
+		assertThat(result.doubleDigit()).isZero();
+		assertThat(result.best()).isNull();
+	}
+
+	@Test
+	@DisplayName("커리어 요약 - 끝난 바쇼가 없으면 비어 있음, 全休뿐이면 최고 성적 없음")
 	void careerSummaryEmpty() {
 		assertThat(service.getCareerSummary(List.of(log(1, 3, 1, 0, Division.Juryo, false))).isEmpty()).isTrue();
 

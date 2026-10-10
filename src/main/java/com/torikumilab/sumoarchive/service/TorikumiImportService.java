@@ -22,14 +22,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * sumo-api.com에서 특정 바쇼·디비전의 15일치 대전을 가져와 upsert한다.
+ * sumo-api.com에서 특정 바쇼·디비전의 15일치 대전(+ 16일째로 오는 우승 결정전)을 가져와 upsert한다.
  * 엔드포인트가 하루치({@code /torikumi/{division}/{day}})라 day 1~15를 각각 호출하고,
  * 호출 사이에 짧게 쉬어(throttle) rate limit에 대비한다. 한 일차가 실패해도 나머지는 진행한다.
  *
  * <p>매칭 키는 {@code externalId}("202405-1-1-31-25"), 리키시는 {@code externalApiId}로 찾는다.
  * 동/서 중 한쪽이라도 우리 DB에 없으면(과거 바쇼면 주로 은퇴자) 그 경기는 스킵하고 목록에 남긴다.
  * {@code kimarite}는 API 로마자를 그대로 저장하고(표시는 {@code KimariteDisplayUtil}), "fusen"이면
- * {@code resultType=FUZEN} + kimarite null. 결정전 판별은 API에 근거가 없어 전부 정규 대전으로 넣는다.</p>
+ * {@code resultType=FUZEN} + kimarite null. 결정전은 16일째 경기로 판별해 {@code isExtraMatch=true}.</p>
  */
 @Service
 @RequiredArgsConstructor
@@ -38,6 +38,11 @@ public class TorikumiImportService {
 	private static final Logger log = LoggerFactory.getLogger(TorikumiImportService.class);
 
 	private static final int MAX_DAY = 15;
+	/**
+	 * sumo-api는 우승 결정전(優勝決定戦)을 16일째 경기로 준다. 결정전으로 표시(isExtraMatch)해서 받고,
+	 * 전적·호시토리표·분석은 기존대로 결정전을 빼고 센다 (공식 기록도 바쇼 성적에 넣지 않음).
+	 */
+	private static final int PLAYOFF_DAY = 16;
 	private static final long THROTTLE_MS = 150L;
 
 	private final SumoApiClient sumoApiClient;
@@ -64,7 +69,7 @@ public class TorikumiImportService {
 		int matchesSeen = 0;
 		List<String> skipped = new ArrayList<>();
 
-		for (int day = 1; day <= MAX_DAY; day++) {
+		for (int day = 1; day <= PLAYOFF_DAY; day++) {
 			SumoApiTorikumiDayDTO dto;
 			try {
 				dto = sumoApiClient.getTorikumi(yyyymm, division, day);
@@ -114,10 +119,8 @@ public class TorikumiImportService {
 			skipped.add(matchLabel(m) + " (필수 필드 없음)");
 			return Outcome.SKIPPED;
 		}
-		RikishiEntity east = rikishiRepository.findByExternalApiId(m.eastId())
-				.orElseGet(() -> rosterImportService.getOrFetchRikishi(m.eastId()));
-		RikishiEntity west = rikishiRepository.findByExternalApiId(m.westId())
-				.orElseGet(() -> rosterImportService.getOrFetchRikishi(m.westId()));
+		RikishiEntity east = resolveRikishi(m.eastId(), m.eastShikona());
+		RikishiEntity west = resolveRikishi(m.westId(), m.westShikona());
 		if (east == null || west == null) {
 			String miss = (east == null ? "東 " + label(m.eastShikona(), m.eastId()) : "")
 					+ (east == null && west == null ? " / " : "")
@@ -166,9 +169,24 @@ public class TorikumiImportService {
 				.loserRikishiEntity(loser)
 				.resultType(resultType)
 				.kimarite(kimarite)
-				.isExtraMatch(false)
+				.isExtraMatch(m.day() != null && m.day() > MAX_DAY)
 				.build());
 		return Outcome.CREATED;
+	}
+
+	/**
+	 * sumo-api ID로 찾고, 없으면 단건 조회로 들여온다. 그래도 없으면 로마자 시코나가 정확히 같은 선수가 딱 한 명일 때만
+	 * 그 선수로 본다 - 데뷔 바쇼 경기에만 임시 ID가 붙고 이후 새 ID로 바뀐 신인이 있어서
+	 * (예: 2025년 7월 카키 9037 → 9088, 옛 ID는 조회하면 204). 동명이인이 있으면 스킵.
+	 */
+	private RikishiEntity resolveRikishi(Integer apiId, String shikonaEn) {
+		RikishiEntity r = rikishiRepository.findByExternalApiId(apiId)
+				.orElseGet(() -> rosterImportService.getOrFetchRikishi(apiId));
+		if (r != null || shikonaEn == null || shikonaEn.isBlank()) {
+			return r;
+		}
+		List<RikishiEntity> sameName = rikishiRepository.findByShikonaEn(shikonaEn.strip());
+		return sameName.size() == 1 ? sameName.get(0) : null;
 	}
 
 	private static boolean isUndecided(SumoApiTorikumiDayDTO.Match m) {

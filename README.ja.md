@@ -131,7 +131,7 @@ application-local.properties            # git 管理外 — 実際のDB/管理�
 | GET | `/admin/basho` | 管理者用場所一覧(番付・取組の件数を含む) |
 | GET / POST | `/admin/basho/new`, `/admin/basho` | 新規場所作成フォーム表示 / 作成(年・月の重複を防止) |
 | POST | `/admin/basho/import?fromYear=&toYear=` | sumo-api から指定年範囲の場所メタ情報をインポート(本場所6場所、未開催分はスキップ) |
-| POST | `/admin/basho/import-year?year=` | 指定年の全場所の幕内・十両の番付、取組、優勝・三賞・金星を一括インポート |
+| POST | `/admin/basho/import-year?year=` | 指定年の全場所の全階級(幕内〜序ノ口)の番付(公式の勝敗・休場数を含む)、取組、優勝・三賞・金星を一括インポート |
 | POST | `/admin/basho/{bashoId}/import-all` | 1場所分の全データ(番付・取組・表彰)を一括インポート |
 | POST | `/admin/basho/{bashoId}/banzuke/import?division=` , `/admin/basho/{bashoId}/torikumi/import?division=` | 場所・地位区分単位の番付 / 取組インポート(未マッチの力士はスキップ) |
 | POST | `/admin/basho/{bashoId}/awards/import` | 優勝・三賞(sumo-api)+ 金星(番付・取組から算出)を更新(再実行可) |
@@ -204,8 +204,8 @@ application-local.properties            # git 管理外 — 実際のDB/管理�
 - **データソース**: 当初は `DataSeeder`(開発用ダミー)でデータを投入していましたが、現在は **sumo-api.com** から
   実データを取得しています。`DataSeeder` はデフォルトで無効(`app.seed-demo=false`)で、
   管理者画面 `/admin/rikishi` の「ロスターインポート」ボタンが現役の部屋・力士を、`/admin/basho` の
-  各インポートボタンが場所メタ情報と幕内・十両の番付・取組・表彰(優勝・三賞・金星)データを取得します。
-  2025年の全場所(1・3・5・7・9・11月)のデータはこの方法で投入済みです。
+  各インポートボタンが場所メタ情報と全階級(幕内〜序ノ口)の番付・取組・表彰(優勝・三賞・金星)データを取得します。
+  2019年1月以降の全場所・全階級のデータはこの方法で投入済みです(2020年5月はコロナで中止)。
   外部 API 関連の設定: `sumo-api.base-url`, `app.seed-demo`。
 
 ### ローカルでの実行方法
@@ -240,7 +240,7 @@ cp src/main/resources/application-local.properties.example \
 - [ ] 決まり手の詳細解説事典
 - [ ] 番付予測シミュレーター
 - [x] 外部相撲データ API(sumo-api.com)との連携 — ロスター・場所・番付・取組・表彰のインポート
-  (現在は幕内・十両が対象)
+  (2019年〜の全階級。幕下以下は15日間で7番のため、成績は番付の公式の勝敗・休場数を基準)
 
 ---
 

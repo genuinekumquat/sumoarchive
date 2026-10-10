@@ -158,7 +158,7 @@ public class TorikumiEntity {
 	/**
 	 * sumo-api 토리쿠미 임포트 재실행 시 API 소유 필드만 갱신한다.
 	 * youtubeUrl / descriptionKr / descriptionJp 는 우리 큐레이션 필드라 건드리지 않는다.
-	 * externalId / bashoEntity / isExtraMatch(항상 false로 임포트)는 행의 정체성이라 유지.
+	 * externalId / bashoEntity / isExtraMatch(임포트 시 16일째 = 결정전)는 행의 정체성이라 유지.
 	 */
 	public void updateFromApi(
 			Integer day,

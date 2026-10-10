@@ -57,10 +57,16 @@ public class RikishiAnalysisService {
 	static final int H2H_MIN_BOUTS = 3;
 	/** 실제 승수와 예상 승수의 차이가 이 이상이어야 "유독" 약하거나 강하다고 본다. */
 	static final double H2H_MIN_DIFF = 1.5;
+	/**
+	 * 또는: 이만큼 이상 맞붙었고 실제 승률이 예상 승률과 이만큼(비율) 이상 차이 나면.
+	 * 강자 상대는 예상 승수 자체가 작아 "승수 차이"로는 잘 안 잡혀서 (예: 예상 39% → 실제 1승 5패 17%, 차이 1.3승)
+	 */
+	static final int H2H_RATE_MIN_BOUTS = 5;
+	static final double H2H_MIN_RATE_GAP = 0.20;
 	static final int H2H_TOP = 3;
 
-	// ===== 커리어 요약 (세키토리 15일 기준) =====
-	static final int KACHIKOSHI_WINS = 8;
+	// ===== 커리어 요약 =====
+	// 카치코시는 "치를 경기의 과반 승리"라 디비전마다 다르다 (세키토리 15번 → 8승, 마쿠시타 이하 7번 → 4승).
 	static final int DOUBLE_DIGIT_WINS = 10;
 
 	private final TorikumiRepository torikumiRepository;
@@ -203,14 +209,16 @@ public class RikishiAnalysisService {
 	 */
 	public HeadToHeadHighlightsDTO getHeadToHeadHighlights(Integer rikishiId, List<HeadToHeadDTO> headToHead) {
 		// 부전은 실제로 붙지 않은 경기라 상성과 무관 - 빼고 센다.
-		record Candidate(HeadToHeadDTO h, long wins, long bouts) {
+		// sekitori = 맞대결 대부분이 세키토리 무대였는지 → 평소 승률도 같은 무대의 경기로 잰다.
+		record Candidate(HeadToHeadDTO h, long wins, long bouts, boolean sekitori) {
 		}
 		List<Candidate> candidates = new ArrayList<>();
 		for (HeadToHeadDTO h : headToHead) {
 			long bouts = h.bouts().stream().filter(b -> !b.fusen()).count();
 			long wins = h.bouts().stream().filter(b -> !b.fusen() && b.win()).count();
+			long sekitoriBouts = h.bouts().stream().filter(b -> !b.fusen() && b.sekitori()).count();
 			if (bouts >= H2H_MIN_BOUTS) {
-				candidates.add(new Candidate(h, wins, bouts));
+				candidates.add(new Candidate(h, wins, bouts, sekitoriBouts * 2 >= bouts));
 			}
 		}
 		if (candidates.isEmpty()) {
@@ -220,18 +228,27 @@ public class RikishiAnalysisService {
 		List<Integer> ids = new ArrayList<>();
 		ids.add(rikishiId);
 		candidates.forEach(c -> ids.add(c.h().opponentId()));
-		Map<Integer, Double> winRate = new HashMap<>();
+		// [0] = 세키토리 경기, [1] = 전체 경기의 {경기 수, 승수}
+		Map<Integer, long[][]> tally = new HashMap<>();
 		for (WinRateRow r : torikumiRepository.findWinRates(ids)) {
-			winRate.put(r.getRikishiId(), (r.getWins().doubleValue() + 1) / (r.getBouts().doubleValue() + 2));
+			long[][] t = tally.computeIfAbsent(r.getRikishiId(), k -> new long[2][2]);
+			if (r.getSekitori() != null && r.getSekitori().intValue() == 1) {
+				t[0][0] += r.getBouts().longValue();
+				t[0][1] += r.getWins().longValue();
+			}
+			t[1][0] += r.getBouts().longValue();
+			t[1][1] += r.getWins().longValue();
 		}
-		double myRate = winRate.getOrDefault(rikishiId, 0.5);
 
 		List<HeadToHeadHighlightsDTO.Row> rows = new ArrayList<>();
 		for (Candidate c : candidates) {
-			double oppRate = winRate.getOrDefault(c.h().opponentId(), 0.5);
+			double myRate = smoothedRate(tally.get(rikishiId), c.sekitori());
+			double oppRate = smoothedRate(tally.get(c.h().opponentId()), c.sekitori());
 			double expected = myRate * (1 - oppRate) / (myRate * (1 - oppRate) + oppRate * (1 - myRate));
 			double diff = c.wins() - c.bouts() * expected;
-			if (Math.abs(diff) >= H2H_MIN_DIFF) {
+			double rateGap = (double) c.wins() / c.bouts() - expected;
+			boolean byRate = c.bouts() >= H2H_RATE_MIN_BOUTS && Math.abs(rateGap) >= H2H_MIN_RATE_GAP;
+			if (Math.abs(diff) >= H2H_MIN_DIFF || byRate) {
 				rows.add(new HeadToHeadHighlightsDTO.Row(c.h().opponentId(), c.h().opponentShikonaKr(),
 						c.h().opponentShikonaJp(), c.wins(), c.bouts() - c.wins(), round1(diff)));
 			}
@@ -251,8 +268,22 @@ public class RikishiAnalysisService {
 	}
 
 	/**
-	 * "바쇼별 성적" 패널 맨 위 커리어 요약. 끝난 마쿠우치·쥬료 바쇼만 센다 (CareerSummaryDTO 참고).
-	 * 휴장이 낀 바쇼도 8승이 안 되면 마케코시 (예: 7승 5패 3휴), 全休도 분모에 포함 - 반즈케에서도 마케코시 취급.
+	 * 평소 승률 (승+1)/(경기+2). sekitori면 세키토리 경기만, 아니면 전체 경기로.
+	 * 세키토리 경기가 아예 없으면(드묾) 전체로 대체, 기록이 없으면 0.5.
+	 */
+	private static double smoothedRate(long[][] t, boolean sekitori) {
+		if (t == null) {
+			return 0.5;
+		}
+		long[] pick = (sekitori && t[0][0] > 0) ? t[0] : t[1];
+		return (pick[1] + 1.0) / (pick[0] + 2.0);
+	}
+
+	/**
+	 * "바쇼별 성적" 패널 맨 위 커리어 요약. 끝난 바쇼를 전 디비전에서 센다 (CareerSummaryDTO 참고).
+	 * 카치코시 = 승 + 패 + 휴(치를 경기 수)의 과반 승리 → 세키토리 8승, 마쿠시타 이하 4승.
+	 * 휴장이 낀 바쇼도 과반이 안 되면 마케코시 (예: 7승 5패 3휴), 全休도 분모에 포함 - 반즈케에서도 마케코시 취급.
+	 * 두 자릿수 승리·최고 성적은 15번 싸우는 세키토리 바쇼만 (하위 리그는 최대 7승이라 같은 잣대가 아니다).
 	 *
 	 * @param gameLog RikishiDetailService.getGameLog 결과 (최신 바쇼부터, 재조회 없이 그대로 사용)
 	 */
@@ -260,24 +291,28 @@ public class RikishiAnalysisService {
 		int basho = 0, kachikoshi = 0, doubleDigit = 0, absence = 0, zenkyu = 0;
 		BashoGameLogDTO best = null;
 		for (BashoGameLogDTO g : gameLog) {
-			if (!g.completed() || (g.division() != Division.Makuuchi && g.division() != Division.Juryo)) {
+			if (!g.completed()) {
 				continue;
 			}
 			basho++;
-			if (g.wins() >= KACHIKOSHI_WINS) {
+			int scheduled = g.wins() + g.losses() + g.absences();
+			if (g.wins() * 2 > scheduled) {
 				kachikoshi++;
-			}
-			if (g.wins() >= DOUBLE_DIGIT_WINS) {
-				doubleDigit++;
 			}
 			if (g.absences() > 0) {
 				absence++;
 			}
+			boolean sekitori = g.division() == Division.Makuuchi || g.division() == Division.Juryo;
 			if (g.wins() == 0 && g.losses() == 0) {
 				zenkyu++;
-			} else if (best == null || g.wins() > best.wins()) {
-				// 최신 바쇼부터 돌기 때문에 승수가 같으면 먼저 본(최근) 바쇼가 남는다.
-				best = g;
+			} else if (sekitori) {
+				if (g.wins() >= DOUBLE_DIGIT_WINS) {
+					doubleDigit++;
+				}
+				if (best == null || g.wins() > best.wins()) {
+					// 최신 바쇼부터 돌기 때문에 승수가 같으면 먼저 본(최근) 바쇼가 남는다.
+					best = g;
+				}
 			}
 		}
 		return new CareerSummaryDTO(basho, kachikoshi, doubleDigit, absence, zenkyu, best);

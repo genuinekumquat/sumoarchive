@@ -90,7 +90,13 @@ public class RikishiDetailService {
 		long wins = torikumiRepository.countByWinnerRikishiEntityIdAndIsExtraMatchFalse(rikishiId);
 		long losses = torikumiRepository.countByLoserRikishiEntityIdAndIsExtraMatchFalse(rikishiId);
 		long bashoCount = banzukeRepository.countByRikishiId(rikishiId);
-		
+		// 휴장은 토리쿠미에 안 남으므로 반즈케의 공식 성적(휴 수)을 합산 (수동 등록 행은 null이라 제외)
+		long absences = banzukeHistory.stream()
+				.map(BanzukeEntity::getAbsences)
+				.filter(java.util.Objects::nonNull)
+				.mapToLong(Integer::longValue)
+				.sum();
+
 		long yushoMakuuchi = countYusho(rikishiId, Division.Makuuchi);
 		long yushoJuryo = countYusho(rikishiId, Division.Juryo);
 		long yushoMakushita = countYusho(rikishiId, Division.Makushita);
@@ -150,7 +156,7 @@ public class RikishiDetailService {
 				.shikonaHistory(history)
 				.totalWins(wins)
 				.totalLosses(losses)
-				.totalAbsences(0L) // ⚠ 현재 스키마에 휴장(休場) 기록이 없어 항상 0으로 내려감
+				.totalAbsences(absences)
 				.totalBasho(bashoCount)
 				.yushoMakuuchi(yushoMakuuchi)
 				.yushoJuryo(yushoJuryo)
@@ -394,7 +400,7 @@ public class RikishiDetailService {
 		}
 
 		return new HeadToHeadBoutDTO(bashoLabel, bashoLabelKr, t.getDay(), win,
-				t.getResultType() == ResultType.FUZEN, kimarite, kimariteKr);
+				t.getResultType() == ResultType.FUZEN, kimarite, kimariteKr, isSekitori(t.getDivision()));
 	}
 
 	/**
@@ -408,23 +414,55 @@ public class RikishiDetailService {
 										   Map<Division, Integer> loadedDays) {
 		BashoEntity basho = banzuke.getBashoEntity();
 		int lastDay = lastLoadedDay(loadedDays);
-		List<MatchHistoryItemDTO> matches = buildMatchHistory(rikishiId, bashoMatches, opponentBanzukeById, lastDay);
-		// 첫날부터 휴장하면 대진 자체가 안 짜여 부전 기록도 안 남음. 같은 바쇼·지위 토리쿠미가 적재돼 있는지로
-		// "全休"와 "아직 적재 전"을 구분하고, 全休면 적재된 일차 전부를 휴장 칸으로 채운다 (0勝0敗15休).
-		if (matches.isEmpty() && loadedDays.containsKey(banzuke.getDivision())) {
-			matches = new ArrayList<>();
-			for (int day = 1; day <= lastDay; day++) {
-				matches.add(absentItem(day));
+		boolean sekitori = isSekitori(banzuke.getDivision());
+		// 공식 성적은 반즈케를 임포트한 시점의 값이라, 대회 중(개막 전에 받은 0승 0패 0휴 그대로인데 경기는 매일
+		// 들어옴)에는 경기 기록보다 뒤처질 수 있다 → 경기 기록의 승·패 수보다 적으면 믿지 않고 경기 기록으로 센다.
+		long decidedBouts = bashoMatches.stream().filter(t -> t.getWinnerRikishiEntity() != null).count();
+		boolean useRecord = banzuke.hasRecord() && banzuke.getWins() + banzuke.getLosses() >= decidedBouts;
+		List<MatchHistoryItemDTO> matches;
+		if (sekitori) {
+			matches = buildMatchHistory(rikishiId, bashoMatches, opponentBanzukeById, lastDay);
+			// 첫날부터 휴장하면 대진 자체가 안 짜여 부전 기록도 안 남음. 공식 성적이 全休이거나, 같은 바쇼·지위
+			// 토리쿠미가 적재돼 있으면 "全休"로 보고 적재된 일차 전부를 휴장 칸으로 채운다 (0勝0敗15休).
+			boolean zenkyu = useRecord
+					? banzuke.getWins() + banzuke.getLosses() == 0 && banzuke.getAbsences() > 0
+					: loadedDays.containsKey(banzuke.getDivision());
+			if (matches.isEmpty() && zenkyu) {
+				matches = new ArrayList<>();
+				for (int day = 1; day <= lastDay; day++) {
+					matches.add(absentItem(day));
+				}
+			}
+		} else {
+			// 마쿠시타 이하는 15일 중 7번만 싸워서 경기 없는 날이 휴장이 아니다 → 실제 경기만 칸으로 보이고,
+			// 휴장은 공식 성적의 휴 수만큼 날짜 없는 칸으로 뒤에 붙인다 (예: 3경기 뒤 휴장 → 3칸 + 휴 4칸).
+			matches = new ArrayList<>(bashoMatches.stream()
+					.map(t -> toMatchHistoryItem(t, rikishiId, opponentBanzukeById))
+					.toList());
+			int absent = useRecord ? banzuke.getAbsences() : 0;
+			for (int i = 0; i < absent; i++) {
+				matches.add(absentItem(null));
 			}
 		}
 
-		long wins = matches.stream().filter(m -> m.status() == MatchHistoryItemDTO.Status.WIN).count();
-		long losses = matches.stream().filter(m -> m.status() == MatchHistoryItemDTO.Status.LOSS).count();
-		long absences = matches.stream().filter(m -> m.status() == MatchHistoryItemDTO.Status.ABSENT).count();
-		String recordSummary = matches.isEmpty()
+		// 성적은 공식 값(반즈케 임포트)을 쓸 수 있으면 그걸, 아니면(수동 등록·대회 중 등) 칸에서 센다.
+		long wins;
+		long losses;
+		long absences;
+		if (useRecord) {
+			wins = banzuke.getWins();
+			losses = banzuke.getLosses();
+			absences = banzuke.getAbsences();
+		} else {
+			wins = matches.stream().filter(m -> m.status() == MatchHistoryItemDTO.Status.WIN).count();
+			losses = matches.stream().filter(m -> m.status() == MatchHistoryItemDTO.Status.LOSS).count();
+			absences = matches.stream().filter(m -> m.status() == MatchHistoryItemDTO.Status.ABSENT).count();
+		}
+		boolean hasResult = useRecord ? wins + losses + absences > 0 : !matches.isEmpty();
+		String recordSummary = !hasResult
 				? "-"
 				: wins + "勝" + losses + "敗" + (absences > 0 ? absences + "休" : "");
-		String recordSummaryKr = matches.isEmpty()
+		String recordSummaryKr = !hasResult
 				? "-"
 				: wins + "승 " + losses + "패" + (absences > 0 ? " " + absences + "휴" : "");
 
@@ -449,8 +487,12 @@ public class RikishiDetailService {
 				(int) wins,
 				(int) losses,
 				(int) absences,
-				!matches.isEmpty() && lastDay >= 15
+				hasResult && lastDay >= 15
 		);
+	}
+
+	private static boolean isSekitori(Division division) {
+		return division == Division.Makuuchi || division == Division.Juryo;
 	}
 	
 	/**
@@ -501,7 +543,8 @@ public class RikishiDetailService {
 				.orElse(15);
 	}
 
-	private MatchHistoryItemDTO absentItem(int day) {
+	/** @param day 휴장한 일차. 마쿠시타 이하처럼 어느 날인지 알 수 없으면 null (칸에 날짜 없이 표시) */
+	private MatchHistoryItemDTO absentItem(Integer day) {
 		return new MatchHistoryItemDTO(day, null, null, null, null, null, null,
 				MatchHistoryItemDTO.Status.ABSENT, "休場");
 	}

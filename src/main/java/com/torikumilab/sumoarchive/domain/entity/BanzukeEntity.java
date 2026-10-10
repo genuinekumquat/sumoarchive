@@ -55,7 +55,17 @@ public class BanzukeEntity {
 	
 	@Column(name = "rank_score")
 	private Integer rankScore;
-	
+
+	// 바쇼 공식 성적 (sumo-api 반즈케의 wins/losses/absences). 수동 등록·임포트 전이면 null.
+	@Column(name = "wins")
+	private Integer wins;
+
+	@Column(name = "losses")
+	private Integer losses;
+
+	@Column(name = "absences")
+	private Integer absences;
+
 	@CreationTimestamp
 	@Column(name = "created_at", updatable = false)
 	private LocalDateTime createdAt;
@@ -81,5 +91,20 @@ public class BanzukeEntity {
 		this.rankName = rankName;
 		this.side = side;
 		this.rankValue = rankValue;
+	}
+
+	/** 반즈케 임포트에서 공식 성적을 함께 저장. 셋 다 있어야 의미가 있어서 한꺼번에 받는다 (없으면 기존 값 유지). */
+	public void updateRecord(Integer wins, Integer losses, Integer absences) {
+		if (wins == null || losses == null || absences == null) {
+			return;
+		}
+		this.wins = wins;
+		this.losses = losses;
+		this.absences = absences;
+	}
+
+	/** 공식 성적이 저장돼 있는지 (임포트된 행) */
+	public boolean hasRecord() {
+		return wins != null && losses != null && absences != null;
 	}
 }

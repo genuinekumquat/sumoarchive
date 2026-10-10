@@ -92,16 +92,19 @@ public class BanzukeImportService {
 					.orElse(null);
 			if (existing != null) {
 				existing.updatePlacement(division, rankName, side, rankNo);
+				existing.updateRecord(e.wins(), e.losses(), e.absences());
 				updated++;
 			} else {
-				banzukeRepository.save(BanzukeEntity.builder()
+				BanzukeEntity row = BanzukeEntity.builder()
 						.rikishiEntity(rikishi)
 						.bashoEntity(basho)
 						.division(division)
 						.rankName(rankName)
 						.side(side)
 						.rankValue(rankNo)
-						.build());
+						.build();
+				row.updateRecord(e.wins(), e.losses(), e.absences());
+				banzukeRepository.save(row);
 				created++;
 			}
 		}

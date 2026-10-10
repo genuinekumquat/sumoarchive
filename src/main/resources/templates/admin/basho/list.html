@@ -131,9 +131,9 @@
     </div>
 
     <div class="import-bar" style="border-left: 3px solid var(--shu);">
-        <span class="desc"><strong>연도별 원클릭 일괄 임포트</strong>: 해당 연도 모든 바쇼의 마쿠우치+쥬료 반즈케, 15일치 대진표, 우승·삼상·킨보시를 순차 적재합니다.</span>
+        <span class="desc"><strong>연도별 원클릭 일괄 임포트</strong>: 해당 연도 모든 바쇼의 전 디비전(마쿠우치~조노구치) 반즈케·15일치 대진표·우승·삼상·킨보시를 순차 적재합니다. 바쇼당 1분 안팎이라 연도 전체는 Nginx 제한 시간(300초)을 넘을 수 있으니, 운영에서는 바쇼별 일괄 임포트를 쓰세요.</span>
         <form th:action="@{/admin/basho/import-year}" method="post" style="display: flex; gap: 8px; align-items: center;"
-              onsubmit="return confirm('선택 연도의 모든 바쇼(마쿠우치+쥬료 반즈케, 15일치 경기, 우승/삼상/킨보시)를 일괄 임포트합니다. 수십 초가 소요될 수 있습니다. 계속할까요?');">
+              onsubmit="return confirm('선택 연도의 모든 바쇼(전 디비전 반즈케, 15일치 경기, 우승/삼상/킨보시)를 일괄 임포트합니다. 수 분이 걸릴 수 있습니다. 계속할까요?');">
             <input type="number" name="year" value="2025" aria-label="임포트 연도">
             <button type="submit" style="background: var(--shu); border-color: var(--shu);">연도 전체 일괄 임포트</button>
         </form>
@@ -171,7 +171,7 @@
                             style="background:none;border:none;padding:0;cursor:pointer;font:inherit">우승·삼상·킨보시 갱신 →</button>
                 </form><br>
                 <form th:action="@{'/admin/basho/' + ${b.id} + '/import-all'}" method="post" style="display:inline"
-                      onsubmit="return confirm('이 바쇼의 마쿠우치+쥬료 반즈케, 15일치 대진표, 우승·삼상·킨보시를 일괄 임포트합니다. 계속할까요?');">
+                      onsubmit="return confirm('이 바쇼의 전 디비전(마쿠우치~조노구치) 반즈케, 15일치 대진표, 우승·삼상·킨보시를 일괄 임포트합니다. 1분 안팎 걸립니다. 계속할까요?');">
                     <button type="submit" class="edit-link"
                             style="background:none;border:none;padding:0;cursor:pointer;font:inherit;font-weight:600;color:var(--sumi)">⚡ 전체 일괄 임포트 →</button>
                 </form>

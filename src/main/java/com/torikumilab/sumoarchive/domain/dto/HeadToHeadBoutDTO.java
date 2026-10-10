@@ -10,6 +10,7 @@ public record HeadToHeadBoutDTO(
 		boolean win,
 		boolean fusen,       // 부전승/부전패 (실제로 붙지 않은 경기 - 천적/강세 집계에서 제외)
 		String kimarite,     // 일본어 결정기술명, 부전이면 "不戦勝"/"不戦敗"
-		String kimariteKr    // 한국어 결정기술명, 부전이면 "부전승"/"부전패"
+		String kimariteKr,   // 한국어 결정기술명, 부전이면 "부전승"/"부전패"
+		boolean sekitori     // 마쿠우치·쥬료 경기인지 (천적/강세의 평소 승률을 같은 무대 기준으로 고르는 데 씀)
 ) {
 }

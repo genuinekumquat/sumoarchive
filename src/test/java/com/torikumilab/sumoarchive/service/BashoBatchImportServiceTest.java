@@ -38,7 +38,7 @@ class BashoBatchImportServiceTest {
 	private BashoBatchImportService bashoBatchImportService;
 
 	@Test
-	@DisplayName("단일 바쇼 일괄 임포트 - 마쿠우치 및 쥬료 반즈케, 토리쿠미, 수상 데이터 순차 동기화")
+	@DisplayName("단일 바쇼 일괄 임포트 - 6개 디비전 반즈케·토리쿠미와 수상 데이터를 순차 동기화")
 	void importBashoFull() {
 		// given
 		BashoEntity basho = BashoEntity.builder()
@@ -50,15 +50,16 @@ class BashoBatchImportServiceTest {
 				.build();
 		given(bashoRepository.findById(1)).willReturn(Optional.of(basho));
 
-		BanzukeImportResultDTO bzMak = new BanzukeImportResultDTO("2025년 1월", Division.Makuuchi, 42, 0, List.of());
-		BanzukeImportResultDTO bzJur = new BanzukeImportResultDTO("2025년 1월", Division.Juryo, 28, 0, List.of());
-		given(banzukeImportService.importDivision(1, Division.Makuuchi)).willReturn(bzMak);
-		given(banzukeImportService.importDivision(1, Division.Juryo)).willReturn(bzJur);
-
-		TorikumiImportResultDTO tkMak = new TorikumiImportResultDTO("2025년 1월", Division.Makuuchi, 300, 0, 15, 300, List.of());
-		TorikumiImportResultDTO tkJur = new TorikumiImportResultDTO("2025년 1월", Division.Juryo, 200, 0, 15, 200, List.of());
-		given(torikumiImportService.importDivision(1, Division.Makuuchi)).willReturn(tkMak);
-		given(torikumiImportService.importDivision(1, Division.Juryo)).willReturn(tkJur);
+		// 디비전별 반즈케 인원 / 경기 수 (마쿠우치·쥬료 + 하위 4개)
+		int[] banzukeSizes = {42, 28, 120, 160, 200, 43};
+		int[] boutCounts = {300, 200, 395, 531, 662, 125};
+		Division[] divisions = Division.values();
+		for (int i = 0; i < divisions.length; i++) {
+			given(banzukeImportService.importDivision(1, divisions[i])).willReturn(
+					new BanzukeImportResultDTO("2025년 1월", divisions[i], banzukeSizes[i], 0, List.of()));
+			given(torikumiImportService.importDivision(1, divisions[i])).willReturn(
+					new TorikumiImportResultDTO("2025년 1월", divisions[i], boutCounts[i], 0, 15, boutCounts[i], List.of()));
+		}
 
 		AwardImportResultDTO awardRes = new AwardImportResultDTO("2025년 1월", 2, 3, 1, List.of());
 		given(awardImportService.importForBasho(1)).willReturn(awardRes);
@@ -67,8 +68,13 @@ class BashoBatchImportServiceTest {
 		BashoBatchImportService.BashoBatchResult result = bashoBatchImportService.importBashoFull(1);
 
 		// then
-		assertThat(result.banzukeCreated()).isEqualTo(70);
-		assertThat(result.torikumiCreated()).isEqualTo(500);
+		for (Division d : divisions) {
+			verify(banzukeImportService).importDivision(1, d);
+			verify(torikumiImportService).importDivision(1, d);
+		}
+		assertThat(result.warnings()).isEmpty();
+		assertThat(result.banzukeCreated()).isEqualTo(593);
+		assertThat(result.torikumiCreated()).isEqualTo(2213);
 		assertThat(result.yushoCreated()).isEqualTo(2);
 		assertThat(result.sanshoCreated()).isEqualTo(3);
 		assertThat(result.kinboshiCreated()).isEqualTo(1);

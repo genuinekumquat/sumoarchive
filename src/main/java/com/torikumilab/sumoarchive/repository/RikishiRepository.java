@@ -22,6 +22,9 @@ public interface RikishiRepository extends JpaRepository<RikishiEntity, Integer>
 	// sumo-api 매칭/재임포트용
 	Optional<RikishiEntity> findByExternalApiId(Integer externalApiId);
 
+	/** 토리쿠미 임포트 보완용 - sumo-api ID가 나중에 바뀐 신인을 로마자 시코나로 찾을 때 (동명이인 판별은 호출부에서) */
+	List<RikishiEntity> findByShikonaEn(String shikonaEn);
+
 	// 슬라이스 5 한국어 시코나 자동 채우기/재생성 대상:
 	// 아직 한국어 시코나가 없거나(미입력) 자동 음차값인(관리자 검수 전) 리키시.
 	// 관리자가 저장해 shikonaKrAuto=false가 된 행은 제외한다.

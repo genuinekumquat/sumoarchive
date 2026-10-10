@@ -18,7 +18,8 @@ import java.util.List;
 
 /**
  * 특정 바쇼 또는 특정 연도의 전체 데이터(반즈케, 토리쿠미, 우승·삼상·킨보시)를
- * 마쿠우치 + 쥬료 2대 디비전 기준으로 일괄 적재(Batch Import)하는 서비스.
+ * 6개 디비전 전부(마쿠우치~조노구치) 기준으로 일괄 적재(Batch Import)하는 서비스.
+ * 하위 리그까지 받으므로 바쇼 1개에 1분 안팎 걸린다 (처음 보는 은퇴 선수가 많으면 단건 조회로 더 걸림).
  */
 @Service
 @RequiredArgsConstructor
@@ -52,7 +53,7 @@ public class BashoBatchImportService {
 	) {}
 
 	/**
-	 * 특정 바쇼 1건의 마쿠우치·쥬료 반즈케, 토리쿠미(1~15일차), 우승·삼상·킨보시를 일괄 동기화.
+	 * 특정 바쇼 1건의 전 디비전 반즈케(공식 승·패·휴 포함), 토리쿠미(1~15일차), 우승·삼상·킨보시를 일괄 동기화.
 	 */
 	@CacheEvict(value = {"banzuke", "bashoOptions", "ichimonStructure"}, allEntries = true)
 	public BashoBatchResult importBashoFull(Integer bashoId) {
@@ -61,7 +62,7 @@ public class BashoBatchImportService {
 
 		String label = basho.getBashoYear() + "년 " + basho.getBashoMonth().getMonthValue() + "월 "
 				+ basho.getBashoMonth().getDisplayNameKr();
-		log.info("[BashoBatchImport] {} 일괄 임포트 시작 (Makuuchi + Juryo)", label);
+		log.info("[BashoBatchImport] {} 일괄 임포트 시작 (전 디비전)", label);
 
 		List<String> warnings = new ArrayList<>();
 		int bzCreated = 0;
@@ -69,8 +70,8 @@ public class BashoBatchImportService {
 		int tkCreated = 0;
 		int tkUpdated = 0;
 
-		// 1. 반즈케 (Makuuchi, Juryo)
-		for (Division div : List.of(Division.Makuuchi, Division.Juryo)) {
+		// 1. 반즈케 (전 디비전)
+		for (Division div : Division.values()) {
 			try {
 				BanzukeImportResultDTO res = banzukeImportService.importDivision(bashoId, div);
 				bzCreated += res.created();
@@ -81,8 +82,8 @@ public class BashoBatchImportService {
 			}
 		}
 
-		// 2. 토리쿠미 (Makuuchi, Juryo)
-		for (Division div : List.of(Division.Makuuchi, Division.Juryo)) {
+		// 2. 토리쿠미 (전 디비전)
+		for (Division div : Division.values()) {
 			try {
 				TorikumiImportResultDTO res = torikumiImportService.importDivision(bashoId, div);
 				tkCreated += res.created();

@@ -132,7 +132,7 @@ application-local.properties            # git 제외 — 실제 DB/관리자 비
 | GET | `/admin/basho` | 관리자 바쇼 목록 (반즈케·토리쿠미 수 포함) |
 | GET / POST | `/admin/basho/new`, `/admin/basho` | 새 바쇼 생성 폼 조회 / 생성 (연·월 중복 차단) |
 | POST | `/admin/basho/import?fromYear=&toYear=` | sumo-api에서 연도 범위 바쇼 메타 임포트 (본장소 6개월, 미개최분 스킵) |
-| POST | `/admin/basho/import-year?year=` | 해당 연도 전 바쇼의 마쿠우치·쥬료 반즈케, 토리쿠미, 우승·산쇼·킨보시 일괄 임포트 |
+| POST | `/admin/basho/import-year?year=` | 해당 연도 전 바쇼의 전 디비전(마쿠우치~조노구치) 반즈케(공식 승·패·휴 포함), 토리쿠미, 우승·산쇼·킨보시 일괄 임포트 |
 | POST | `/admin/basho/{bashoId}/import-all` | 바쇼 1건의 전체 데이터(반즈케·토리쿠미·수상) 일괄 임포트 |
 | POST | `/admin/basho/{bashoId}/banzuke/import?division=` , `/admin/basho/{bashoId}/torikumi/import?division=` | 바쇼·디비전 단위 반즈케 / 토리쿠미 임포트 (미매칭 리키시 스킵) |
 | POST | `/admin/basho/{bashoId}/awards/import` | 우승·산쇼(sumo-api) + 킨보시(반즈케·토리쿠미에서 파생) 갱신 (재실행 가능) |
@@ -206,8 +206,8 @@ application-local.properties            # git 제외 — 실제 DB/관리자 비
 - **데이터 소스**: 초기에는 `DataSeeder`(개발용 더미)로 채웠으나, 지금은 **sumo-api.com**에서
   실데이터를 가져옵니다. `DataSeeder`는 기본 비활성(`app.seed-demo=false`)이고,
   관리자 `/admin/rikishi`의 "로스터 임포트" 버튼이 현역 헤야·리키시를, `/admin/basho`의
-  임포트 버튼들이 바쇼 메타와 마쿠우치·쥬료 반즈케·토리쿠미·수상(우승·산쇼·킨보시) 데이터를
-  가져옵니다. 2025년 전 바쇼(1·3·5·7·9·11월) 데이터가 이 방식으로 적재되어 있습니다.
+  임포트 버튼들이 바쇼 메타와 전 디비전(마쿠우치~조노구치) 반즈케·토리쿠미·수상(우승·산쇼·킨보시) 데이터를
+  가져옵니다. 2019년 1월부터의 전 바쇼·전 디비전 데이터가 이 방식으로 적재되어 있습니다 (2020년 5월은 코로나로 중지).
   외부 API 관련 설정: `sumo-api.base-url`, `app.seed-demo`.
 
 ### 로컬 실행 방법
@@ -242,7 +242,7 @@ cp src/main/resources/application-local.properties.example \
 - [ ] 키마리테 상세 설명 백과사전
 - [ ] 반즈케 예측 시뮬레이터
 - [x] 외부 스모 데이터 API(sumo-api.com) 연동 — 로스터·바쇼·반즈케·토리쿠미·수상 임포트
-  (현재 마쿠우치·쥬료 대상)
+  (2019년~ 전 디비전. 마쿠시타 이하는 15일 중 7번이라 성적은 반즈케의 공식 승·패·휴 기준)
 
 ---
 
