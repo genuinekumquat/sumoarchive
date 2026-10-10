@@ -199,7 +199,7 @@
             color: var(--sumi);
         }
 
-        /* 핵심 요약 줄 (통산 전적 / 최근 바쇼 / 최고위) */
+        /* 핵심 요약 줄 (기록된 전적 / 최근 바쇼 / 최고위) */
         .profile-summary {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -1009,10 +1009,11 @@
                 </div>
                 <div th:unless="${rikishi.shikonaHistory != null and !rikishi.shikonaHistory.isEmpty() and #locale.language != 'ja'}" class="shikona-spacer"></div>
 
-                <!-- 핵심 요약 줄: 통산 전적 / 최근 바쇼 / 최고위 (현재 계급은 시코나 옆에 표시) -->
+                <!-- 핵심 요약 줄: 기록된 전적 / 최근 바쇼 / 최고위 (현재 계급은 시코나 옆에 표시).
+                     전적은 적재된 경기(2019년~)만 세므로 "통산"이라 쓰지 않는다 -->
                 <div class="profile-summary" th:with="ja=${#locale.language == 'ja'}, decided=${rikishi.totalWins + rikishi.totalLosses}">
                     <div class="summary-cell">
-                        <div class="summary-label" th:text="${ja} ? '通算成績' : '통산 전적'">통산 전적</div>
+                        <div class="summary-label" th:text="${ja} ? '記録上の成績' : '기록된 전적'">기록된 전적</div>
                         <div class="summary-value" th:if="${ja}"
                              th:text="${rikishi.totalWins} + '勝' + ${rikishi.totalLosses} + '敗' + (${rikishi.totalAbsences} > 0 ? ${rikishi.totalAbsences} + '休' : '')">109勝55敗</div>
                         <div class="summary-value" th:unless="${ja}"
@@ -1094,11 +1095,11 @@
 
             <div class="record-summary" th:if="${#locale.language == 'ja'}">
                 <span th:text="${rikishi.totalWins} + '勝' + ${rikishi.totalLosses} + '敗' + (${rikishi.totalAbsences} > 0 ? ${rikishi.totalAbsences} + '休' : '')">429勝214敗159休</span>
-                <span class="basho-count" th:text="'通算' + ${rikishi.totalBasho} + '場所'">通算62場所</span>
+                <span class="basho-count" th:text="'記録 ' + ${rikishi.totalBasho} + '場所' + (${recordSinceYear} != null ? '（' + ${recordSinceYear} + '年〜）' : '')">記録 45場所（2019年〜）</span>
             </div>
             <div class="record-summary" th:unless="${#locale.language == 'ja'}">
                 <span th:text="${rikishi.totalWins} + '승 ' + ${rikishi.totalLosses} + '패' + (${rikishi.totalAbsences} > 0 ? ' ' + ${rikishi.totalAbsences} + '휴' : '')">429승 214패 159휴</span>
-                <span class="basho-count" th:text="'통산 ' + ${rikishi.totalBasho} + '바쇼'">통산 62바쇼</span>
+                <span class="basho-count" th:text="'기록된 ' + ${rikishi.totalBasho} + '바쇼' + (${recordSinceYear} != null ? ' (' + ${recordSinceYear} + '년~)' : '')">기록된 45바쇼 (2019년~)</span>
             </div>
 
             <div class="award-grid" th:if="${#locale.language == 'ja'}">
@@ -1305,15 +1306,15 @@
         </div>
 
         <div class="opp-pane" role="tabpanel" id="opp-pane-rank" aria-labelledby="opp-tab-rank">
-            <div class="opp-caption" th:text="#{rikishi.opp.caption.rank}">그 바쇼 상대의 반즈케 기준 · 통산 (부전·결정전 제외)</div>
+            <div class="opp-caption" th:text="#{rikishi.opp.caption.rank}">그 바쇼 상대의 반즈케 기준 · 기록된 전체 (부전·결정전 제외)</div>
             <table th:replace="~{this :: oppTable(${opponentConditions.byRank}, false)}"></table>
         </div>
         <div class="opp-pane" role="tabpanel" id="opp-pane-weight" aria-labelledby="opp-tab-weight" hidden>
-            <div class="opp-caption" th:text="#{rikishi.opp.caption.physique}">양쪽의 현재 키·체중 기준 · 통산 (부전·결정전 제외)</div>
+            <div class="opp-caption" th:text="#{rikishi.opp.caption.physique}">양쪽의 현재 키·체중 기준 · 기록된 전체 (부전·결정전 제외)</div>
             <table th:replace="~{this :: oppTable(${opponentConditions.byWeight}, true)}"></table>
         </div>
         <div class="opp-pane" role="tabpanel" id="opp-pane-height" aria-labelledby="opp-tab-height" hidden>
-            <div class="opp-caption" th:text="#{rikishi.opp.caption.physique}">양쪽의 현재 키·체중 기준 · 통산 (부전·결정전 제외)</div>
+            <div class="opp-caption" th:text="#{rikishi.opp.caption.physique}">양쪽의 현재 키·체중 기준 · 기록된 전체 (부전·결정전 제외)</div>
             <table th:replace="~{this :: oppTable(${opponentConditions.byHeight}, true)}"></table>
         </div>
         <div class="opp-note" th:text="#{rikishi.opp.small}">흐린 줄은 10경기 미만이라 참고용입니다.</div>

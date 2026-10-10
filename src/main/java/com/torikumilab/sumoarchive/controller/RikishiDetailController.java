@@ -58,6 +58,13 @@ public class RikishiDetailController {
 				.filter(g -> !"-".equals(g.recordSummary()))
 				.findFirst()
 				.orElse(null));
+		// 전적은 DB에 적재된 경기만 센다(과거 데이터는 2019년부터) → "통산"이 아니라 "기록된 전적 · ○○년~"으로 표시.
+		// gameLog가 최신순이라 마지막으로 기록이 있는 바쇼가 가장 오래된 기록
+		model.addAttribute("recordSinceYear", gameLog.stream()
+				.filter(g -> !"-".equals(g.recordSummary()))
+				.reduce((newer, older) -> older)
+				.map(BashoGameLogDTO::bashoYear)
+				.orElse(null));
 		model.addAttribute("headToHeadGroups", headToHeadGroups);
 		model.addAttribute("headToHeadHighlights", rikishiAnalysisService.getHeadToHeadHighlights(id, headToHead));
 		// 결정기술 차트 기간 필터 select 기본 선택값 유지용 (없으면 "전체" 옵션이 선택됨)
