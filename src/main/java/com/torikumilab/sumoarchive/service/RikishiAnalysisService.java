@@ -262,14 +262,20 @@ public class RikishiAnalysisService {
 			}
 		}
 
+		// 자격은 "예상 대비"로 거르고, 순서는 실제 전적이 확실히 기운 순 (천적 = 실제로 훨씬 많이 지는 상대).
+		// 예상 대비 순이면 원래 이길 상대에게 진 1승 4패가 강자에게 진 1승 5패보다 위로 올라가고,
+		// 그냥 승률 순이면 0승 3패가 3승 16패보다 위로 올라가서 → 표본 크기를 감안한 Wilson 구간으로.
+		// 천적은 승률 상한이 낮은 순(높게 봐도 이 정도), 강한 상대는 하한이 높은 순(낮게 봐도 이 정도).
 		List<HeadToHeadHighlightsDTO.Row> tough = rows.stream()
 				.filter(r -> r.diff() < 0)
-				.sorted(Comparator.comparingDouble(HeadToHeadHighlightsDTO.Row::diff))
+				.sorted(Comparator.comparingDouble((HeadToHeadHighlightsDTO.Row r) -> wilson(r, true))
+						.thenComparingDouble(HeadToHeadHighlightsDTO.Row::diff))
 				.limit(H2H_TOP)
 				.toList();
 		List<HeadToHeadHighlightsDTO.Row> favorable = rows.stream()
 				.filter(r -> r.diff() > 0)
-				.sorted(Comparator.comparingDouble(HeadToHeadHighlightsDTO.Row::diff).reversed())
+				.sorted(Comparator.comparingDouble((HeadToHeadHighlightsDTO.Row r) -> wilson(r, false)).reversed()
+						.thenComparing(Comparator.comparingDouble(HeadToHeadHighlightsDTO.Row::diff).reversed()))
 				.limit(H2H_TOP)
 				.toList();
 		return new HeadToHeadHighlightsDTO(H2H_MIN_BOUTS, H2H_MIN_DIFF, tough, favorable);
@@ -279,6 +285,23 @@ public class RikishiAnalysisService {
 	 * 평소 승률 (승+1)/(경기+2). sekitori면 세키토리 경기만, 아니면 전체 경기로.
 	 * 세키토리 경기가 아예 없으면(드묾) 전체로 대체, 기록이 없으면 0.5.
 	 */
+	/**
+	 * 맞대결 승률의 Wilson 95% 구간 상한(upper=true) 또는 하한. 경기 수가 적을수록 구간이 넓어서
+	 * 0승 3패의 상한(약 56%)이 3승 16패의 상한(약 38%)보다 높게 나온다.
+	 */
+	private static double wilson(HeadToHeadHighlightsDTO.Row r, boolean upper) {
+		double n = r.wins() + r.losses();
+		if (n == 0) {
+			return upper ? 1 : 0;
+		}
+		double z = 1.96;
+		double p = r.wins() / n;
+		double denom = 1 + z * z / n;
+		double center = (p + z * z / (2 * n)) / denom;
+		double margin = z * Math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / denom;
+		return upper ? center + margin : center - margin;
+	}
+
 	private static double smoothedRate(long[][] t, boolean sekitori) {
 		if (t == null) {
 			return 0.5;

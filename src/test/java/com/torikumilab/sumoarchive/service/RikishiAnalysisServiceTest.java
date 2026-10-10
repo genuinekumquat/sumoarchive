@@ -255,6 +255,32 @@ class RikishiAnalysisServiceTest {
 		assertThat(service.getHeadToHeadHighlights(ID, h2h).isEmpty()).isTrue();
 	}
 
+	@Test
+	@DisplayName("상대전적 요약 - 순서는 표본을 감안한 승률 상한이 낮은 순 (강자에게 1승 5패 > 약한 상대에게 1승 4패, 3승 16패 > 0승 3패)")
+	void toughOrderedByActualRate() {
+		// 강자(69%)에게 1승 5패: 예상 대비 -1.4승, 승률 17% / 비슷한 상대(60%)에게 1승 4패: -1.5승, 승률 20%
+		List<HeadToHeadDTO> h2h = List.of(
+				h2h(2, "약한쪽", 1, 4, 0),
+				h2h(3, "강자", 1, 5, 0));
+		given(torikumiRepository.findWinRates(List.of(ID, 2, 3))).willReturn(List.of(
+				winRate(ID, 100, 60), winRate(2, 100, 60), winRate(3, 100, 69)));
+
+		HeadToHeadHighlightsDTO result = service.getHeadToHeadHighlights(ID, h2h);
+
+		assertThat(result.tough()).extracting(HeadToHeadHighlightsDTO.Row::opponentShikonaKr)
+				.containsExactly("강자", "약한쪽");
+
+		// 0승 3패(상한 약 56%)보다 3승 16패(상한 약 38%)가 더 확실한 천적
+		List<HeadToHeadDTO> h2h2 = List.of(
+				h2h(4, "세판", 0, 3, 0),
+				h2h(5, "열아홉판", 3, 16, 0));
+		given(torikumiRepository.findWinRates(List.of(ID, 4, 5))).willReturn(List.of(
+				winRate(ID, 100, 60), winRate(4, 100, 60), winRate(5, 100, 60)));
+		assertThat(service.getHeadToHeadHighlights(ID, h2h2).tough())
+				.extracting(HeadToHeadHighlightsDTO.Row::opponentShikonaKr)
+				.containsExactly("열아홉판", "세판");
+	}
+
 	// ===== helpers =====
 
 	/** 부전 경기는 wins/losses와 별개로 fusenLosses만큼 부전패를 덧붙인다. */
