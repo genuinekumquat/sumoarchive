@@ -435,6 +435,7 @@ public class RikishiDetailService {
 
 		return new BashoGameLogDTO(
 				basho.getId(),
+				basho.getBashoYear(),
 				bashoLabel,
 				bashoLabelKr,
 				withSide(RankDisplayUtil.sideDisplay(banzuke.getSide()),

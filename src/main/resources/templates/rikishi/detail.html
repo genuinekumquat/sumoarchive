@@ -272,6 +272,39 @@
             margin-bottom: 14px;
             border-bottom: 1px solid var(--sumi);
         }
+        /* 제목 오른쪽에 드롭다운이 붙는 패널 (호시토리표 연도) */
+        .panel-title.with-control {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding-bottom: 8px;
+        }
+
+        /* 메인 반즈케 드롭다운(index.html .panel-select)과 같은 모양 */
+        .panel-select {
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 12px;
+            letter-spacing: 1px;
+            color: var(--sumi);
+            background: transparent;
+            border: 1px solid var(--washi-line);
+            border-radius: 0;
+            padding: 4px 22px 4px 9px;
+            cursor: pointer;
+            appearance: none;
+            background-image:
+                linear-gradient(45deg, transparent 50%, var(--sumi-soft) 50%),
+                linear-gradient(135deg, var(--sumi-soft) 50%, transparent 50%);
+            background-position:
+                calc(100% - 12px) center,
+                calc(100% - 8px) center;
+            background-size: 4px 4px, 4px 4px;
+            background-repeat: no-repeat;
+        }
+        .panel-select:hover { border-color: var(--sumi); }
+        .panel-select:focus { outline: 1px solid var(--shu); outline-offset: 1px; }
+        .panel-select[hidden] { display: none; }
 
         .record-summary {
             text-align: center;
@@ -526,6 +559,9 @@
         }
         .game-log-row:first-child { padding-top: 4px; }
         .game-log-row + .game-log-row { border-top: 1px solid var(--washi-line); }
+        /* 연도 드롭다운으로 거른 줄. is-lead = 보이는 줄 중 첫 줄 (앞의 숨은 줄 때문에 구분선이 생기지 않게) */
+        .game-log-row[hidden] { display: none; }
+        .game-log-row.is-lead { border-top: none; }
 
         .game-log-meta {
             display: flex;
@@ -1177,14 +1213,22 @@
     <!-- ===== 호시토리표(星取表) - 바쇼별 가로 스트립. 칸마다 마크(○●휴)+상대명(세로쓰기) 노출,
          칸을 클릭하면 옆에서 상세 패널(.match-panel)이 슬라이드로 열림. -->
     <div class="panel match-history-panel" th:if="${gameLog != null and !gameLog.isEmpty()}">
-        <div class="panel-title" th:text="${#locale.language == 'ja'} ? '星取表' : #{rikishi.panel.hoshitori}">星取表</div>
+        <!-- 연도 드롭다운: 옵션은 아래 줄들의 data-year로 스크립트가 채운다 (스크립트가 없으면 전체가 그대로 보임) -->
+        <div class="panel-title with-control">
+            <span th:text="${#locale.language == 'ja'} ? '星取表' : #{rikishi.panel.hoshitori}">星取表</span>
+            <select class="panel-select" id="hoshitoriYear" hidden
+                    th:attr="data-all-label=${#locale.language == 'ja'} ? '全期間' : '전체 연도',
+                             data-year-suffix=${#locale.language == 'ja'} ? '年' : '년',
+                             aria-label=${#locale.language == 'ja'} ? '年を選択' : '연도 선택'"
+                    aria-label="연도 선택"></select>
+        </div>
 
         <!-- 커리어 요약: 끝난 마쿠우치·쥬료 바쇼 기준 (CareerSummaryDTO) -->
         <th:block th:if="${careerSummary != null and !careerSummary.isEmpty()}"
                   th:with="ja=${#locale.language == 'ja'}, cs=${careerSummary}">
             <div class="profile-summary career-summary">
                 <div class="summary-cell">
-                    <div class="summary-label" th:text="${ja} ? '勝ち越し' : '가치코시'">가치코시</div>
+                    <div class="summary-label" th:text="${ja} ? '勝ち越し' : '카치코시'">카치코시</div>
                     <div class="summary-value" th:text="${cs.kachikoshi} + ' / ' + ${cs.basho} + (${ja} ? '場所' : '바쇼')">7 / 11바쇼</div>
                     <div class="summary-sub" th:text="${cs.kachikoshiPercent()} + '%'">64%</div>
                 </div>
@@ -1210,7 +1254,7 @@
                  th:text="${ja} ? '記録された幕内・十両の場所のみ（開催中の場所を除く）' : '기록된 마쿠우치·쥬료 바쇼 기준 (진행 중 바쇼 제외)'">기록된 마쿠우치·쥬료 바쇼 기준 (진행 중 바쇼 제외)</div>
         </th:block>
 
-        <div class="game-log-row" th:each="g, iter : ${gameLog}">
+        <div class="game-log-row" th:each="g, iter : ${gameLog}" th:attr="data-year=${g.bashoYear}">
             <div class="game-log-meta">
                 <span class="glm-basho" th:text="${#locale.language == 'ja'} ? ${g.bashoLabel} : ${g.bashoLabelKr}">2026年07月場所</span>
                 <span class="glm-rank" th:text="${#locale.language == 'ja'} ? ${g.rankDisplay} : ${g.rankDisplayKr}">東 前頭10枚目</span>
@@ -1669,6 +1713,37 @@
             });
         } else {
             updateChartAndLegend(false);
+        }
+    }
+
+    // ===== 호시토리표 연도 드롭다운 =====
+    // 줄(.game-log-row)마다 data-year가 있고 최신 바쇼부터 정렬돼 있다. 기본은 가장 최근 연도.
+    // 딥링크(#match-123)로 들어오면 그 경기가 있는 연도를 먼저 보여준다.
+    const hoshitoriYear = document.getElementById('hoshitoriYear');
+    if (hoshitoriYear) {
+        const logRows = Array.from(document.querySelectorAll('.game-log-row[data-year]'));
+        const years = [...new Set(logRows.map(r => r.dataset.year))];
+        if (years.length > 1) {
+            const suffix = hoshitoriYear.dataset.yearSuffix;
+            years.forEach(y => hoshitoriYear.add(new Option(y + suffix, y)));
+            hoshitoriYear.add(new Option(hoshitoriYear.dataset.allLabel, 'all'));
+
+            const showYear = (year) => {
+                let lead = true;
+                logRows.forEach(r => {
+                    const visible = year === 'all' || r.dataset.year === year;
+                    r.hidden = !visible;
+                    r.classList.toggle('is-lead', visible && lead);
+                    if (visible) lead = false;
+                });
+            };
+
+            const linked = location.hash.match(/^#match-(\d+)$/);
+            const linkedRow = linked && document.querySelector('.strip-day-btn[data-torikumi-id="' + linked[1] + '"]');
+            hoshitoriYear.value = linkedRow ? linkedRow.closest('.game-log-row').dataset.year : years[0];
+            showYear(hoshitoriYear.value);
+            hoshitoriYear.hidden = false;
+            hoshitoriYear.addEventListener('change', () => showYear(hoshitoriYear.value));
         }
     }
 

@@ -245,7 +245,7 @@ class RikishiAnalysisServiceTest {
 		// 최신 바쇼부터 (getGameLog 순서)
 		List<BashoGameLogDTO> gameLog = List.of(
 				log(9, 6, 2, 0, Division.Makuuchi, false),   // 진행 중 (6승 2패 시점) - 제외
-				log(8, 12, 3, 0, Division.Makuuchi, true),   // 가치코시 + 두 자릿수, 최고 성적 후보(최근)
+				log(8, 12, 3, 0, Division.Makuuchi, true),   // 카치코시 + 두 자릿수, 최고 성적 후보(최근)
 				log(7, 7, 5, 3, Division.Makuuchi, true),    // 휴장 낀 7승 → 마케코시
 				log(6, 0, 0, 15, Division.Juryo, true),      // 全休
 				log(5, 12, 3, 0, Division.Juryo, true),      // 12승 동률이지만 더 예전 바쇼
@@ -275,7 +275,7 @@ class RikishiAnalysisServiceTest {
 	}
 
 	private static BashoGameLogDTO log(int bashoId, int wins, int losses, int absences, Division division, boolean completed) {
-		return new BashoGameLogDTO(bashoId, null, null, null, null, null, null, List.of(),
+		return new BashoGameLogDTO(bashoId, 2026, null, null, null, null, null, null, List.of(),
 				division, wins, losses, absences, completed);
 	}
 
