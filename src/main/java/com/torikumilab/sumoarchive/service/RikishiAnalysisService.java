@@ -69,6 +69,10 @@ public class RikishiAnalysisService {
 	 */
 	static final double H2H_TOUGH_MAX_RATE = 0.40;
 	static final double H2H_FAVORABLE_MIN_RATE = 0.60;
+	/** 그리고 승패 차이가 이만큼 이상 (2승 3패처럼 1승 차이는 상성이라 보기 어려움) */
+	static final int H2H_MIN_MARGIN = 2;
+	/** 현역 선수 페이지는 최근 이 기간 안에 붙은 상대만 (몇 년 전 몇 번 붙은 상대는 지금의 상성과 무관) */
+	static final int H2H_RECENT_YEARS = 3;
 	static final int H2H_TOP = 3;
 
 	// ===== 커리어 요약 =====
@@ -212,17 +216,19 @@ public class RikishiAnalysisService {
 	 * 평소 승률은 (승+1)/(경기+2)로 살짝 보정 - 전승·전패 선수가 있어도 식이 0으로 나뉘지 않게.
 	 *
 	 * @param headToHead RikishiDetailService.getHeadToHead 결과 (재조회 없이 그대로 사용)
-	 * @param activeOpponentsOnly 현역 상대만 후보로 (현역 선수 페이지 - 은퇴한 옛 상대가 천적으로 남지 않게)
+	 * @param currentOnly 현역 선수 페이지 - 현역 상대이면서 최근 3년 안에 붙은 상대만 후보로
+	 *                    (은퇴한 옛 상대나 오래전에 붙은 상대가 지금의 천적으로 보이지 않게). 은퇴 선수는 false(커리어 전체)
 	 */
 	public HeadToHeadHighlightsDTO getHeadToHeadHighlights(Integer rikishiId, List<HeadToHeadDTO> headToHead,
-														   boolean activeOpponentsOnly) {
+														   boolean currentOnly) {
+		LocalDate recentCutoff = LocalDate.now().minusYears(H2H_RECENT_YEARS);
 		// 부전은 실제로 붙지 않은 경기라 상성과 무관 - 빼고 센다.
 		// sekitori = 맞대결 대부분이 세키토리 무대였는지 → 평소 승률도 같은 무대의 경기로 잰다.
 		record Candidate(HeadToHeadDTO h, long wins, long bouts, boolean sekitori) {
 		}
 		List<Candidate> candidates = new ArrayList<>();
 		for (HeadToHeadDTO h : headToHead) {
-			if (activeOpponentsOnly && !h.opponentActive()) {
+			if (currentOnly && (!h.opponentActive() || !metSince(h, recentCutoff))) {
 				continue;
 			}
 			long bouts = h.bouts().stream().filter(b -> !b.fusen()).count();
@@ -260,7 +266,9 @@ public class RikishiAnalysisService {
 			double actualRate = (double) c.wins() / c.bouts();
 			double rateGap = actualRate - expected;
 			boolean byRate = c.bouts() >= H2H_RATE_MIN_BOUTS && Math.abs(rateGap) >= H2H_MIN_RATE_GAP;
-			boolean lopsided = diff < 0 ? actualRate <= H2H_TOUGH_MAX_RATE : actualRate >= H2H_FAVORABLE_MIN_RATE;
+			long margin = Math.abs(c.wins() - (c.bouts() - c.wins()));
+			boolean lopsided = margin >= H2H_MIN_MARGIN
+					&& (diff < 0 ? actualRate <= H2H_TOUGH_MAX_RATE : actualRate >= H2H_FAVORABLE_MIN_RATE);
 			if ((Math.abs(diff) >= H2H_MIN_DIFF || byRate) && lopsided) {
 				rows.add(new HeadToHeadHighlightsDTO.Row(c.h().opponentId(), c.h().opponentShikonaKr(),
 						c.h().opponentShikonaJp(), c.wins(), c.bouts() - c.wins(), round1(diff)));
@@ -290,6 +298,12 @@ public class RikishiAnalysisService {
 	 * 평소 승률 (승+1)/(경기+2). sekitori면 세키토리 경기만, 아니면 전체 경기로.
 	 * 세키토리 경기가 아예 없으면(드묾) 전체로 대체, 기록이 없으면 0.5.
 	 */
+	/** 이 상대와 cutoff 이후 시작한 바쇼에서 붙은 적이 있는지 (바쇼 시작일이 없는 수동 데이터는 최근으로 본다) */
+	private static boolean metSince(HeadToHeadDTO h, LocalDate cutoff) {
+		return h.bouts().stream()
+				.anyMatch(b -> b.bashoStart() == null || !b.bashoStart().isBefore(cutoff));
+	}
+
 	/**
 	 * 맞대결 승률의 Wilson 95% 구간 상한(upper=true) 또는 하한. 경기 수가 적을수록 구간이 넓어서
 	 * 0승 3패의 상한(약 56%)이 3승 16패의 상한(약 38%)보다 높게 나온다.

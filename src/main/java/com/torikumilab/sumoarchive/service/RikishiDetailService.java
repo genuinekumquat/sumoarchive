@@ -400,7 +400,8 @@ public class RikishiDetailService {
 		}
 
 		return new HeadToHeadBoutDTO(bashoLabel, bashoLabelKr, t.getDay(), win,
-				t.getResultType() == ResultType.FUZEN, kimarite, kimariteKr, isSekitori(t.getDivision()));
+				t.getResultType() == ResultType.FUZEN, kimarite, kimariteKr, isSekitori(t.getDivision()),
+				basho.getStartDate());
 	}
 
 	/**

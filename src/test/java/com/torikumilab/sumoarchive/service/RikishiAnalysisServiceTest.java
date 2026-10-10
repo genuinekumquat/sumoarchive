@@ -22,6 +22,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -298,6 +299,27 @@ class RikishiAnalysisServiceTest {
 				.extracting(HeadToHeadHighlightsDTO.Row::opponentShikonaKr).containsExactlyInAnyOrder("은퇴", "현역");
 	}
 
+	@Test
+	@DisplayName("상대전적 요약 - 1승 차이(2승 3패)는 제외, 현역 페이지는 최근 3년 안에 안 붙은 상대도 제외")
+	void marginAndRecency() {
+		// 강자(평소 69%)에게 2승 3패도, 1승 차이라 제외
+		List<HeadToHeadDTO> oneWinGap = List.of(h2h(2, "한끗", 2, 3, 0));
+		// 5년 전에만 0승 5패로 진 상대: 커리어 전체로는 천적, 현역 페이지에선 제외
+		HeadToHeadDTO recent = h2h(3, "옛상대", 0, 5, 0);
+		List<HeadToHeadBoutDTO> oldBouts = recent.bouts().stream()
+				.map(b -> new HeadToHeadBoutDTO(b.bashoLabel(), b.bashoLabelKr(), b.day(), b.win(), b.fusen(),
+						b.kimarite(), b.kimariteKr(), b.sekitori(), LocalDate.now().minusYears(5)))
+				.toList();
+		List<HeadToHeadDTO> old = List.of(new HeadToHeadDTO(3, "옛상대", "옛상대", "옛상대", 0, 5, oldBouts, true));
+		given(torikumiRepository.findWinRates(anyList())).willReturn(List.of(
+				winRate(ID, 100, 60), winRate(2, 100, 40), winRate(3, 100, 60)));
+
+		assertThat(service.getHeadToHeadHighlights(ID, oneWinGap, false).isEmpty()).isTrue();
+		assertThat(service.getHeadToHeadHighlights(ID, old, true).isEmpty()).isTrue();
+		assertThat(service.getHeadToHeadHighlights(ID, old, false).tough())
+				.extracting(HeadToHeadHighlightsDTO.Row::opponentShikonaKr).containsExactly("옛상대");
+	}
+
 	// ===== helpers =====
 
 	/** 부전 경기는 wins/losses와 별개로 fusenLosses만큼 부전패를 덧붙인다. */
@@ -310,7 +332,7 @@ class RikishiAnalysisServiceTest {
 	}
 
 	private static HeadToHeadBoutDTO bout(boolean win, boolean fusen) {
-		return new HeadToHeadBoutDTO("2025年01月場所", "2025년 1월 하츠바쇼", 1, win, fusen, "-", "-", true);
+		return new HeadToHeadBoutDTO("2025年01月場所", "2025년 1월 하츠바쇼", 1, win, fusen, "-", "-", true, LocalDate.now());
 	}
 
 	/** 세키토리 경기 승률 행 */

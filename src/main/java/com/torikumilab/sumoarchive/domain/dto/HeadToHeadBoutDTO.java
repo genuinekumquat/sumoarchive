@@ -1,5 +1,7 @@
 package com.torikumilab.sumoarchive.domain.dto;
 
+import java.time.LocalDate;
+
 /**
  * 상대전적(HeadToHeadDTO) 패널을 펼쳤을 때 보이는 개별 대전 한 건.
  */
@@ -11,6 +13,7 @@ public record HeadToHeadBoutDTO(
 		boolean fusen,       // 부전승/부전패 (실제로 붙지 않은 경기 - 천적/강세 집계에서 제외)
 		String kimarite,     // 일본어 결정기술명, 부전이면 "不戦勝"/"不戦敗"
 		String kimariteKr,   // 한국어 결정기술명, 부전이면 "부전승"/"부전패"
-		boolean sekitori     // 마쿠우치·쥬료 경기인지 (천적/강세의 평소 승률을 같은 무대 기준으로 고르는 데 씀)
+		boolean sekitori,    // 마쿠우치·쥬료 경기인지 (천적/강세의 평소 승률을 같은 무대 기준으로 고르는 데 씀)
+		LocalDate bashoStart // 그 바쇼 시작일 (현역 선수의 천적/강세는 최근에 붙은 상대만 - 마지막 대전 시점 판단용)
 ) {
 }
