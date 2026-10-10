@@ -53,4 +53,28 @@ class OriginDisplayUtilTest {
 		assertThat(OriginDisplayUtil.toKorean("Tokyo-to, Edogawa-ku")).isEqualTo("도쿄도");
 		assertThat(OriginDisplayUtil.toJapanese("Tokyo-to, Edogawa-ku")).isEqualTo("東京都");
 	}
+
+	@Test
+	@DisplayName("출신지가 바뀐 리키시는 마지막(협회 공식) 출신지로 표시")
+	void testChangedShusshinUsesLatest() {
+		String fujinokawa = "Tokyo-to, Edogawa-ku - Kyoto-fu, Kyoto-shi, Nishikyo-ku";
+		assertThat(OriginDisplayUtil.toKorean(fujinokawa)).isEqualTo("교토부");
+		assertThat(OriginDisplayUtil.toJapanese(fujinokawa)).isEqualTo("京都府");
+		assertThat(OriginDisplayUtil.toDetailOriginKr(null, fujinokawa)).isEqualTo("교토부");
+		assertThat(OriginDisplayUtil.toDetailOriginJp(fujinokawa)).isEqualTo("京都府");
+		assertThat(OriginDisplayUtil.deriveNationality(fujinokawa)).isEqualTo("일본");
+
+		// 국적이 바뀐 경우 (로가: 몽골 태생, 협회 표기 러시아)
+		String roga = "Mongolia, Ulaanbaatar - Russia";
+		assertThat(OriginDisplayUtil.toKorean(roga)).isEqualTo("러시아");
+		assertThat(OriginDisplayUtil.deriveNationality(roga)).isEqualTo("러시아");
+		assertThat(OriginDisplayUtil.deriveNationalityJp(roga)).isEqualTo("ロシア");
+
+		// 세 개 이상이어도 마지막
+		assertThat(OriginDisplayUtil.toKorean("Osaka-fu, Ikeda-shi - Okayama-ken, Bizen-shi - Osaka-fu, Toyonaka-shi"))
+				.isEqualTo("오사카부");
+
+		// 관리자 직접 입력이 있으면 그대로 우선
+		assertThat(OriginDisplayUtil.toDetailOriginKr("도쿄도", fujinokawa)).isEqualTo("도쿄도");
+	}
 }

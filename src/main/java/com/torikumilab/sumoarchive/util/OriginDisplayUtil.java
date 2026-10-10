@@ -163,7 +163,7 @@ public final class OriginDisplayUtil {
 		if (birthplace == null || birthplace.isBlank()) {
 			return "일본";
 		}
-		String first = birthplace.strip().split(",", 2)[0].strip();
+		String first = current(birthplace).split(",", 2)[0].strip();
 		if (containsHangul(first)) {
 			String base = KR_TO_BASE.get(first);
 			if (base != null && COUNTRIES.contains(base)) {
@@ -186,7 +186,7 @@ public final class OriginDisplayUtil {
 		if (birthplace == null || birthplace.isBlank()) {
 			return "日本";
 		}
-		String first = birthplace.strip().split(",", 2)[0].strip();
+		String first = current(birthplace).split(",", 2)[0].strip();
 		if (containsHangul(first)) {
 			String base = KR_TO_BASE.get(first);
 			if (base != null && COUNTRIES.contains(base)) {
@@ -213,7 +213,7 @@ public final class OriginDisplayUtil {
 		if (birthplace == null || birthplace.isBlank()) {
 			return null;
 		}
-		String[] parts = birthplace.strip().split(",", 2);
+		String[] parts = current(birthplace).split(",", 2);
 		String first = parts[0].strip();
 		String base = containsHangul(first) ? KR_TO_BASE.get(first) : stripSuffix(first);
 		if (base != null && COUNTRIES.contains(base) && parts.length > 1) {
@@ -237,7 +237,7 @@ public final class OriginDisplayUtil {
 		if (birthplace == null || birthplace.isBlank()) {
 			return null;
 		}
-		String[] parts = birthplace.strip().split(",", 2);
+		String[] parts = current(birthplace).split(",", 2);
 		String first = parts[0].strip();
 		String base = containsHangul(first) ? KR_TO_BASE.get(first) : stripSuffix(first);
 		if (base != null && COUNTRIES.contains(base) && parts.length > 1) {
@@ -258,7 +258,7 @@ public final class OriginDisplayUtil {
 		if (birthplace == null || birthplace.isBlank()) {
 			return null;
 		}
-		String region = birthplace.strip().split(",", 2)[0].strip();
+		String region = current(birthplace).split(",", 2)[0].strip();
 
 		String base = containsHangul(region) ? KR_TO_BASE.get(region) : stripSuffix(region);
 		if (base == null) {
@@ -266,6 +266,17 @@ public final class OriginDisplayUtil {
 		}
 
 		return label.getOrDefault(base, region);
+	}
+
+	/**
+	 * 출신지가 바뀐 리키시는 sumo-api가 "옛 출신지 - 현재 출신지"로 이어서 준다
+	 * (예: 후지노카와 "Tokyo-to, Edogawa-ku - Kyoto-fu, Kyoto-shi, Nishikyo-ku" - 도쿄 태생, 협회 표기는 교토).
+	 * 협회 공식 표기인 마지막 것만 쓴다.
+	 */
+	private static String current(String birthplace) {
+		String s = birthplace.strip();
+		int i = s.lastIndexOf(" - ");
+		return i >= 0 ? s.substring(i + 3).strip() : s;
 	}
 
 	private static String stripSuffix(String region) {
