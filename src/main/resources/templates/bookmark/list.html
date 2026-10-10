@@ -77,17 +77,6 @@
 
         .bm-handle { color: var(--sumi-faint); font-size: 16px; user-select: none; }
 
-        .bm-photo {
-            flex-shrink: 0;
-            width: 44px; height: 44px;
-            border: 1px solid var(--washi-line);
-            display: flex; align-items: center; justify-content: center;
-            overflow: hidden;
-            background: var(--washi);
-        }
-        .bm-photo img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
-        .bm-photo-placeholder { font-family: 'Yuji Syuku', serif; font-size: 18px; color: var(--sumi-faint); }
-
         .bm-link { display: flex; align-items: center; gap: 14px; flex: 1; min-width: 0; text-decoration: none; }
         .bm-info { display: flex; flex-direction: column; min-width: 0; }
         .bm-name { font-weight: 900; font-size: 15.5px; color: var(--sumi); }
@@ -174,17 +163,12 @@
                 var period = JA ? c.activePeriodJp : c.activePeriod;
                 var status = JA ? c.statusLabelJp : c.statusLabel;
 
-                var photo = c.photoUrl
-                    ? '<img src="' + esc(c.photoUrl) + '" alt="">'
-                    : '<span class="bm-photo-placeholder">' + esc((name || '?').charAt(0)) + '</span>';
-
                 var card = document.createElement('div');
                 card.className = 'bm-card';
                 card.dataset.rikishiId = id;
                 card.innerHTML =
                     '<span class="bm-handle">⠿</span>' +
                     '<a class="bm-link" href="/rikishi/' + id + '">' +
-                        '<span class="bm-photo">' + photo + '</span>' +
                         '<span class="bm-info">' +
                             '<span class="bm-name">' + esc(name) + '</span>' +
                             '<span class="bm-sub">' + esc(heya || MSG.unaffiliated) + ' · ' + esc(rank || '-') + '</span>' +

@@ -47,7 +47,6 @@ public class RikishiBookmarkService {
 				RankDisplayUtil.toKorean(r.getHighestRank()),
 				formatPeriod(r.getDebutDate(), r.getRetiredDate()),
 				statusLabel(r),
-				r.getPhotoUrl(),
 				r.getHeyaEntity() != null ? r.getHeyaEntity().getNameJp() : null,
 				RankDisplayUtil.toJapanese(r.getHighestRank()),
 				formatPeriodJp(r.getDebutDate(), r.getRetiredDate()),

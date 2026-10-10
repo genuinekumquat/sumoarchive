@@ -12,7 +12,6 @@ public record RikishiBookmarkCardDTO(
 		String highestRank,
 		String activePeriod,
 		String statusLabel,
-		String photoUrl,
 		// 일본어 화면용 (즐겨찾기 페이지가 html lang에 맞춰 고른다)
 		String heyaNameJp,
 		String highestRankJp,
