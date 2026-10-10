@@ -248,14 +248,16 @@
         }
 
         /* ===== 하단 2단 (커리어 레코드 / 키마리테 차트) ===== */
+        /* minmax(0, …): 칸이 내용물(키마리테 차트 canvas 300px)보다 좁아질 수 있게.
+           그냥 1fr이면 모바일에서 칸이 화면보다 넓어져 두 패널 모두 가로로 삐져나온다 */
         .stats-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 24px;
             margin-bottom: 28px;
         }
         @media (max-width: 700px) {
-            .stats-grid { grid-template-columns: 1fr; }
+            .stats-grid { grid-template-columns: minmax(0, 1fr); }
         }
 
         .panel {
