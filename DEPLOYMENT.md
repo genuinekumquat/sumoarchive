@@ -9,7 +9,7 @@
 
 ### 준비할 것
 - **서버**: Ubuntu 24.04, **메모리 2GB 이상** (서버에서 Docker 이미지를 빌드할 때 Gradle 컴파일 + JVM + MySQL이 함께 돈다. 1GB면 아래 스왑 필수)
-- **도메인** `torikumilab.com`과 DNS 관리 화면 접근 (스모아카이브는 `archive.torikumilab.com`, 루트는 임시로 archive로 이동 — 5절 1)
+- **도메인** `sumoarchive.com`과 DNS 관리 화면 접근 (정식 주소는 `sumoarchive.com`, `www`는 정식 주소로 이동 — 5절 1)
 - **문의 이메일** (개인정보 처리 안내 `/privacy`에 공개된다)
 - 로컬 PC: 최신 `main`, 로컬 DB(데이터 이전용), `mysqldump`
 
@@ -30,7 +30,7 @@ Graviton(ARM) 인스턴스 **t4g.small(2 vCPU·메모리 2GB)**에 지금 구성
    - 공인 IPv4는 쓰는 동안 시간당 요금이 붙고(월 약 3.6달러), **인스턴스에 연결 안 된 탄력적 IP도 요금이 나온다** → 서버를 없앨 때 Release까지 할 것
 6. **방화벽**: 바깥은 보안 그룹, 서버 안은 1단계의 ufw 그대로 (AWS Ubuntu 이미지엔 미리 막힌 규칙이 없다). 메모리 2GB라 1단계의 **스왑은 꼭** 만든다.
 7. **백업 저장소(S3)** — 서버가 통째로 사라져도 DB를 살릴 수 있게 (5단계에서 연결, 6절 1):
-   - S3 → 버킷 생성 (예: `torikumilab-backup-<임의 문자>`, 서울 리전, **퍼블릭 액세스 차단 유지**)
+   - S3 → 버킷 생성 (예: `sumoarchive-backup-<임의 문자>`, 서울 리전, **퍼블릭 액세스 차단 유지**)
    - 버킷 → Management → **수명 주기 규칙**: 접두사 `sumoarchive/db/`, 객체 **14일 후 만료** (`/privacy`의 백업 보관 기간 14일과 맞춘다)
    - IAM → Roles → Create role (신뢰 대상 EC2), 인라인 정책은 이 버킷 접두사에만 쓰기 허용:
      ```json
@@ -83,28 +83,28 @@ nano .env                   # SPRING_DATASOURCE_PASSWORD, MYSQL_ROOT_PASSWORD, A
 - 이 단계까지는 Nginx가 없어서 밖에서 사이트가 안 보인다 → 빈 화면이 공개되거나 캐시되는 일이 없다.
 
 ### 4단계: 도메인과 HTTPS (→ 5절)
-1. DNS에 A 레코드 3개(`@`, `www`, `archive` → 탄력적 IP) 추가, `nslookup archive.torikumilab.com`으로 반영 확인 (보안 그룹이 ICMP를 막아서 `ping`은 응답이 없는 게 정상)
-   - Cloudflare DNS를 쓰면 세 레코드 모두 **DNS only(회색 구름)**로 둔다. 프록시(주황 구름)를 켜면 certbot 발급이 꼬이고, 앱이 보는 접속 IP가 전부 Cloudflare IP가 되어 댓글 쿨다운·신고 제한이 방문자 구분을 못 한다
+1. DNS에 A 레코드 2개(`@`, `www` → 탄력적 IP) 추가, `nslookup sumoarchive.com`으로 반영 확인 (보안 그룹이 ICMP를 막아서 `ping`은 응답이 없는 게 정상)
+   - Cloudflare DNS를 쓰면 두 레코드 모두 **DNS only(회색 구름)**로 둔다. 프록시(주황 구름)를 켜면 certbot 발급이 꼬이고, 앱이 보는 접속 IP가 전부 Cloudflare IP가 되어 댓글 쿨다운·신고 제한이 방문자 구분을 못 한다
 2. 5절 0)의 순서: 80 포트 임시 설정 → `certbot --nginx` → 5절 1)의 최종 설정(보안 헤더, `/admin/` 300초)으로 교체
 3. 5절 3)으로 Nginx 접속 로그 14일 보관 확인
 
 ### 5단계: 운영 설정 (→ 3절, 6절)
 - 백업: `sudo S3_URI=s3://<버킷 이름>/sumoarchive/db ./scripts/backup-db.sh` 한 번 실행해 서버 파일과 S3 객체가 생기는지 보고, `sudo crontab -e`로 매일 새벽 4시 등록 (6절 1)
-- 업타임 모니터(UptimeRobot 등)에 `https://archive.torikumilab.com/actuator/health` 등록
+- 업타임 모니터(UptimeRobot 등)에 `https://sumoarchive.com/actuator/health` 등록
 
 ### 6단계: 공개 전 확인
 - [ ] `https://` 접속, `http://`는 https로 넘어감
-- [ ] `https://torikumilab.com`·`www` 접속 시 `archive.torikumilab.com`의 같은 경로로 이동(302)
+- [ ] `https://www.sumoarchive.com` 접속 시 `https://sumoarchive.com`의 같은 경로로 이동(301)
 - [ ] 메인(반즈케·일문·키마리테 탭), 리키시 프로필, 경기 상세, 검색, 즐겨찾기 — 한국어·일본어(`?lang=ja`) 모두
 - [ ] 관리자 로그인(`/admin/login`), 댓글 작성·신고·본인 삭제, 관리자 블라인드
 - [ ] 댓글 작성 시각이 한국 시간으로 나오는지
 - [ ] `/privacy`에 실제 문의 이메일, 시행일
-- [ ] `/robots.txt`·`/sitemap.xml`의 주소가 `https://archive.torikumilab.com`으로 나오는지 (Nginx가 Host·X-Forwarded-Proto를 넘겨야 함)
+- [ ] `/robots.txt`·`/sitemap.xml`의 주소가 `https://sumoarchive.com`으로 나오는지 (Nginx가 Host·X-Forwarded-Proto를 넘겨야 함)
 - [ ] `docker compose exec app ls -l /app/logs`에 로그 파일
 
 ### 7단계: 공개 후
-- Google Search Console·네이버 서치어드바이저에 사이트 등록, `https://archive.torikumilab.com/sitemap.xml` 제출
-  (Search Console은 DNS TXT로 **도메인 속성 `torikumilab.com`**을 등록하면 앞으로 생길 서브도메인까지 한 번에 관리된다)
+- Google Search Console·네이버 서치어드바이저에 사이트 등록, `https://sumoarchive.com/sitemap.xml` 제출
+  (Search Console은 DNS TXT로 **도메인 속성 `sumoarchive.com`**을 등록하면 www·앞으로 생길 서브도메인까지 한 번에 관리된다)
 - 다음 바쇼 반즈케 발표 때 7절 절차대로 첫 데이터 갱신
 
 ### 이후 업데이트 배포
@@ -207,7 +207,7 @@ CONTACT_EMAIL=문의용_이메일@example.com
    docker compose ps                          # app이 (healthy)로 표시되면 정상
    curl http://127.0.0.1:8080/actuator/health # {"status":"UP"} - DB 연결까지 확인
    ```
-   외부 업타임 모니터(UptimeRobot 등)에는 `https://archive.torikumilab.com/actuator/health`를 등록해 두면, 앱이나 DB가 죽었을 때 알림을 받을 수 있다.
+   외부 업타임 모니터(UptimeRobot 등)에는 `https://sumoarchive.com/actuator/health`를 등록해 두면, 앱이나 DB가 죽었을 때 알림을 받을 수 있다.
    노출되는 actuator 엔드포인트는 `health` 하나뿐이고 세부 정보는 표시하지 않는다.
 
 ---
@@ -291,65 +291,59 @@ docker compose restart app
 처음에는 80 포트만 열고 인증서를 받은 뒤 최종 설정으로 바꾼다. (DNS A 레코드가 서버 IP를 가리키고 있어야 한다)
 
 ```bash
-# 1. 80 포트만 있는 임시 설정 (세 주소 모두 앱으로)
-sudo tee /etc/nginx/sites-available/torikumilab > /dev/null <<'NGINX'
+# 1. 80 포트만 있는 임시 설정 (두 주소 모두 앱으로)
+sudo tee /etc/nginx/sites-available/sumoarchive > /dev/null <<'NGINX'
 server {
     listen 80;
-    server_name torikumilab.com www.torikumilab.com archive.torikumilab.com;
+    server_name sumoarchive.com www.sumoarchive.com;
     location / {
         proxy_pass http://127.0.0.1:8080;
         proxy_set_header Host $host;
     }
 }
 NGINX
-sudo ln -sf /etc/nginx/sites-available/torikumilab /etc/nginx/sites-enabled/torikumilab
+sudo ln -sf /etc/nginx/sites-available/sumoarchive /etc/nginx/sites-enabled/sumoarchive
 sudo rm -f /etc/nginx/sites-enabled/default
 sudo nginx -t && sudo systemctl reload nginx
 
-# 2. 인증서 발급 - 세 주소를 인증서 하나로 (파일은 첫 -d 이름인 /etc/letsencrypt/live/torikumilab.com/).
+# 2. 인증서 발급 - 두 주소를 인증서 하나로 (파일은 첫 -d 이름인 /etc/letsencrypt/live/sumoarchive.com/).
 #    자동 갱신 타이머도 같이 설치된다
-sudo certbot --nginx -d torikumilab.com -d www.torikumilab.com -d archive.torikumilab.com
+sudo certbot --nginx -d sumoarchive.com -d www.sumoarchive.com
 
 # 3. 아래 1)의 최종 설정으로 파일을 통째로 바꾼 뒤
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
-### 1) Nginx 설정 파일 (`/etc/nginx/sites-available/torikumilab`) — 최종
+### 1) Nginx 설정 파일 (`/etc/nginx/sites-available/sumoarchive`) — 최종
 
-주소 구조: **토리쿠미 연구소** `torikumilab.com` 아래에 서비스를 서브도메인으로 둔다.
-
-| 주소 | 용도 |
-|---|---|
-| `torikumilab.com`, `www.torikumilab.com` | 토리쿠미 연구소 (소개 페이지가 생기기 전까지 스모아카이브로 임시 이동) |
-| `archive.torikumilab.com` | 스모아카이브 (이 앱) |
-| (나중에) `banzuke.torikumilab.com` 등 | 반즈케 시뮬레이터 등 새 서비스 |
+주소 구조: 정식 주소는 **`sumoarchive.com`** 하나. `www`는 정식 주소로 영구 이동(301)해서 검색엔진에 주소가 둘로 갈리지 않게 한다.
+나중에 새 서비스(반즈케 시뮬레이터 등)는 `banzuke.sumoarchive.com` 같은 서브도메인이나 `/banzuke` 경로로 붙인다 (2절 아래).
 
 ```nginx
 # http → https (모든 주소)
 server {
     listen 80;
-    server_name torikumilab.com www.torikumilab.com archive.torikumilab.com;
+    server_name sumoarchive.com www.sumoarchive.com;
     return 301 https://$host$request_uri;
 }
 
-# 토리쿠미 연구소 루트: 소개 페이지가 생기기 전까지 스모아카이브로 "임시" 이동.
-# 301(영구)로 하면 브라우저·검색엔진이 기억해 나중에 소개 페이지로 바꾸기 어려우므로 302.
+# www → 정식 주소 (경로 유지)
 server {
     listen 443 ssl http2;
-    server_name torikumilab.com www.torikumilab.com;
-    ssl_certificate /etc/letsencrypt/live/torikumilab.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/torikumilab.com/privkey.pem;
-    return 302 https://archive.torikumilab.com$request_uri;
+    server_name www.sumoarchive.com;
+    ssl_certificate /etc/letsencrypt/live/sumoarchive.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/sumoarchive.com/privkey.pem;
+    return 301 https://sumoarchive.com$request_uri;
 }
 
 # 스모아카이브
 server {
     listen 443 ssl http2;
-    server_name archive.torikumilab.com;
+    server_name sumoarchive.com;
 
-    # SSL 인증서 (Certbot / Let's Encrypt, 세 주소 공용)
-    ssl_certificate /etc/letsencrypt/live/torikumilab.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/torikumilab.com/privkey.pem;
+    # SSL 인증서 (Certbot / Let's Encrypt, www와 공용)
+    ssl_certificate /etc/letsencrypt/live/sumoarchive.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/sumoarchive.com/privkey.pem;
 
     # 보안 헤더
     add_header X-Frame-Options "SAMEORIGIN" always;
@@ -410,9 +404,11 @@ sudo certbot renew --dry-run          # 90일마다 자동 갱신되는지 미�
 ```
 
 **나중에 새 서비스(예: 반즈케 시뮬레이터)를 붙일 때**
-1. DNS에 `banzuke` A 레코드 추가
-2. 기존 인증서에 주소 추가: `sudo certbot --nginx --expand -d torikumilab.com -d www.torikumilab.com -d archive.torikumilab.com -d banzuke.torikumilab.com`
-3. 1) 설정의 80 블록 `server_name`에 추가하고, 443 서버 블록을 하나 더 만든다 (다른 포트의 다른 앱으로 `proxy_pass`)
+- 이 앱 안의 기능이면 경로(`sumoarchive.com/banzuke`)로 붙이면 되고 Nginx·인증서는 손댈 것이 없다.
+- 별도 앱으로 띄울 때만 서브도메인:
+  1. DNS에 `banzuke` A 레코드 추가
+  2. 기존 인증서에 주소 추가: `sudo certbot --nginx --expand -d sumoarchive.com -d www.sumoarchive.com -d banzuke.sumoarchive.com`
+  3. 1) 설정의 80 블록 `server_name`에 추가하고, 443 서버 블록을 하나 더 만든다 (다른 포트의 다른 앱으로 `proxy_pass`)
 
 ### 3) 접속 로그 보관 기간 (14일)
 개인정보 처리 안내(`/privacy`)에 "서버 접속 기록은 14일 후 자동 삭제"라고 적었으므로 Nginx 로그 보관 기간을 맞춘다.
@@ -510,7 +506,7 @@ docker compose start app
 - [x] **Docker 노출 최소화**: 앱 포트는 `127.0.0.1:8080`에만 바인딩, `ADMIN_PASSWORD`는 기본값 없이 `.env` 필수
 - [x] **검색 노출**: 페이지 설명·OG·파비콘(`fragments/common :: seo`), 검색·즐겨찾기·에러 페이지 noindex, `/robots.txt`·`/sitemap.xml`(요청 주소 기준으로 생성 - Nginx가 `Host`·`X-Forwarded-Proto`를 넘겨야 https 도메인으로 나옴)
 - [x] **출처·면책**: 공개 페이지 푸터에 sumo-api.com 출처와 "日本相撲協会와 무관한 개인 팬 사이트" 문구 (`fragments/common :: footerNote`)
-- [ ] **배포 후 검색 등록**: Google Search Console·네이버 서치어드바이저에 사이트 등록 후 `https://archive.torikumilab.com/sitemap.xml` 제출
+- [ ] **배포 후 검색 등록**: Google Search Console·네이버 서치어드바이저에 사이트 등록 후 `https://sumoarchive.com/sitemap.xml` 제출
 - [x] **DB 비밀번호**: compose에 `SPRING_DATASOURCE_PASSWORD`·`MYSQL_ROOT_PASSWORD` 기본값 없음 - `.env`에 없으면 시작 거부 (DB 포트는 외부에 열지 않음)
 - [x] **시크릿 환경변수화**: DB 및 어드민 비밀번호를 `.env` 또는 서버 환경변수로 관리
 - [x] **데이터 안전성 확보**: 로스터 임포트 시 `wipeExisting()` 제거 및 `Upsert` 전환 완료
