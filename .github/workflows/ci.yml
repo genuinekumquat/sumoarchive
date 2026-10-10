@@ -70,7 +70,7 @@ jobs:
 
   deploy-files:
     name: 배포 파일 검증 (${{ matrix.arch }})
-    # x86(일반 VPS·AWS)과 ARM(Oracle Cloud 무료 A1) 양쪽에서 이미지 빌드와 실제 기동까지 확인
+    # x86과 ARM(운영 중인 AWS Graviton t4g, 이전 후보 Oracle A1) 양쪽에서 이미지 빌드와 실제 기동까지 확인
     strategy:
       fail-fast: false
       matrix:

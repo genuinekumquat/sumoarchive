@@ -1,6 +1,6 @@
 # SUMOARCHIVE 운영 서버 배포 가이드 (Production Deployment Guide)
 
-이 문서는 **SUMOARCHIVE**를 실제 운영 서버(AWS, GCP, Oracle Cloud, VPS 등)에 배포하고 운영하기 위한 실전 가이드입니다.
+이 문서는 **SUMOARCHIVE**를 실제 운영 서버에 배포하고 운영하기 위한 실전 가이드입니다. 운영 서버는 **AWS EC2(서울)**이고, 다른 서버(Oracle Cloud·VPS 등)로 옮기는 방법은 9절에 있다.
 처음 배포할 때는 0절을 위에서부터 순서대로 따라 하고, 자세한 내용은 각 단계에 적힌 절을 본다.
 
 ---
@@ -13,26 +13,33 @@
 - **문의 이메일** (개인정보 처리 안내 `/privacy`에 공개된다)
 - 로컬 PC: 최신 `main`, 로컬 DB(데이터 이전용), `mysqldump`
 
-### Oracle Cloud 무료(Always Free)로 할 때
-공식 무료 한도: ARM(Ampere A1) **2 OCPU·메모리 12GB**, 블록 스토리지 200GB, 아웃바운드 월 10TB. 이미지(`eclipse-temurin`·`mysql:8.0`)는 arm64를 지원하고, CI가 ARM에서 compose 기동까지 확인한다.
+### AWS EC2로 할 때
+Graviton(ARM) 인스턴스 **t4g.small(2 vCPU·메모리 2GB)**에 지금 구성(Docker Compose: 앱 + MySQL)을 그대로 올린다. 이미지(`eclipse-temurin`·`mysql:8.0`)는 arm64를 지원하고, CI가 ARM에서 compose 기동까지 확인한다.
+리전은 전부 **서울(`ap-northeast-2`)** — 콘솔 오른쪽 위에서 먼저 바꿔 둔다.
 
-1. **가입**: 카드 인증이 필요하다. **홈 리전은 나중에 못 바꾸고 무료 서버는 홈 리전에서만 만들 수 있다** → 서울(`ap-seoul-1`)·춘천(`ap-chuncheon-1`)·도쿄(`ap-tokyo-1`) 중 하나.
-2. **예산 알림**: Billing → Budgets에서 월 1달러 알림을 걸어 둔다 (실수로 유료 자원을 만들었을 때 바로 알 수 있게).
-3. **인스턴스 생성** (Compute → Instances → Create):
-   - Image: **Canonical Ubuntu 24.04** (aarch64), Shape: **VM.Standard.A1.Flex, 2 OCPU / 12GB**
-   - Networking: 공인 IP 할당, SSH 공개 키 업로드. 기본 사용자는 `ubuntu`
-   - "Out of host capacity"가 나오면 다른 가용 영역(AD)을 고르거나 시간을 두고 다시 시도 (공식 안내)
-4. **포트 열기 — 두 군데 다** (한쪽만 열면 사이트가 안 보인다):
-   - 콘솔: Networking → VCN → Security Lists → Default → Ingress Rule 추가: Source `0.0.0.0/0`, TCP, 포트 `80`, `443`
-   - 서버 안: Oracle의 Ubuntu 이미지는 iptables에 REJECT 규칙이 미리 들어 있다. **아래 1단계의 ufw 대신** 이렇게 연다
-     ```bash
-     sudo iptables -L INPUT --line-numbers            # REJECT 줄 번호 확인 (보통 마지막 쪽)
-     sudo iptables -I INPUT 5 -p tcp -m state --state NEW --dport 80 -j ACCEPT    # 5 = REJECT보다 앞 번호
-     sudo iptables -I INPUT 5 -p tcp -m state --state NEW --dport 443 -j ACCEPT
-     sudo netfilter-persistent save                   # 재부팅 후에도 유지
+1. **가입**: 가입할 때 **Free plan**을 고른다 (새 계정 크레딧, Billing → Credits에서 잔액·만료일 확인). 가입 직후:
+   - 루트 계정 **MFA** 켜기, 이후 작업은 루트 대신 **IAM Identity Center(또는 IAM) 관리자 사용자**로
+2. **예산 알림**: Billing → Budgets → 월 비용 예산(예: 5달러)을 만들고 80%·100%에 메일 알림. 크레딧이 끝나면 바로 실제 청구로 넘어가므로 꼭 걸어 둔다.
+3. **키 페어**: EC2 → Key Pairs → Create (ED25519, `.pem`) 또는 내 공개 키 Import.
+4. **인스턴스 생성** (EC2 → Instances → Launch instances):
+   - AMI: **Ubuntu Server 24.04 LTS**, 아키텍처 **64-bit (Arm)**, 인스턴스 유형: **t4g.small**
+   - 스토리지: **gp3 20GB** (이미지·DB·로그·14일치 백업에 충분)
+   - 보안 그룹(새로 만들기): SSH `22` → **내 IP만**, HTTP `80`·HTTPS `443` → `0.0.0.0/0`. 앱 8080·DB 3306은 열지 않는다
+   - 기본 사용자는 `ubuntu` → `ssh -i <키>.pem ubuntu@<IP>`
+5. **탄력적 IP(Elastic IP)**: EC2 → Elastic IPs → Allocate → 인스턴스에 Associate. 이걸 안 하면 인스턴스를 멈췄다 켤 때마다 IP가 바뀌어 DNS가 깨진다.
+   - 공인 IPv4는 쓰는 동안 시간당 요금이 붙고(월 약 3.6달러), **인스턴스에 연결 안 된 탄력적 IP도 요금이 나온다** → 서버를 없앨 때 Release까지 할 것
+6. **방화벽**: 바깥은 보안 그룹, 서버 안은 1단계의 ufw 그대로 (AWS Ubuntu 이미지엔 미리 막힌 규칙이 없다). 메모리 2GB라 1단계의 **스왑은 꼭** 만든다.
+7. **백업 저장소(S3)** — 서버가 통째로 사라져도 DB를 살릴 수 있게 (5단계에서 연결, 6절 1):
+   - S3 → 버킷 생성 (예: `torikumilab-backup-<임의 문자>`, 서울 리전, **퍼블릭 액세스 차단 유지**)
+   - 버킷 → Management → **수명 주기 규칙**: 접두사 `sumoarchive/db/`, 객체 **14일 후 만료** (`/privacy`의 백업 보관 기간 14일과 맞춘다)
+   - IAM → Roles → Create role (신뢰 대상 EC2), 인라인 정책은 이 버킷 접두사에만 쓰기 허용:
+     ```json
+     {"Version": "2012-10-17", "Statement": [{"Effect": "Allow", "Action": "s3:PutObject",
+       "Resource": "arn:aws:s3:::<버킷 이름>/sumoarchive/db/*"}]}
      ```
-5. 메모리가 12GB라 1단계의 **스왑은 건너뛴다**.
-6. **유휴 회수 주의**: 7일간 CPU·네트워크·메모리 사용률이 **모두** 20% 미만이면 회수될 수 있다(공식 정책). 방문자가 적은 초기엔 해당될 수 있으니 서버 밖 백업(5단계)을 꼭 해 두고, 계정을 종량제(Pay As You Go)로 전환하면 회수 대상에서 빠진다고 알려져 있다 — 전환 전에 Oracle 안내를 확인할 것 (무료 한도 안에서는 요금이 나오지 않는다고 안내됨).
+   - EC2 → 인스턴스 → Actions → Security → **Modify IAM role**로 이 역할 연결 (서버에 액세스 키를 두지 않는다)
+
+**대략적인 비용** (서울 리전, 크레딧이 끝난 뒤 기준. 요금은 바뀔 수 있으니 [AWS 요금 계산기](https://calculator.aws/)로 확인): t4g.small 월 약 12달러 + gp3 20GB 약 2달러 + 공인 IPv4 약 3.6달러 + S3 백업 몇 센트 → **월 18달러 안팎**. 크레딧이 끝나기 전에 계속 쓸지, 9절 절차로 더 싼 서버(Oracle Cloud 무료 등)로 옮길지 정한다.
 
 ### 1단계: 서버 기본 설정
 ```bash
@@ -42,9 +49,12 @@ sudo adduser deploy && sudo usermod -aG sudo deploy
 # 시간대: 백업 파일 이름·cron 시각이 한국 시간이 되도록 (앱 JVM은 Dockerfile에서 따로 Asia/Seoul)
 sudo timedatectl set-timezone Asia/Seoul
 
-# 방화벽: SSH·HTTP·HTTPS만 (앱 8080·DB 3306은 밖에 열지 않는다) — Oracle Cloud는 ufw 대신 위 "Oracle Cloud" 4번의 iptables
+# 방화벽: SSH·HTTP·HTTPS만 (앱 8080·DB 3306은 밖에 열지 않는다) (AWS는 보안 그룹과 이중으로)
 sudo apt update && sudo apt install -y ufw nginx certbot python3-certbot-nginx git
 sudo ufw allow OpenSSH && sudo ufw allow 'Nginx Full' && sudo ufw enable
+
+# AWS CLI (S3 백업 업로드용 - 6절 1). Ubuntu 24.04 apt에는 없어서 snap으로
+sudo snap install aws-cli --classic
 
 # 메모리 1~2GB 서버면 스왑 2GB (이미지 빌드 중 메모리 부족 방지)
 sudo fallocate -l 2G /swapfile && sudo chmod 600 /swapfile && sudo mkswap /swapfile && sudo swapon /swapfile
@@ -73,13 +83,13 @@ nano .env                   # SPRING_DATASOURCE_PASSWORD, MYSQL_ROOT_PASSWORD, A
 - 이 단계까지는 Nginx가 없어서 밖에서 사이트가 안 보인다 → 빈 화면이 공개되거나 캐시되는 일이 없다.
 
 ### 4단계: 도메인과 HTTPS (→ 5절)
-1. DNS에 A 레코드 3개(`@`, `www`, `archive` → 서버 IP) 추가, `ping archive.torikumilab.com`으로 반영 확인
+1. DNS에 A 레코드 3개(`@`, `www`, `archive` → 탄력적 IP) 추가, `nslookup archive.torikumilab.com`으로 반영 확인 (보안 그룹이 ICMP를 막아서 `ping`은 응답이 없는 게 정상)
+   - Cloudflare DNS를 쓰면 세 레코드 모두 **DNS only(회색 구름)**로 둔다. 프록시(주황 구름)를 켜면 certbot 발급이 꼬이고, 앱이 보는 접속 IP가 전부 Cloudflare IP가 되어 댓글 쿨다운·신고 제한이 방문자 구분을 못 한다
 2. 5절 0)의 순서: 80 포트 임시 설정 → `certbot --nginx` → 5절 1)의 최종 설정(보안 헤더, `/admin/` 300초)으로 교체
 3. 5절 3)으로 Nginx 접속 로그 14일 보관 확인
 
 ### 5단계: 운영 설정 (→ 3절, 6절)
-- 백업: `sudo ./scripts/backup-db.sh` 한 번 실행해 파일이 생기는지 보고, `sudo crontab -e`로 매일 새벽 4시 등록 (6절 1)
-- 백업을 서버 밖으로도 복사 (rclone 등)
+- 백업: `sudo S3_URI=s3://<버킷 이름>/sumoarchive/db ./scripts/backup-db.sh` 한 번 실행해 서버 파일과 S3 객체가 생기는지 보고, `sudo crontab -e`로 매일 새벽 4시 등록 (6절 1)
 - 업타임 모니터(UptimeRobot 등)에 `https://archive.torikumilab.com/actuator/health` 등록
 
 ### 6단계: 공개 전 확인
@@ -427,17 +437,19 @@ sudo logrotate -d /etc/nginx/logrotate.d/nginx                 # 설정 점검 (
 - 비밀번호는 컨테이너 안의 `MYSQL_ROOT_PASSWORD`를 환경변수로 넘긴다 (`-p<비밀번호>`는 `ps`로 누구나 볼 수 있어 쓰지 않는다).
 - 덤프가 중간에 끊기면 파일을 남기지 않고 exit 1로 끝난다.
 - 경로·보관 기간은 `BACKUP_DIR`, `KEEP_DAYS` 환경변수로 바꿀 수 있다.
+- **서버 밖 보관**: `S3_URI`를 주면 만든 파일을 S3에도 올린다 (EC2에 연결한 IAM 역할 권한으로, 0절 AWS 7번). S3 쪽 삭제는 버킷 수명 주기 규칙(14일)이 맡는다. 업로드에 실패하면 서버 파일은 남기고 exit 1.
 
 ```bash
 # 한 번 수동 실행해서 확인
-sudo ./scripts/backup-db.sh
+sudo S3_URI=s3://<버킷 이름>/sumoarchive/db ./scripts/backup-db.sh
+# S3에 올라갔는지는 콘솔(S3 → 버킷)에서 확인 (서버의 역할은 쓰기만 되고 목록 보기는 안 된다)
 
 # cron 등록 (sudo crontab -e) - 매일 새벽 4시
-0 4 * * * /home/deploy/sumoarchive/scripts/backup-db.sh >> /var/log/sumoarchive-backup.log 2>&1
+0 4 * * * S3_URI=s3://<버킷 이름>/sumoarchive/db /home/deploy/sumoarchive/scripts/backup-db.sh >> /var/log/sumoarchive-backup.log 2>&1
 ```
 
-> 서버 디스크가 통째로 날아가면 백업도 같이 사라진다. 백업 폴더를 주기적으로 서버 밖(오브젝트 스토리지, 다른 PC 등)으로도 복사해 두자.
-> 예: `rclone copy /var/backups/sumoarchive remote:sumoarchive-backup`
+> 서버 디스크가 통째로 날아가면 서버 안 백업도 같이 사라지므로 `S3_URI`(또는 다른 서버 밖 저장소)는 꼭 쓴다.
+> S3 외 저장소라면 `S3_URI` 없이 돌리고 `rclone copy /var/backups/sumoarchive remote:sumoarchive-backup` 같은 복사를 cron에 따로 건다. 어느 쪽이든 서버 밖 보관 기간도 14일로 맞춘다(`/privacy`).
 
 ### 2) 복원
 ```bash
@@ -511,7 +523,7 @@ docker compose start app
 - [x] **시간대**: 컨테이너 JVM `-Duser.timezone=Asia/Seoul` (댓글 작성·신고 시각, 로그), 서버는 `timedatectl set-timezone Asia/Seoul` (백업 파일명·cron) — CI가 이미지의 JVM 시간대 확인
 - [ ] **Nginx `/admin/` 제한 시간 300초**: 5절 설정 (임포트가 60초를 넘길 수 있음)
 - [ ] **첫 바쇼 리허설**: 7절 절차대로 (2026년 11월 큐슈바쇼 반즈케 발표 10/26 전후)
-- [x] **ARM(Oracle 무료) 대응**: 베이스 이미지 arm64 지원, CI가 x86·ARM 양쪽에서 이미지 빌드·compose 기동·health 확인. Oracle 전용 절차는 0절
+- [x] **ARM 대응** (AWS Graviton t4g·Oracle A1): 베이스 이미지 arm64 지원, CI가 x86·ARM 양쪽에서 이미지 빌드·compose 기동·health 확인. AWS 절차는 0절, Oracle은 9절
 - [x] **캐싱 최적화**: 바쇼 목록, 반즈케 데이터, 키마리테 백과사전에 Spring Cache 적용 완료
 - [x] **관리자 수정 즉시 반영**: 바쇼·반즈케 행·리키시 프로필·헤야 이름 수정 시 관련 캐시를 커밋 직후 비움 (`config/CacheConfig`). DB에 SQL로 직접 넣은 데이터는 여전히 앱 재시작 필요
 - [x] **이미지 핫링크 방어**: 템플릿 메타 태그 `<meta name="referrer" content="no-referrer">` 적용 완료
@@ -519,11 +531,12 @@ docker compose start app
 - [x] **헬스체크**: Actuator `/actuator/health`만 노출(세부 정보 숨김), compose app healthcheck 적용
 - [x] **DB 자동 백업**: `scripts/backup-db.sh` + cron, 14일 보관 (6절)
 - [x] **로그 보존**: docker logs 컨테이너당 10MB x 5개 제한, 앱 로그는 `sumo_app_logs` 볼륨에 파일로 저장(14일·500MB, 날짜·10MB 단위 gzip)
-- [ ] **백업 외부 보관 / 업타임 모니터 등록**: 백업 폴더를 서버 밖으로 복사, `/actuator/health`를 외부 모니터에 등록
+- [ ] **백업 외부 보관 / 업타임 모니터 등록**: `S3_URI`로 S3에 업로드(수명 주기 14일, 6절 1), `/actuator/health`를 외부 모니터에 등록
+- [ ] **AWS 비용 관리**: Budgets 알림, 크레딧 만료일 확인 후 계속 쓸지·옮길지(9절) 결정 (0절 AWS)
 
 ---
 
-## 9. 서버 이전 (예: Oracle Cloud → AWS EC2·다른 VPS)
+## 9. 서버 이전 (예: AWS EC2 → Oracle Cloud 무료·다른 VPS)
 
 앱은 Docker 이미지, 설정은 `.env` 하나, 데이터는 MySQL 하나, 스키마는 Flyway라 특정 클라우드 기능에 묶여 있지 않다.
 x86·ARM 모두 같은 이미지가 돈다(CI가 둘 다 확인). 멈추는 시간은 3번 구간의 몇 분뿐.
@@ -550,3 +563,17 @@ x86·ARM 모두 같은 이미지가 돈다(CI가 둘 다 확인). 멈추는 시�
 
 > 이식성을 지키려면 앱이 특정 클라우드 전용 서비스(전용 DB·큐·저장소)를 직접 쓰지 않게 한다. 백업 파일을 클라우드 저장소에 복사하는 정도는 앱과 무관해서 괜찮다.
 > AWS RDS 같은 관리형 MySQL로 옮길 때는 `docker-compose.yml`의 app `SPRING_DATASOURCE_URL`(지금은 `db:3306` 고정)을 RDS 주소로 바꾸고 `db` 서비스·`depends_on`을 빼면 된다. 코드 수정은 없다.
+
+### Oracle Cloud 무료(Always Free)로 옮길 때 주의
+무료 한도: ARM(Ampere A1) **2 OCPU·메모리 12GB**, 블록 스토리지 200GB, 아웃바운드 월 10TB (공식 안내, 옮기기 전에 다시 확인).
+- **홈 리전은 가입 후 못 바꾸고 무료 서버는 홈 리전에서만** 만들 수 있다 → 서울(`ap-seoul-1`)·춘천(`ap-chuncheon-1`)·도쿄(`ap-tokyo-1`) 중 하나
+- 인스턴스: Canonical Ubuntu 24.04 (aarch64), `VM.Standard.A1.Flex` 2 OCPU / 12GB, 기본 사용자 `ubuntu`. "Out of host capacity"면 다른 가용 영역(AD)이나 시간을 두고 재시도. 메모리가 넉넉해 스왑은 생략
+- **포트는 두 군데 다** 연다: 콘솔 VCN → Security Lists → Ingress `80`·`443`, 그리고 서버 안 iptables (Oracle Ubuntu 이미지엔 REJECT 규칙이 미리 있어서 1단계의 ufw 대신 이렇게):
+  ```bash
+  sudo iptables -L INPUT --line-numbers            # REJECT 줄 번호 확인 (보통 마지막 쪽)
+  sudo iptables -I INPUT 5 -p tcp -m state --state NEW --dport 80 -j ACCEPT    # 5 = REJECT보다 앞 번호
+  sudo iptables -I INPUT 5 -p tcp -m state --state NEW --dport 443 -j ACCEPT
+  sudo netfilter-persistent save                   # 재부팅 후에도 유지
+  ```
+- **유휴 회수**: 7일간 CPU·네트워크·메모리 사용률이 모두 20% 미만이면 회수될 수 있다(공식 정책). 서버 밖 백업 필수. 종량제(Pay As You Go)로 전환하면 회수 대상에서 빠진다고 알려져 있으니 Oracle 안내를 확인할 것
+- 백업: S3 대신 OCI Object Storage 등으로 `rclone` 복사 (6절 1), 보관 14일 유지

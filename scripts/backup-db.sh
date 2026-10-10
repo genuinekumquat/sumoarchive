@@ -6,9 +6,10 @@
 #   ./scripts/backup-db.sh
 #   BACKUP_DIR, KEEP_DAYS, DB_CONTAINER, DB_NAME 환경변수로 바꿀 수 있음
 #   (기본: /var/backups/sumoarchive / 14일 / sumoarchive-db / sumo)
+#   S3_URI(예: s3://버킷/sumoarchive/db)를 주면 만든 파일을 S3에도 올린다 (AWS CLI 필요, 권한은 EC2의 IAM 역할)
 #
 # cron 예시 (매일 새벽 4시, DEPLOYMENT.md 6절 참고):
-#   0 4 * * * /home/deploy/sumoarchive/scripts/backup-db.sh >> /var/log/sumoarchive-backup.log 2>&1
+#   0 4 * * * S3_URI=s3://<버킷>/sumoarchive/db /home/deploy/sumoarchive/scripts/backup-db.sh >> /var/log/sumoarchive-backup.log 2>&1
 #
 # 비밀번호는 컨테이너에 이미 있는 MYSQL_ROOT_PASSWORD를 MYSQL_PWD로 넘긴다.
 # -p<비밀번호>처럼 명령줄 인자로 넘기면 ps로 누구나 볼 수 있기 때문.
@@ -18,6 +19,10 @@ BACKUP_DIR="${BACKUP_DIR:-/var/backups/sumoarchive}"
 KEEP_DAYS="${KEEP_DAYS:-14}"
 DB_CONTAINER="${DB_CONTAINER:-sumoarchive-db}"
 DB_NAME="${DB_NAME:-sumo}"
+S3_URI="${S3_URI:-}"
+
+# cron의 PATH에는 snap으로 설치한 aws(/snap/bin)가 없다
+PATH="$PATH:/snap/bin"
 
 mkdir -p "$BACKUP_DIR"
 OUT="$BACKUP_DIR/sumo_$(date +%Y%m%d_%H%M%S).sql.gz"
@@ -42,5 +47,14 @@ mv "$TMP" "$OUT"
 chmod 600 "$OUT"
 echo "[$(date '+%F %T')] 백업 완료: $OUT ($(wc -c < "$OUT") bytes)"
 
-# 보관 기간이 지난 백업 삭제
+# 보관 기간이 지난 백업 삭제 (S3 쪽은 버킷 수명 주기 규칙이 지운다)
 find "$BACKUP_DIR" -name 'sumo_*.sql.gz' -type f -mtime +"$KEEP_DAYS" -delete
+
+# 서버 밖 보관. 실패해도 서버 파일은 남기고, cron 로그에서 알 수 있게 exit 1
+if [ -n "$S3_URI" ]; then
+  if ! aws s3 cp --only-show-errors "$OUT" "${S3_URI%/}/$(basename "$OUT")"; then
+    echo "[$(date '+%F %T')] S3 업로드 실패: $S3_URI (서버 파일은 남아 있음)" >&2
+    exit 1
+  fi
+  echo "[$(date '+%F %T')] S3 업로드 완료: ${S3_URI%/}/$(basename "$OUT")"
+fi
