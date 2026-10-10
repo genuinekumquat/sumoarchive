@@ -212,14 +212,19 @@ public class RikishiAnalysisService {
 	 * 평소 승률은 (승+1)/(경기+2)로 살짝 보정 - 전승·전패 선수가 있어도 식이 0으로 나뉘지 않게.
 	 *
 	 * @param headToHead RikishiDetailService.getHeadToHead 결과 (재조회 없이 그대로 사용)
+	 * @param activeOpponentsOnly 현역 상대만 후보로 (현역 선수 페이지 - 은퇴한 옛 상대가 천적으로 남지 않게)
 	 */
-	public HeadToHeadHighlightsDTO getHeadToHeadHighlights(Integer rikishiId, List<HeadToHeadDTO> headToHead) {
+	public HeadToHeadHighlightsDTO getHeadToHeadHighlights(Integer rikishiId, List<HeadToHeadDTO> headToHead,
+														   boolean activeOpponentsOnly) {
 		// 부전은 실제로 붙지 않은 경기라 상성과 무관 - 빼고 센다.
 		// sekitori = 맞대결 대부분이 세키토리 무대였는지 → 평소 승률도 같은 무대의 경기로 잰다.
 		record Candidate(HeadToHeadDTO h, long wins, long bouts, boolean sekitori) {
 		}
 		List<Candidate> candidates = new ArrayList<>();
 		for (HeadToHeadDTO h : headToHead) {
+			if (activeOpponentsOnly && !h.opponentActive()) {
+				continue;
+			}
 			long bouts = h.bouts().stream().filter(b -> !b.fusen()).count();
 			long wins = h.bouts().stream().filter(b -> !b.fusen() && b.win()).count();
 			long sekitoriBouts = h.bouts().stream().filter(b -> !b.fusen() && b.sekitori()).count();

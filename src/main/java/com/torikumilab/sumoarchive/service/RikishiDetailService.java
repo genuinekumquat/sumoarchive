@@ -365,7 +365,7 @@ public class RikishiDetailService {
 					.toList();
 
 			result.add(new HeadToHeadDTO(opponent.getId(), opponentDisplayName(opponent), opponentDisplayNameJp(opponent),
-					firstToken(opponent.getShikonaEn()), wins, losses, boutDtos));
+					firstToken(opponent.getShikonaEn()), wins, losses, boutDtos, opponent.isActive()));
 		}
 
 		// 상대 이름 가나다순 정렬 (ㄱㄴㄷ 인덱스 그룹화 전제라 알파벳순이어야 함).

@@ -12,6 +12,7 @@ public record HeadToHeadDTO(
 		String opponentShikonaEn, // 로마자 시코나 - 일본어 화면 あかさたな 탭 행·정렬용 (KanaIndexUtil)
 		long wins,
 		long losses,
-		List<HeadToHeadBoutDTO> bouts // 최신 바쇼부터 내림차순
+		List<HeadToHeadBoutDTO> bouts, // 최신 바쇼부터 내림차순
+		boolean opponentActive    // 상대가 현역인지 (현역 선수의 천적/강한 상대 요약은 현역 상대만)
 ) {
 }

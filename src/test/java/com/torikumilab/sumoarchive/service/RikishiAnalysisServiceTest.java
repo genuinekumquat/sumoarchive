@@ -29,6 +29,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.BDDMockito.given;
 
 @ExtendWith(MockitoExtension.class)
@@ -192,7 +193,7 @@ class RikishiAnalysisServiceTest {
 		given(torikumiRepository.findWinRates(List.of(ID, 2, 3, 4))).willReturn(List.of(
 				winRate(ID, 100, 70), winRate(2, 100, 73), winRate(3, 100, 74), winRate(4, 100, 60)));
 
-		HeadToHeadHighlightsDTO result = service.getHeadToHeadHighlights(ID, h2h);
+		HeadToHeadHighlightsDTO result = service.getHeadToHeadHighlights(ID, h2h, false);
 
 		assertThat(result.tough()).extracting(HeadToHeadHighlightsDTO.Row::opponentShikonaKr).containsExactly("A");
 		assertThat(result.tough().get(0).diff()).isEqualTo(-1.8);
@@ -207,7 +208,7 @@ class RikishiAnalysisServiceTest {
 		given(torikumiRepository.findWinRates(List.of(ID, 2))).willReturn(List.of(
 				winRate(ID, 100, 50), winRate(2, 100, 80)));
 
-		HeadToHeadHighlightsDTO result = service.getHeadToHeadHighlights(ID, h2h);
+		HeadToHeadHighlightsDTO result = service.getHeadToHeadHighlights(ID, h2h, false);
 
 		assertThat(result.isEmpty()).isTrue();
 	}
@@ -221,7 +222,7 @@ class RikishiAnalysisServiceTest {
 		given(torikumiRepository.findWinRates(List.of(ID, 2))).willReturn(List.of(
 				winRate(ID, 100, 60), winRate(2, 100, 60), lowerWinRate(2, 100, 95)));
 
-		HeadToHeadHighlightsDTO result = service.getHeadToHeadHighlights(ID, h2h);
+		HeadToHeadHighlightsDTO result = service.getHeadToHeadHighlights(ID, h2h, false);
 
 		assertThat(result.tough()).extracting(HeadToHeadHighlightsDTO.Row::opponentShikonaKr).containsExactly("급성장");
 		assertThat(result.tough().get(0).diff()).isEqualTo(-2.0);
@@ -238,7 +239,7 @@ class RikishiAnalysisServiceTest {
 		given(torikumiRepository.findWinRates(List.of(ID, 2, 3))).willReturn(List.of(
 				winRate(ID, 100, 60), winRate(2, 100, 69), winRate(3, 100, 60)));
 
-		HeadToHeadHighlightsDTO result = service.getHeadToHeadHighlights(ID, h2h);
+		HeadToHeadHighlightsDTO result = service.getHeadToHeadHighlights(ID, h2h, false);
 
 		assertThat(result.tough()).extracting(HeadToHeadHighlightsDTO.Row::opponentShikonaKr).containsExactly("강자");
 		assertThat(result.tough().get(0).diff()).isEqualTo(-1.4);
@@ -252,7 +253,7 @@ class RikishiAnalysisServiceTest {
 		given(torikumiRepository.findWinRates(List.of(ID, 2))).willReturn(List.of(
 				winRate(ID, 100, 70), winRate(2, 100, 40)));
 
-		assertThat(service.getHeadToHeadHighlights(ID, h2h).isEmpty()).isTrue();
+		assertThat(service.getHeadToHeadHighlights(ID, h2h, false).isEmpty()).isTrue();
 	}
 
 	@Test
@@ -265,7 +266,7 @@ class RikishiAnalysisServiceTest {
 		given(torikumiRepository.findWinRates(List.of(ID, 2, 3))).willReturn(List.of(
 				winRate(ID, 100, 60), winRate(2, 100, 60), winRate(3, 100, 69)));
 
-		HeadToHeadHighlightsDTO result = service.getHeadToHeadHighlights(ID, h2h);
+		HeadToHeadHighlightsDTO result = service.getHeadToHeadHighlights(ID, h2h, false);
 
 		assertThat(result.tough()).extracting(HeadToHeadHighlightsDTO.Row::opponentShikonaKr)
 				.containsExactly("강자", "약한쪽");
@@ -276,9 +277,25 @@ class RikishiAnalysisServiceTest {
 				h2h(5, "열아홉판", 3, 16, 0));
 		given(torikumiRepository.findWinRates(List.of(ID, 4, 5))).willReturn(List.of(
 				winRate(ID, 100, 60), winRate(4, 100, 60), winRate(5, 100, 60)));
-		assertThat(service.getHeadToHeadHighlights(ID, h2h2).tough())
+		assertThat(service.getHeadToHeadHighlights(ID, h2h2, false).tough())
 				.extracting(HeadToHeadHighlightsDTO.Row::opponentShikonaKr)
 				.containsExactly("열아홉판", "세판");
+	}
+
+	@Test
+	@DisplayName("상대전적 요약 - 현역 선수 페이지는 은퇴한 상대를 천적 후보에서 뺌 (은퇴 선수 페이지는 전체)")
+	void activeOpponentsOnly() {
+		HeadToHeadDTO retired = h2h(2, "은퇴", 0, 5, 0);
+		retired = new HeadToHeadDTO(retired.opponentId(), retired.opponentShikonaKr(), retired.opponentShikonaJp(),
+				retired.opponentShikonaEn(), retired.wins(), retired.losses(), retired.bouts(), false);
+		List<HeadToHeadDTO> h2h = List.of(retired, h2h(3, "현역", 0, 5, 0));
+		given(torikumiRepository.findWinRates(anyList())).willReturn(List.of(
+				winRate(ID, 100, 60), winRate(2, 100, 60), winRate(3, 100, 60)));
+
+		assertThat(service.getHeadToHeadHighlights(ID, h2h, true).tough())
+				.extracting(HeadToHeadHighlightsDTO.Row::opponentShikonaKr).containsExactly("현역");
+		assertThat(service.getHeadToHeadHighlights(ID, h2h, false).tough())
+				.extracting(HeadToHeadHighlightsDTO.Row::opponentShikonaKr).containsExactlyInAnyOrder("은퇴", "현역");
 	}
 
 	// ===== helpers =====
@@ -289,7 +306,7 @@ class RikishiAnalysisServiceTest {
 		for (int i = 0; i < wins; i++) bouts.add(bout(true, false));
 		for (int i = 0; i < losses; i++) bouts.add(bout(false, false));
 		for (int i = 0; i < fusenLosses; i++) bouts.add(bout(false, true));
-		return new HeadToHeadDTO(opponentId, name, name, name, wins, losses + fusenLosses, bouts);
+		return new HeadToHeadDTO(opponentId, name, name, name, wins, losses + fusenLosses, bouts, true);
 	}
 
 	private static HeadToHeadBoutDTO bout(boolean win, boolean fusen) {

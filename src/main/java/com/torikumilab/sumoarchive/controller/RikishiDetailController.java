@@ -66,7 +66,9 @@ public class RikishiDetailController {
 				.map(BashoGameLogDTO::bashoYear)
 				.orElse(null));
 		model.addAttribute("headToHeadGroups", headToHeadGroups);
-		model.addAttribute("headToHeadHighlights", rikishiAnalysisService.getHeadToHeadHighlights(id, headToHead));
+		// 현역 선수는 지금도 붙는 현역 상대만 요약 (은퇴한 옛 상대가 "천적"으로 남지 않게). 은퇴 선수는 전체.
+		model.addAttribute("headToHeadHighlights",
+				rikishiAnalysisService.getHeadToHeadHighlights(id, headToHead, rikishi.isActive()));
 		// 결정기술 차트 기간 필터 select 기본 선택값 유지용 (없으면 "전체" 옵션이 선택됨)
 		model.addAttribute("fromBasho", fromBasho);
 		model.addAttribute("toBasho", toBasho);
