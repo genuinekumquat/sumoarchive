@@ -49,24 +49,6 @@
             margin-bottom: 36px;
         }
 
-        .seal {
-            position: absolute;
-            top: -18px;
-            right: 22px;
-            width: 58px;
-            height: 58px;
-            background: var(--shu);
-            color: var(--washi);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-family: 'Yuji Syuku', serif;
-            font-size: 26px;
-            letter-spacing: -2px;
-            transform: rotate(-4deg);
-            box-shadow: 0 2px 3px rgba(0,0,0,0.3), inset 0 0 0 2px rgba(247,246,243,0.5);
-        }
-
         .brand-row {
             display: flex;
             align-items: baseline;
@@ -137,6 +119,15 @@
         }
 
         .search-wrap button:hover { background: var(--shu-deep); border-color: var(--shu-deep); }
+
+        /* 모바일: 검색창이 기본 최소 너비(약 20자) 아래로 줄어들지 못해 검색 버튼·즐겨찾기 링크가 화면 밖으로 밀리던 문제.
+           좁은 화면에서는 즐겨찾기 링크를 다음 줄로 내린다 */
+        .search-wrap form { display: flex; gap: 10px; flex: 1; min-width: 0; }
+        .search-wrap input[type="text"] { min-width: 0; }
+        @media (max-width: 520px) {
+            .search-wrap { flex-wrap: wrap; row-gap: 8px; }
+            .search-wrap form { flex-basis: 100%; }
+        }
 
         /* ===== 언어 스위처 ===== */
         .lang-switch {
@@ -492,7 +483,12 @@
             .r-Maegashira { font-size: 12.5px; }
             .rikishi-cell { padding: 8px 6px; }
             .sub-info { font-size: 9.5px; }
-            .rank-cell { font-size: 11px; letter-spacing: 0.5px; }
+            /* 계급 칸이 좁아 "마에가시라12"가 칸 밖으로 넘치므로: 칸을 넓히고 순번은 다음 줄로 */
+            .banzuke-table thead th.col-rank { width: 22%; }
+            .banzuke-table thead th.col-east,
+            .banzuke-table thead th.col-west { width: 39%; }
+            .rank-cell { font-size: 10.5px; letter-spacing: 0; white-space: normal; line-height: 1.35; }
+            .rank-no { display: block; }
             .banzuke-table thead th { font-size: 10px; letter-spacing: 2px; }
         }
     </style>
@@ -501,7 +497,6 @@
 <div class="page">
 
     <header>
-        <div class="seal">相撲</div>
         <div class="brand-row">
             <a class="brand-jp" th:href="@{/}">相撲archive</a>
             <span class="brand-kr">스모아카이브</span>
@@ -509,7 +504,7 @@
         <div class="brand-sub">SUMO RANKING &amp; RIKISHI ARCHIVE</div>
 
         <div class="search-wrap">
-            <form th:action="@{/search}" method="get" style="display: flex; gap: 10px; flex: 1;">
+            <form th:action="@{/search}" method="get">
                 <input type="text" name="keyword" th:placeholder="#{main.search.placeholder}" placeholder="시코나 검색">
                 <button type="submit" th:text="#{main.search.button}">검색</button>
             </form>
@@ -737,13 +732,16 @@
         });
     }
 
-    function rankCellText(rankName, rankValue) {
-        const label = RANK_LABEL[rankName] || rankName;
-        // 마에가시라/주료 이하는 순번을 붙임 (예: 前頭10)
+    // 계급 칸 채우기. 마에가시라/주료 이하는 순번을 붙임 (예: 前頭10).
+    // 순번은 따로 span으로 둬서 좁은 화면에서는 다음 줄로 내린다 (CSS .rank-no)
+    function fillRankCell(td, rankName, rankValue) {
+        td.textContent = RANK_LABEL[rankName] || rankName;
         if (rankValue != null && (rankName === 'Maegashira' || RANK_ORDER[rankName] >= RANK_ORDER.Juryo)) {
-            return label + rankValue;
+            const no = document.createElement('span');
+            no.className = 'rank-no';
+            no.textContent = rankValue;
+            td.appendChild(no);
         }
-        return label;
     }
 
     function makeRikishiCell(row, rankName) {
@@ -799,7 +797,7 @@
 
             const rankTd = document.createElement('td');
             rankTd.className = 'rank-cell';
-            rankTd.textContent = rankCellText(entry.rankName, entry.rankValue);
+            fillRankCell(rankTd, entry.rankName, entry.rankValue);
             tr.appendChild(rankTd);
 
             tr.appendChild(makeRikishiCell(entry.west, entry.rankName));

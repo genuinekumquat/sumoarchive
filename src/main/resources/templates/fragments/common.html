@@ -10,8 +10,8 @@
 <th:block th:fragment="seo(title, description, indexable)">
     <meta name="description" th:content="${description}">
     <meta name="robots" content="noindex, follow" th:unless="${indexable}">
-    <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48">
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <link rel="icon" href="/favicon.ico?v=2" sizes="16x16 32x32 48x48">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2">
     <meta property="og:site_name" th:content="#{site.title}">
     <meta property="og:type" content="website">
     <meta property="og:title" th:content="${title}">
