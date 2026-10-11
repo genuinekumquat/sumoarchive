@@ -11,19 +11,25 @@ import java.util.stream.Stream;
  * kimarite 값은 torikumi.kimarite 저장값(sumo-api 로마자 소문자) 기준. 목록에 없는 기술은 ETC.
  */
 public enum LossType {
+	// 後ろもたれ는 상대가 등을 진 채 밀어내는 기술이라, 진 쪽에서는 밀려 나간 패배다.
 	OSHI("밀려서 짐", "押され負け",
-			"oshidashi", "oshitaoshi", "tsukidashi", "tsukitaoshi"),
+			"oshidashi", "oshitaoshi", "tsukidashi", "tsukitaoshi", "ushiromotare"),
+	// 割り出し·鯖折り는 샅바를 잡힌 채 밀리거나 짓눌린 패배, 吊り落とし는 吊り出し와 같은 들려서 진 패배.
 	YORI("잡혀서 몰림", "寄られ負け",
-			"yorikiri", "yoritaoshi", "abisetaoshi", "kimedashi", "kimetaoshi", "tsuridashi"),
+			"yorikiri", "yoritaoshi", "abisetaoshi", "kimedashi", "kimetaoshi", "tsuridashi",
+			"tsuriotoshi", "waridashi", "sabaori"),
 	// 突き落とし는 공식 분류로는 捻り手지만, 진 쪽에서 보면 옆·앞으로 쓰러지는 패배라 여기에 둔다.
 	OCHI("앞으로 고꾸라짐", "引き・叩きで落ちる",
-			"hatakikomi", "hikiotoshi", "tsukiotoshi", "katasukashi", "hikkake", "makiotoshi", "okurihikiotoshi"),
+			"hatakikomi", "hikiotoshi", "tsukiotoshi", "katasukashi", "hikkake", "makiotoshi", "okurihikiotoshi",
+			"sokubiotoshi"),
 	NAGE("던져지거나 비틀림", "投げ・捻り",
 			"uwatenage", "shitatenage", "sukuinage", "kotenage", "uwatedashinage", "shitatedashinage",
 			"kubinage", "kakenage", "tottari", "sakatottari", "uwatehineri", "shitatehineri",
-			"kainahineri", "kubihineri", "amiuchi"),
+			"kainahineri", "kubihineri", "amiuchi",
+			"koshinage", "ipponzeoi", "yaguranage", "tsukaminage", "harimanage", "osakate",
+			"tokkurinage", "zubuneri", "kotehineri", "gasshohineri", "uchimuso", "sotomuso"),
 	OKURI("뒤를 잡힘", "後ろを取られる",
-			"okuridashi", "okuritaoshi", "okurinage", "okuritsuridashi"),
+			"okuridashi", "okuritaoshi", "okurinage", "okuritsuridashi", "okuritsuriotoshi", "okurigake"),
 	ETC("기타", "その他");
 
 	private static final Map<String, LossType> BY_KIMARITE = Stream.of(values())
