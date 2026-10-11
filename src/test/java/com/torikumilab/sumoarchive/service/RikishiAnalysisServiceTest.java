@@ -61,6 +61,9 @@ class RikishiAnalysisServiceTest {
 		assertThat(LossType.of("harimanage")).isEqualTo(LossType.NAGE);
 		assertThat(LossType.of("sokubiotoshi")).isEqualTo(LossType.OCHI);
 		assertThat(LossType.of("okuritsuriotoshi")).isEqualTo(LossType.OKURI);
+		assertThat(LossType.of("sotogake")).isEqualTo(LossType.ASHI);
+		assertThat(LossType.of("ashitori")).isEqualTo(LossType.ASHI);
+		assertThat(LossType.of("okurigake")).isEqualTo(LossType.OKURI);
 		assertThat(LossType.of("someNewKimarite")).isEqualTo(LossType.ETC);
 		assertThat(LossType.of(null)).isEqualTo(LossType.ETC);
 	}

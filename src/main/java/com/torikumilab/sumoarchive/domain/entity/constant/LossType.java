@@ -28,6 +28,11 @@ public enum LossType {
 			"kainahineri", "kubihineri", "amiuchi",
 			"koshinage", "ipponzeoi", "yaguranage", "tsukaminage", "harimanage", "osakate",
 			"tokkurinage", "zubuneri", "kotehineri", "gasshohineri", "uchimuso", "sotomuso"),
+	// 협회 掛け手 18개 전부(다리를 걸거나 차거나 잡혀서 진 패배). 뒤에서 건 送り掛け는 OKURI.
+	ASHI("다리 기술에 넘어짐", "足技で倒される",
+			"uchigake", "sotogake", "chongake", "kirikaeshi", "kawazugake", "kekaeshi", "ketaguri",
+			"mitokorozeme", "watashikomi", "nimaigeri", "komatasukui", "sotokomata", "omata",
+			"tsumatori", "kozumatori", "ashitori", "susotori", "susoharai"),
 	OKURI("뒤를 잡힘", "後ろを取られる",
 			"okuridashi", "okuritaoshi", "okurinage", "okuritsuridashi", "okuritsuriotoshi", "okurigake"),
 	ETC("기타", "その他");
