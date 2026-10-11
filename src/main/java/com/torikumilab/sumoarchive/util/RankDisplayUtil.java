@@ -33,7 +33,7 @@ public final class RankDisplayUtil {
 
 	/**
 	 * 마에가시라 이하(마에가시라·주료·마쿠시타·산단메·조니단·조노구치)는 순번을 붙여서 "前頭10枚目" 형태로,
-	 * 요코즈나~코무스비는 순번 없이 "横綱" 형태로 반환.
+	 * 요코즈나~코무스비는 순번 없이 "横綱" 형태로 반환. 1번은 "前頭筆頭"처럼 筆頭로.
 	 */
 	public static String rankDisplay(RankName rankName, Integer rankValue) {
 		if (rankName == null) {
@@ -49,14 +49,14 @@ public final class RankDisplayUtil {
 				|| rankName == RankName.Jonokuchi;
 
 		if (numbered && rankValue != null) {
-			return label + rankValue + "枚目";
+			return rankValue == 1 ? label + "筆頭" : label + rankValue + "枚目";
 		}
 		return label;
 	}
 
 	/**
 	 * rankDisplay(RankName, Integer)의 한국어 버전 - index.html JS RANK_LABEL의 번호 규칙과 동일
-	 * ("마에가시라10", 순번 없는 계급은 "요코즈나" 그대로, "번째" 같은 접미사는 안 붙임).
+	 * ("마에가시라10", 1번은 "마에가시라필두", 순번 없는 계급은 "요코즈나" 그대로, "번째" 같은 접미사는 안 붙임).
 	 */
 	public static String rankDisplayKorean(RankName rankName, Integer rankValue) {
 		if (rankName == null) {
@@ -72,7 +72,7 @@ public final class RankDisplayUtil {
 				|| rankName == RankName.Jonokuchi;
 
 		if (numbered && rankValue != null) {
-			return label + rankValue;
+			return label + (rankValue == 1 ? "필두" : rankValue);
 		}
 		return label;
 	}

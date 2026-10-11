@@ -732,14 +732,14 @@
         });
     }
 
-    // 계급 칸 채우기. 마에가시라/주료 이하는 순번을 붙임 (예: 前頭10).
+    // 계급 칸 채우기. 마에가시라/주료 이하는 순번을 붙임 (예: 前頭10, 1번은 前頭筆頭 / 마에가시라필두).
     // 순번은 따로 span으로 둬서 좁은 화면에서는 다음 줄로 내린다 (CSS .rank-no)
     function fillRankCell(td, rankName, rankValue) {
         td.textContent = RANK_LABEL[rankName] || rankName;
         if (rankValue != null && (rankName === 'Maegashira' || RANK_ORDER[rankName] >= RANK_ORDER.Juryo)) {
             const no = document.createElement('span');
             no.className = 'rank-no';
-            no.textContent = rankValue;
+            no.textContent = rankValue === 1 ? (LOCALE === 'ja' ? '筆頭' : '필두') : rankValue;
             td.appendChild(no);
         }
     }
