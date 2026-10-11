@@ -7,6 +7,8 @@ import com.torikumilab.sumoarchive.util.KimariteDisplayUtil;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -24,8 +26,8 @@ class KimariteEncyclopediaServiceTest {
 						KimariteCategory.KIHON.getCode(),
 						KimariteCategory.NAGE.getCode(),
 						KimariteCategory.KAKE.getCode(),
-						KimariteCategory.HINERI.getCode(),
 						KimariteCategory.SORI.getCode(),
+						KimariteCategory.HINERI.getCode(),
 						KimariteCategory.TOKUSHU.getCode(),
 						KimariteCategory.HIGI.getCode()
 				);
@@ -59,6 +61,47 @@ class KimariteEncyclopediaServiceTest {
 		assertThat(KimariteDisplayUtil.categoryOf("yorikiri")).isEqualTo(KimariteCategory.KIHON);
 		assertThat(KimariteDisplayUtil.categoryOf("上手投げ")).isEqualTo(KimariteCategory.NAGE);
 		assertThat(KimariteDisplayUtil.categoryOf("uwatenage")).isEqualTo(KimariteCategory.NAGE);
+	}
+
+	@Test
+	void 협회_공식_82수와_분류별_개수가_일치한다() {
+		Map<String, Integer> counts = service.getKimariteEncyclopedia().stream()
+				.collect(Collectors.toMap(KimariteGroupDTO::code, g -> g.entries().size()));
+
+		assertThat(counts).containsEntry(KimariteCategory.KIHON.getCode(), 7)
+				.containsEntry(KimariteCategory.NAGE.getCode(), 13)
+				.containsEntry(KimariteCategory.KAKE.getCode(), 18)
+				.containsEntry(KimariteCategory.SORI.getCode(), 6)
+				.containsEntry(KimariteCategory.HINERI.getCode(), 19)
+				.containsEntry(KimariteCategory.TOKUSHU.getCode(), 19);
+	}
+
+	@Test
+	void 공식_결정기술이_아닌_이름은_사전에_없다() {
+		assertThat(KimariteDisplayUtil.krSuggestions()).doesNotContain("하즈오시", "다시나게");
+		assertThat(KimariteDisplayUtil.toKr("hazuoshi")).isEqualTo("hazuoshi");
+		assertThat(KimariteDisplayUtil.toKr("dashinage")).isEqualTo("dashinage");
+	}
+
+	@Test
+	void 적재_데이터에_나온_로마자는_전부_한국어로_바뀐다() {
+		// 2025~ torikumi.kimarite에 실제로 저장된 값 중 예전에 사전에 없어 로마자가 그대로 노출되던 것들
+		List<String> romaji = List.of("harimanage", "sokubiotoshi", "tokkurinage", "ushiromotare",
+				"zubuneri", "kotehineri", "osakate", "izori", "ipponzeoi", "chongake", "kawazugake",
+				"tsuriotoshi", "nimaigeri", "okuritsuriotoshi", "sotokomata", "tasukizori", "sabaori",
+				"koshinage", "waridashi", "okuritsuridashi", "okurigake", "mitokorozeme", "omata",
+				"gasshohineri", "kozumatori", "susotori");
+		for (String r : romaji) {
+			assertThat(KimariteDisplayUtil.toKr(r)).as(r).isIn(KimariteDisplayUtil.krSuggestions());
+		}
+	}
+
+	@Test
+	void 협회_표기가_아닌_일본어도_인식하고_협회_표기로_보여준다() {
+		assertThat(KimariteDisplayUtil.toKr("うっちゃり")).isEqualTo("웃차리");
+		assertThat(KimariteDisplayUtil.toJp("うっちゃり")).isEqualTo("打っ棄り");
+		assertThat(KimariteDisplayUtil.toJp("utchari")).isEqualTo("打っ棄り");
+		assertThat(KimariteDisplayUtil.toJp("肩透かし")).isEqualTo("肩すかし");
 	}
 
 	@Test
