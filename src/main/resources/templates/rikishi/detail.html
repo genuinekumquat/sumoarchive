@@ -991,10 +991,14 @@
                     <span class="rank-display"
                           th:if="${rikishi.isActive and rikishi.rankDisplayKr != null and #locale.language != 'ja'}"
                           th:text="${rikishi.sideDisplayKr} + ' ' + ${rikishi.rankDisplayKr}">동 마에가시라10</span>
-                    <span class="rank-display" th:if="${!rikishi.isActive and #locale.language == 'ja'}"
-                          th:text="${rikishi.oyakataNameJp} != null ? (${rikishi.oyakataNameJp} + #{rikishi.oyakata.label}) : #{rikishi.retired}">引退</span>
-                    <span class="rank-display" th:if="${!rikishi.isActive and #locale.language != 'ja'}"
-                          th:text="${rikishi.oyakataNameKr} != null ? (${rikishi.oyakataNameKr} + ' ' + #{rikishi.oyakata.label}) : #{rikishi.retired}">은퇴</span>
+                    <!-- 은퇴: 오야카타면 오야카타명, 아니면 은퇴 연도 (위 배지에 이미 '은퇴'가 있어 같은 말을 반복하지 않음) -->
+                    <span class="rank-display" th:if="${!rikishi.isActive and #locale.language == 'ja' and rikishi.oyakataNameJp != null}"
+                          th:text="${rikishi.oyakataNameJp} + #{rikishi.oyakata.label}">親方</span>
+                    <span class="rank-display" th:if="${!rikishi.isActive and #locale.language != 'ja' and rikishi.oyakataNameKr != null}"
+                          th:text="${rikishi.oyakataNameKr} + ' ' + #{rikishi.oyakata.label}">오야카타</span>
+                    <span class="rank-display"
+                          th:if="${!rikishi.isActive and rikishi.retiredDate != null and (#locale.language == 'ja' ? rikishi.oyakataNameJp == null : rikishi.oyakataNameKr == null)}"
+                          th:text="#{rikishi.retired.year(${'' + rikishi.retiredDate.year})}">2025년 은퇴</span>
                 </div>
                 <div class="shikona-kana" th:if="${#locale.language == 'ja'}" th:text="${rikishi.shikonaFullKr}">四股名</div>
                 <div class="shikona-kana" th:unless="${#locale.language == 'ja'}" th:text="${rikishi.shikonaFullJp}">四股名</div>
