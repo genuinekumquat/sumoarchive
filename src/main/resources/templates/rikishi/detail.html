@@ -980,7 +980,7 @@
                 </button>
                 <span class="status-badge"
                       th:classappend="${rikishi.isActive} ? '' : 'retired'"
-                      th:text="${rikishi.isActive} ? '現役' : (${rikishi.oyakataNameKr} != null ? '親方' : '引退')">現役</span>
+                      th:text="${rikishi.isActive} ? #{rikishi.active} : (${rikishi.oyakataNameKr} != null ? #{rikishi.oyakata.label} : #{rikishi.retired})">현역</span>
 
                 <div class="shikona-row">
                     <span class="shikona-main" th:if="${#locale.language == 'ja'}" th:text="${rikishi.shikonaFullJp}">시코나</span>

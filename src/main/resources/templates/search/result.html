@@ -199,28 +199,20 @@
             letter-spacing: 1px;
         }
 
+        /* 리키시 프로필의 status-badge와 같은 모양 */
         .status-stamp {
             font-family: 'Zen Kaku Gothic New', sans-serif;
-            font-size: 12px;
-            font-weight: 700;
+            font-size: 11px;
             letter-spacing: 2px;
-            padding: 5px 12px;
-            border: 2px solid var(--sumi);
+            padding: 3px 10px;
+            border: 1px solid var(--shu);
+            color: var(--shu);
             white-space: nowrap;
-            transform: rotate(-3deg);
         }
-        .status-active {
-            background: var(--shu);
-            border-color: var(--shu);
-            color: var(--washi);
-        }
-        .status-retired {
-            color: var(--sumi-faint);
-            border-color: var(--washi-line);
-        }
+        .status-retired,
         .status-oyakata {
-            color: var(--sumi-soft);
-            border-color: var(--sumi-soft);
+            border-color: var(--sumi-faint);
+            color: var(--sumi-faint);
         }
 
         .card-info {
@@ -295,7 +287,7 @@
 
         @media (max-width: 520px) {
             .card-name-block .kr { font-size: 18px; }
-            .status-stamp { font-size: 10px; padding: 4px 8px; }
+            .status-stamp { font-size: 10px; padding: 2px 8px; }
         }
     </style>
 </head>
@@ -348,7 +340,7 @@
                     </div>
                     <span class="status-stamp"
                           th:classappend="${item.statusLabel == '현역'} ? 'status-active' : (${item.statusLabel == '오야카타'} ? 'status-oyakata' : 'status-retired')"
-                          th:text="${item.statusLabel == '현역'} ? '現役' : (${item.statusLabel == '오야카타'} ? '親方' : '引退')">現役</span>
+                          th:text="${item.statusLabel == '현역'} ? #{rikishi.active} : (${item.statusLabel == '오야카타'} ? #{rikishi.oyakata.label} : #{rikishi.retired})">현역</span>
                 </div>
                 <div class="card-info">
                     <span><span class="label" th:text="#{search.label.heya}">소속</span><span th:text="(${ja} ? ${item.heyaNameJp} : ${item.heyaName}) ?: #{rikishi.value.unaffiliated}">헤야</span></span>
