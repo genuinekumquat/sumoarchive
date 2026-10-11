@@ -160,6 +160,7 @@ public final class KimariteDisplayUtil {
 		alias("合掌ひねり", "갓쇼히네리");
 		alias("襷反り", "타스키조리");
 		alias("外襷反り", "소토타스키조리");
+		alias("つきひざ", "츠키히자");
 
 		// sumo-api 로마자 → 일본어 한자(위 put의 협회 표기와 같은 문자열이어야 toKr까지 이어진다).
 		romaji("tsukidashi", "突き出し");
