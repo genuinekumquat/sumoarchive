@@ -976,7 +976,7 @@
 
             <div class="profile-info">
                 <button type="button" id="bookmarkBtn" class="bookmark-btn" th:attr="data-rikishi-id=${rikishi.id}">
-                    <span id="bookmarkIcon">☆</span> <span th:text="#{rikishi.bookmark}">북마크</span>
+                    <span id="bookmarkIcon">☆</span> <span th:text="#{rikishi.bookmark}">즐겨찾기</span>
                 </button>
                 <span class="status-badge"
                       th:classappend="${rikishi.isActive} ? '' : 'retired'"
