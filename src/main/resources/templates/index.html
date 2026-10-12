@@ -171,6 +171,41 @@
             border-color: var(--sumi);
         }
 
+        /* ===== 대진(取組) 탭 - 날짜별 결과·예정 대진 (TorikumiDayApiController) ===== */
+        .tk-nav { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 10px 0 6px; font-family: 'Zen Kaku Gothic New', sans-serif; }
+        .tk-nav button {
+            border: 1px solid var(--washi-line); background: transparent; color: var(--sumi-soft);
+            font-size: 13px; width: 30px; height: 28px; cursor: pointer;
+        }
+        .tk-nav button:hover:not(:disabled) { border-color: var(--sumi); color: var(--sumi); }
+        .tk-nav button:disabled { opacity: 0.3; cursor: default; }
+        .tk-nav .tk-day-label { font-size: 15px; font-weight: 700; letter-spacing: 2px; min-width: 110px; text-align: center; }
+        .tk-nav .tk-day-label .tk-sched { color: var(--shu); font-size: 11px; font-weight: 500; margin-left: 4px; }
+        .tk-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; margin: 6px 0 14px; }
+        .tk-chip {
+            font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 11px; min-width: 26px; padding: 3px 5px;
+            border: 1px solid var(--washi-line); background: transparent; color: var(--sumi-soft); cursor: pointer;
+        }
+        .tk-chip.scheduled { border-style: dashed; color: var(--shu); }
+        .tk-chip.current { background: var(--sumi); border-color: var(--sumi); color: var(--washi); }
+        .tk-legend { text-align: center; font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 11px; color: var(--sumi-faint); margin-bottom: 8px; }
+        .torikumi-table td.tk-mid {
+            text-align: center; vertical-align: middle; padding: 8px 4px;
+            font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; color: var(--sumi-soft);
+            border-left: 1px solid var(--washi-line); border-right: 1px solid var(--washi-line);
+        }
+        .torikumi-table td.tk-mid a { color: inherit; text-decoration: none; display: block; }
+        .torikumi-table td.tk-mid a:hover { color: var(--shu); }
+        .torikumi-table td.tk-mid .vs { color: var(--sumi-faint); letter-spacing: 2px; }
+        .torikumi-table .tk-name { font-family: 'Noto Serif KR', serif; font-size: 15px; color: var(--sumi); text-decoration: none; }
+        .torikumi-table .tk-name.jp-font { font-family: 'Yuji Syuku', serif; }
+        .torikumi-table .tk-name:hover { color: var(--shu); }
+        .torikumi-table .tk-mark { font-size: 14px; margin-right: 4px; }
+        .torikumi-table .tk-mark.w { color: var(--shu); }
+        .torikumi-table .tk-win .tk-name { font-weight: 600; }
+        .torikumi-table tr.is-fav { background: rgba(163, 39, 44, 0.06); }
+        .torikumi-table .tk-star { color: var(--shu); margin-right: 2px; }
+
         /* ===== 일문(一門) 탭 ===== */
         .ichimon-group { margin-bottom: 26px; }
         .ichimon-group:last-child { margin-bottom: 0; }
@@ -523,6 +558,7 @@
         <button type="button" class="view-tab active" id="tabBanzuke" th:text="#{main.tab.banzuke}">반즈케</button>
         <button type="button" class="view-tab" id="tabIchimon" th:text="#{main.tab.ichimon}">일문</button>
         <button type="button" class="view-tab" id="tabKimarite" th:text="#{main.tab.kimarite}">키마리테</button>
+        <button type="button" class="view-tab" id="tabTorikumi" th:text="#{main.tab.torikumi}">대진</button>
     </div>
 
     <div class="banzuke" id="banzukePanel">
@@ -553,6 +589,46 @@
                 </tr>
                 </thead>
                 <tbody id="banzuke-body">
+                <tr><td colspan="3" class="empty-row" th:text="#{main.table.loading}">불러오는 중…</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ===== 대진(取組) 탭 - 날짜별 결과·예정 대진. 처음 탭을 열 때 /api/torikumi/day로 불러온다.
+         주소로 바로 들어오기: /?tab=torikumi&day=6&division=Juryo&bashoId=… -->
+    <div class="banzuke torikumi-panel" id="torikumiPanel" hidden>
+        <div class="banzuke-inner">
+            <div class="banzuke-title">
+                <span class="jp">取組</span>
+                <span class="meta">
+                    <select class="panel-select" id="tk-basho-select" th:aria-label="#{main.select.basho}" aria-label="대회 선택"></select>
+                    <select class="panel-select" id="tk-division-select" th:aria-label="#{main.select.division}" aria-label="계급 선택">
+                        <option value="Makuuchi" th:text="#{main.division.makuuchi}">마쿠우치</option>
+                        <option value="Juryo" th:text="#{main.division.juryo}">주료</option>
+                        <option value="Makushita" th:text="#{main.division.makushita}">마쿠시타</option>
+                        <option value="Sandanme" th:text="#{main.division.sandanme}">산단메</option>
+                        <option value="Jonidan" th:text="#{main.division.jonidan}">조니단</option>
+                        <option value="Jonokuchi" th:text="#{main.division.jonokuchi}">조노구치</option>
+                    </select>
+                </span>
+            </div>
+            <div class="tk-nav">
+                <button type="button" id="tk-prev" th:aria-label="#{torikumi.prev}" aria-label="이전 날">‹</button>
+                <span class="tk-day-label" id="tk-day-label">-</span>
+                <button type="button" id="tk-next" th:aria-label="#{torikumi.next}" aria-label="다음 날">›</button>
+            </div>
+            <div class="tk-chips" id="tk-chips" role="group" th:aria-label="#{torikumi.select.day}" aria-label="날짜 선택"></div>
+            <div class="tk-legend" th:text="#{torikumi.legend}">★ 즐겨찾기한 선수 · 이름 옆 성적은 그 경기 전까지</div>
+            <table class="banzuke-table torikumi-table">
+                <thead>
+                <tr>
+                    <th class="col-east" th:text="#{main.table.east}">동</th>
+                    <th class="col-rank" th:text="#{torikumi.result}">결과</th>
+                    <th class="col-west" th:text="#{main.table.west}">서</th>
+                </tr>
+                </thead>
+                <tbody id="tk-body">
                 <tr><td colspan="3" class="empty-row" th:text="#{main.table.loading}">불러오는 중…</td></tr>
                 </tbody>
             </table>
@@ -816,13 +892,179 @@
     }
     loadBanzuke();
 
+    // ===== 대진(取組) 탭 - /api/torikumi/day. 처음 탭을 열 때만 불러온다 =====
+    // 주의: 이 블록은 th:inline="javascript" 안이라 "[" 바로 뒤에 "(" 나 "[" 를 쓰면 Thymeleaf 표현식으로 읽힌다.
+    const TK_MSG = {
+        day: /*[[#{torikumi.day}]]*/ '{0}일째',
+        playoff: /*[[#{torikumi.playoff}]]*/ '결정전',
+        scheduled: /*[[#{torikumi.scheduled}]]*/ '예정',
+        vs: /*[[#{torikumi.vs}]]*/ 'vs',
+        fusen: /*[[#{torikumi.fusen}]]*/ '부전',
+        empty: /*[[#{torikumi.empty}]]*/ '이 날의 경기가 없습니다.',
+        noData: /*[[#{torikumi.noData}]]*/ '아직 경기 기록이 없습니다.'
+    };
+    window.SumoTorikumi = (function () {
+        const JA = LOCALE === 'ja';
+        const body = document.getElementById('tk-body');
+        const bashoSel = document.getElementById('tk-basho-select');
+        const divSel = document.getElementById('tk-division-select');
+        const prevBtn = document.getElementById('tk-prev');
+        const nextBtn = document.getElementById('tk-next');
+        const dayLabel = document.getElementById('tk-day-label');
+        const chips = document.getElementById('tk-chips');
+        const state = { bashoId: null, division: 'Makuuchi', day: null, days: [], loaded: false };
+
+        function esc(s) {
+            return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+        function dayText(d) {
+            return d === 16 ? TK_MSG.playoff : TK_MSG.day.replace('{0}', d);
+        }
+        function favIds() {
+            try {
+                const arr = JSON.parse(localStorage.getItem('sumoarchive_bookmarks') || '[]');
+                return new Set(Array.isArray(arr) ? arr.map(Number) : []);
+            } catch (e) {
+                return new Set();
+            }
+        }
+
+        // 대회 드롭다운: 서버가 준 바쇼 목록(최신순) 그대로
+        BASHO_OPTIONS.forEach(function (b) {
+            const opt = document.createElement('option');
+            opt.value = b.id;
+            opt.textContent = JA ? b.year + '年 ' + b.monthLabel : b.year + '년 ' + b.monthLabelKr;
+            bashoSel.appendChild(opt);
+        });
+
+        function sideHtml(s, mark, fav) {
+            const name = JA ? s.nameJp : s.nameKr;
+            const rank = JA ? s.rankJp : s.rankKr;
+            const rec = s.wins + '-' + s.losses;
+            return '<a class="tk-name' + (JA ? ' jp-font' : '') + '" href="/rikishi/' + s.rikishiId + '">' +
+                (fav ? '<span class="tk-star">★</span>' : '') + mark + esc(name) + '</a>' +
+                '<div class="sub-info">' + esc(rank || '') + (rank ? ' · ' : '') + esc(rec) + '</div>';
+        }
+
+        function render(data) {
+            state.bashoId = data.bashoId;
+            state.day = data.day;
+            state.days = data.days || [];
+            if (data.bashoId != null) bashoSel.value = data.bashoId;
+            syncUrl();
+
+            // 날짜 칩 · 이전/다음
+            chips.innerHTML = '';
+            state.days.forEach(function (d) {
+                const b = document.createElement('button');
+                b.type = 'button';
+                b.className = 'tk-chip' + (d.status === 'SCHEDULED' ? ' scheduled' : '') + (d.day === state.day ? ' current' : '');
+                b.textContent = d.day === 16 ? TK_MSG.playoff : d.day;
+                b.addEventListener('click', function () { load(d.day); });
+                chips.appendChild(b);
+            });
+            const idx = state.days.findIndex(function (d) { return d.day === state.day; });
+            prevBtn.disabled = idx <= 0;
+            nextBtn.disabled = idx < 0 || idx >= state.days.length - 1;
+            const cur = state.days.find(function (d) { return d.day === state.day; });
+            dayLabel.innerHTML = state.day == null ? '-'
+                : esc(dayText(state.day)) + (cur && cur.status === 'SCHEDULED' ? '<span class="tk-sched">' + esc(TK_MSG.scheduled) + '</span>' : '');
+
+            if (!data.bouts || data.bouts.length === 0) {
+                body.innerHTML = '<tr><td colspan="3" class="empty-row"></td></tr>';
+                body.querySelector('.empty-row').textContent = state.days.length === 0 ? TK_MSG.noData : TK_MSG.empty;
+                return;
+            }
+            const favs = favIds();
+            body.innerHTML = '';
+            data.bouts.forEach(function (bt) {
+                const eastFav = favs.has(bt.east.rikishiId);
+                const westFav = favs.has(bt.west.rikishiId);
+                const tr = document.createElement('tr');
+                if (eastFav || westFav) tr.className = 'is-fav';
+                let eastMark = '', westMark = '', mid;
+                if (bt.scheduled) {
+                    mid = '<span class="vs">' + esc(TK_MSG.vs) + '</span>';
+                } else {
+                    const fusenMark = bt.fusen ? { w: '□', l: '■' } : { w: '○', l: '●' };
+                    if (bt.winner === 'EAST') {
+                        eastMark = '<span class="tk-mark w">' + fusenMark.w + '</span>';
+                        westMark = '<span class="tk-mark">' + fusenMark.l + '</span>';
+                    } else if (bt.winner === 'WEST') {
+                        eastMark = '<span class="tk-mark">' + fusenMark.l + '</span>';
+                        westMark = '<span class="tk-mark w">' + fusenMark.w + '</span>';
+                    }
+                    const kim = bt.fusen ? TK_MSG.fusen : (JA ? bt.kimariteJp : bt.kimariteKr);
+                    mid = bt.torikumiId ? '<a href="/torikumi/' + bt.torikumiId + '">' + esc(kim || '-') + '</a>' : esc(kim || '-');
+                }
+                tr.innerHTML =
+                    '<td class="rikishi-cell' + (bt.winner === 'EAST' ? ' tk-win' : '') + '">' + sideHtml(bt.east, eastMark, eastFav) + '</td>' +
+                    '<td class="tk-mid">' + mid + '</td>' +
+                    '<td class="rikishi-cell' + (bt.winner === 'WEST' ? ' tk-win' : '') + '">' + sideHtml(bt.west, westMark, westFav) + '</td>';
+                body.appendChild(tr);
+            });
+        }
+
+        function load(day) {
+            const params = new URLSearchParams({ division: state.division });
+            if (state.bashoId != null) params.set('bashoId', state.bashoId);
+            if (day != null) params.set('day', day);
+            fetch('/api/torikumi/day?' + params)
+                .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+                .then(render)
+                .catch(function (e) {
+                    console.error('대진 조회 실패:', e);
+                    body.innerHTML = '<tr><td colspan="3" class="empty-row"></td></tr>';
+                    body.querySelector('.empty-row').textContent = MSG_ERROR;
+                });
+        }
+
+        // 지금 보고 있는 대진을 주소에 남겨 공유할 수 있게 (탭이 열려 있을 때만)
+        function syncUrl() {
+            const p = new URLSearchParams(location.search);
+            p.set('tab', 'torikumi');
+            p.set('division', state.division);
+            if (state.day != null) p.set('day', state.day); else p.delete('day');
+            if (state.bashoId != null) p.set('bashoId', state.bashoId);
+            history.replaceState(null, '', location.pathname + '?' + p.toString() + location.hash);
+        }
+
+        prevBtn.addEventListener('click', function () {
+            const idx = state.days.findIndex(function (d) { return d.day === state.day; });
+            if (idx > 0) load(state.days.at(idx - 1).day);
+        });
+        nextBtn.addEventListener('click', function () {
+            const idx = state.days.findIndex(function (d) { return d.day === state.day; });
+            if (idx >= 0 && idx < state.days.length - 1) load(state.days.at(idx + 1).day);
+        });
+        bashoSel.addEventListener('change', function () { state.bashoId = Number(bashoSel.value); load(null); });
+        divSel.addEventListener('change', function () { state.division = divSel.value; load(state.day); });
+
+        return {
+            // 탭을 처음 열 때 한 번. 주소의 day·division·bashoId가 있으면 그대로
+            show: function () {
+                if (state.loaded) { syncUrl(); return; }
+                state.loaded = true;
+                const p = new URLSearchParams(location.search);
+                const div = p.get('division');
+                if (div && Array.prototype.some.call(divSel.options, function (o) { return o.value === div; })) {
+                    state.division = div;
+                    divSel.value = div;
+                }
+                if (p.get('bashoId')) state.bashoId = Number(p.get('bashoId'));
+                load(p.get('day') ? Number(p.get('day')) : null);
+            }
+        };
+    })();
+
     // ===== 반즈케 / 일문 / 키마리테 탭 전환 =====
     // 일문·키마리테 패널은 서버가 이미 렌더링해서 내려준 정적 HTML이라, 여기선 hidden 속성만 토글하면 된다.
     (function () {
         var tabs = {
             banzuke: { btn: document.getElementById('tabBanzuke'), panel: document.getElementById('banzukePanel') },
             ichimon: { btn: document.getElementById('tabIchimon'), panel: document.getElementById('ichimonPanel') },
-            kimarite: { btn: document.getElementById('tabKimarite'), panel: document.getElementById('kimaritePanel') }
+            kimarite: { btn: document.getElementById('tabKimarite'), panel: document.getElementById('kimaritePanel') },
+            torikumi: { btn: document.getElementById('tabTorikumi'), panel: document.getElementById('torikumiPanel') }
         };
 
         function show(name) {
@@ -831,11 +1073,21 @@
                 tabs[key].btn.classList.toggle('active', active);
                 tabs[key].panel.hidden = !active;
             });
+            if (name === 'torikumi') {
+                window.SumoTorikumi.show();
+            } else if (new URLSearchParams(location.search).get('tab') === 'torikumi') {
+                history.replaceState(null, '', location.pathname + location.hash); // 다른 탭이면 대진 주소를 지움
+            }
         }
 
         Object.keys(tabs).forEach(function (key) {
             tabs[key].btn.addEventListener('click', function () { show(key); });
         });
+
+        // /?tab=torikumi 로 바로 들어온 경우
+        if (new URLSearchParams(location.search).get('tab') === 'torikumi') {
+            show('torikumi');
+        }
     })();
 
     // ===== 키마리테 ㄱㄴㄷ 인덱스 - 상대전적 패널과 동일한 방식(인덱스 클릭/딥링크 시 그룹 강제로 열기) =====

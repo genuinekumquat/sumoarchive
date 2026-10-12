@@ -28,6 +28,18 @@ public interface ScheduledBoutRepository extends JpaRepository<ScheduledBoutEnti
 	List<ScheduledBoutEntity> findByBashoAndRikishiIn(@Param("bashoId") Integer bashoId,
 													  @Param("ids") Collection<Integer> rikishiIds);
 
+	// 메인 "대진" 탭 - 특정 바쇼·디비전의 예정 대진, 양쪽 선수 fetch
+	@Query("""
+    SELECT s FROM ScheduledBoutEntity s
+    JOIN FETCH s.eastRikishiEntity
+    JOIN FETCH s.westRikishiEntity
+    WHERE s.bashoEntity.id = :bashoId
+      AND s.division = :division
+    ORDER BY s.day ASC, s.matchNo ASC
+""")
+	List<ScheduledBoutEntity> findByBashoAndDivisionFetch(@Param("bashoId") Integer bashoId,
+														  @Param("division") Division division);
+
 	// 이 바쇼에 발표된 예정 대진 중 가장 이른 일차 (없으면 null)
 	@Query("SELECT MIN(s.day) FROM ScheduledBoutEntity s WHERE s.bashoEntity.id = :bashoId")
 	Integer findMinDay(@Param("bashoId") Integer bashoId);
