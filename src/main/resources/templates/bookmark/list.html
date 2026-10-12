@@ -77,11 +77,23 @@
 
         .bm-handle { color: var(--sumi-faint); font-size: 16px; user-select: none; }
 
-        .bm-link { display: flex; align-items: center; gap: 14px; flex: 1; min-width: 0; text-decoration: none; }
-        .bm-info { display: flex; flex-direction: column; min-width: 0; }
+        .bm-body { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+        .bm-link { display: flex; flex-direction: column; min-width: 0; text-decoration: none; }
         .bm-name { font-weight: 900; font-size: 15.5px; color: var(--sumi); }
         .bm-link:hover .bm-name { color: var(--shu); }
         .bm-sub { font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 11.5px; color: var(--sumi-faint); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        /* 이번 바쇼: 계급·성적 / ○●□■ / 마지막 경기 */
+        .bm-now { font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12.5px; color: var(--sumi); margin-top: 3px; }
+        .bm-now .rec { font-weight: 700; }
+        .bm-marks { font-size: 13px; letter-spacing: 2px; color: var(--sumi); margin-top: 1px; word-break: break-all; }
+        .bm-marks .w { color: var(--shu); }
+        .bm-last { font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; color: var(--sumi-soft); text-decoration: none; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .bm-last:hover { color: var(--shu); }
+        .bm-last .w { color: var(--shu); font-weight: 700; }
+        .bm-summary {
+            font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 13px; color: var(--sumi);
+            border-left: 3px solid var(--shu); background: #fff; padding: 8px 12px; margin: 0 0 14px;
+        }
 
         .bm-remove {
             flex-shrink: 0;
@@ -119,6 +131,7 @@
         <div style="margin-top: 10px;"><a th:href="@{/search}" th:text="#{bookmark.empty.search}">선수 검색하러 가기 →</a></div>
     </div>
 
+    <p id="bashoSummary" class="bm-summary" hidden></p>
     <div id="bookmarkList"></div>
 
     <footer><span th:text="#{main.footer}">SUMOARCHIVE — 韓国語で見る大相撲情報アーカイブ</span><th:block th:replace="~{fragments/common :: footerNote}"></th:block></footer>
@@ -133,10 +146,82 @@
         var MSG = {
             unaffiliated: /*[[#{rikishi.value.unaffiliated}]]*/ '무소속',
             remove: /*[[#{bookmark.remove}]]*/ '제거',
-            error: /*[[#{bookmark.error}]]*/ '즐겨찾기 목록을 불러오지 못했습니다.'
+            error: /*[[#{bookmark.error}]]*/ '즐겨찾기 목록을 불러오지 못했습니다.',
+            inProgress: /*[[#{bookmark.basho.inProgress}]]*/ '{0} {1}일째',
+            inProgressNoDay: /*[[#{bookmark.basho.inProgressNoDay}]]*/ '{0} 진행 중',
+            finished: /*[[#{bookmark.basho.finished}]]*/ '{0} 종료',
+            upcoming: /*[[#{bookmark.basho.upcoming}]]*/ '{0} · {1} 개막',
+            date: /*[[#{bookmark.basho.date}]]*/ '{0}/{1}',
+            today: /*[[#{bookmark.today}]]*/ '오늘 내 선수 {0}승 {1}패',
+            entered: /*[[#{bookmark.entered}]]*/ '내 선수 {0}명 출전',
+            record: /*[[#{bookmark.record}]]*/ '{0}승 {1}패',
+            absent: /*[[#{bookmark.record.absent}]]*/ '{0}휴',
+            day: /*[[#{bookmark.day}]]*/ '{0}일째'
         };
         var listEl = document.getElementById('bookmarkList');
         var emptyEl = document.getElementById('bookmarkEmpty');
+        var summaryEl = document.getElementById('bashoSummary');
+        var MARK = { WIN: '○', LOSS: '●', FUSEN_WIN: '□', FUSEN_LOSS: '■' };
+        var SEP = JA ? '・' : ' · ';
+
+        function fmt(pattern) {
+            var args = Array.prototype.slice.call(arguments, 1);
+            return pattern.replace(/\{(\d)\}/g, function (m, i) { return args[i]; });
+        }
+
+        // 계급 · 바쇼 이름 성적 (개막 전이면 성적 없이)
+        function nowLine(cur, basho) {
+            var rank = JA ? cur.rankJp : cur.rankKr;
+            var name = basho ? (JA ? basho.nameJp : basho.nameKr) : '';
+            if (basho && basho.status === 'UPCOMING') return esc(rank) + SEP + esc(name);
+            var rec = fmt(MSG.record, cur.wins, cur.losses) + (cur.absences > 0 ? (JA ? '' : ' ') + fmt(MSG.absent, cur.absences) : '');
+            return esc(rank) + SEP + esc(name) + ' <span class="rec">' + esc(rec) + '</span>';
+        }
+
+        function marksHtml(marks) {
+            return marks.map(function (m) {
+                var s = MARK[m] || '';
+                return m.indexOf('WIN') >= 0 ? '<span class="w">' + s + '</span>' : s;
+            }).join('');
+        }
+
+        function lastBoutHtml(b) {
+            var opp = JA ? b.opponentJp : b.opponentKr;
+            var kim = JA ? b.kimariteJp : b.kimariteKr;
+            // "[" 바로 뒤에 "("를 쓰면 Thymeleaf 인라인 표현식으로 읽히므로 키를 먼저 만든다
+            var key = (b.fusen ? 'FUSEN_' : '') + (b.win ? 'WIN' : 'LOSS');
+            var mark = MARK[key];
+            return '<a class="bm-last" href="/torikumi/' + b.torikumiId + '">' + esc(fmt(MSG.day, b.day)) + ' ' +
+                (b.win ? '<span class="w">' + mark + '</span>' : mark) + ' ' + esc(opp) + (kim ? SEP + esc(kim) : '') + ' →</a>';
+        }
+
+        // 맨 위 한 줄: 진행 중이면 그날(적재된 마지막 일차) 내 선수 승패, 끝났거나 개막 전이면 출전 인원
+        function renderSummary(basho, cards) {
+            if (!basho) return;
+            var label = JA ? basho.labelJp : basho.labelKr;
+            var entered = cards.filter(function (c) { return c.current; });
+            var head;
+            if (basho.status === 'UPCOMING') {
+                var d = basho.startDate ? basho.startDate.split('-') : null;
+                head = d ? fmt(MSG.upcoming, label, fmt(MSG.date, Number(d[1]), Number(d[2]))) : label;
+            } else if (basho.status === 'FINISHED') {
+                head = fmt(MSG.finished, label);
+            } else {
+                head = basho.lastDay ? fmt(MSG.inProgress, label, basho.lastDay) : fmt(MSG.inProgressNoDay, label);
+            }
+            var tail = '';
+            if (basho.status === 'IN_PROGRESS' && basho.lastDay) {
+                var w = 0, l = 0;
+                entered.forEach(function (c) {
+                    var b = c.current.lastBout;
+                    if (b && b.day === basho.lastDay) { if (b.win) w++; else l++; }
+                });
+                if (w + l > 0) tail = fmt(MSG.today, w, l);
+            }
+            if (!tail && entered.length > 0) tail = fmt(MSG.entered, entered.length);
+            summaryEl.textContent = head + (tail ? SEP + tail : '');
+            summaryEl.hidden = false;
+        }
 
         function esc(s) {
             return String(s == null ? '' : s)
@@ -148,7 +233,7 @@
             if (listEl.children.length === 0) emptyEl.hidden = false;
         }
 
-        function render(orderIds, cards) {
+        function render(orderIds, cards, basho) {
             var byId = {};
             cards.forEach(function (c) { byId[c.rikishiId] = c; });
 
@@ -166,15 +251,22 @@
                 var card = document.createElement('div');
                 card.className = 'bm-card';
                 card.dataset.rikishiId = id;
+                var cur = c.current;
+                // 경기 상세 링크(.bm-last)가 프로필 링크 안에 들어가면 안 돼서 프로필 링크를 둘로 나눈다
                 card.innerHTML =
                     '<span class="bm-handle">⠿</span>' +
-                    '<a class="bm-link" href="/rikishi/' + id + '">' +
-                        '<span class="bm-info">' +
+                    '<span class="bm-body">' +
+                        '<a class="bm-link" href="/rikishi/' + id + '">' +
                             '<span class="bm-name">' + esc(name) + '</span>' +
+                            (cur ? '<span class="bm-now">' + nowLine(cur, basho) + '</span>' : '') +
+                            (cur && cur.marks.length ? '<span class="bm-marks">' + marksHtml(cur.marks) + '</span>' : '') +
+                        '</a>' +
+                        (cur && cur.lastBout ? lastBoutHtml(cur.lastBout) : '') +
+                        '<a class="bm-link" href="/rikishi/' + id + '">' +
                             '<span class="bm-sub">' + esc(heya || MSG.unaffiliated) + ' · ' + esc(rank || '-') + '</span>' +
                             '<span class="bm-sub">' + esc(period) + ' · ' + esc(status) + '</span>' +
-                        '</span>' +
-                    '</a>' +
+                        '</a>' +
+                    '</span>' +
                     '<button type="button" class="bm-remove" data-id="' + id + '">' + esc(MSG.remove) + '</button>';
                 listEl.appendChild(card);
             });
@@ -207,8 +299,9 @@
         } else {
             fetch('/api/rikishiEntity?ids=' + ids.join(','))
                 .then(function (res) { return res.json(); })
-                .then(function (cards) {
-                    render(ids, cards);
+                .then(function (page) {
+                    render(ids, page.cards, page.basho);
+                    renderSummary(page.basho, page.cards);
                     showEmptyIfNeeded();
                 })
                 .catch(function () {

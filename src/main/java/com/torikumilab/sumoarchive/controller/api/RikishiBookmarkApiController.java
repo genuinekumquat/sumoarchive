@@ -1,6 +1,6 @@
 package com.torikumilab.sumoarchive.controller.api;
 
-import com.torikumilab.sumoarchive.domain.dto.RikishiBookmarkCardDTO;
+import com.torikumilab.sumoarchive.domain.dto.BookmarkPageDTO;
 import com.torikumilab.sumoarchive.service.RikishiBookmarkService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,7 +20,7 @@ public class RikishiBookmarkApiController {
 	private final RikishiBookmarkService rikishiBookmarkService;
 
 	@GetMapping("/api/rikishiEntity")
-	public List<RikishiBookmarkCardDTO> getByIds(@RequestParam List<Integer> ids) {
-		return rikishiBookmarkService.getBookmarkCards(ids);
+	public BookmarkPageDTO getByIds(@RequestParam List<Integer> ids) {
+		return rikishiBookmarkService.getBookmarkPage(ids);
 	}
 }

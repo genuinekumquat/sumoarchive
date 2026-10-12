@@ -256,6 +256,24 @@ public interface TorikumiRepository extends JpaRepository<TorikumiEntity, Intege
 """)
 	List<TorikumiEntity> findRegularByBasho(@Param("bashoId") Integer bashoId);
 
+	// 즐겨찾기 "이번 바쇼" - 특정 바쇼에서 여러 리키시의 정규 대전, 양쪽 선수·승자 fetch, 일차 오름차순.
+	@Query("""
+    SELECT t FROM TorikumiEntity t
+    JOIN FETCH t.eastRikishiEntity
+    JOIN FETCH t.westRikishiEntity
+    LEFT JOIN FETCH t.winnerRikishiEntity
+    WHERE t.bashoEntity.id = :bashoId
+      AND t.isExtraMatch = false
+      AND (t.eastRikishiEntity.id IN :ids OR t.westRikishiEntity.id IN :ids)
+    ORDER BY t.day ASC
+""")
+	List<TorikumiEntity> findRegularByBashoAndRikishiIn(@Param("bashoId") Integer bashoId,
+														@Param("ids") Collection<Integer> rikishiIds);
+
+	// 이 바쇼에 적재된 마지막 일차 (정규 대전). 아직 없으면 null
+	@Query("SELECT MAX(t.day) FROM TorikumiEntity t WHERE t.bashoEntity.id = :bashoId AND t.isExtraMatch = false")
+	Integer findMaxRegularDay(@Param("bashoId") Integer bashoId);
+
 	// ===== 관리자 토리쿠미 관리 =====
 
 	// 바쇼 목록의 대전 수 (디비전 무관)
