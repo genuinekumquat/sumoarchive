@@ -19,9 +19,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * 진행 중인 바쇼를 매일 저녁 자동으로 일괄 임포트한다 (관리자의 "⚡ 전체 일괄 임포트 →"와 같은 작업).
  *
  * <p>마쿠우치 경기가 18시 전후에 끝나므로 18:30·20:00·22:00에 받고, 밤사이 정정이 있을 수 있어
- * 다음 날 9:00에 한 번 더 받는다. 대상은 "시작일 ≤ 오늘 ≤ 종료일 + 1일"인 바쇼뿐이라 바쇼 기간이 아니면
- * 아무것도 하지 않는다 (종료 다음 날까지 받는 건 결정전·수상이 폐막 후에 반영되기 때문).
- * 임포트는 여러 번 돌려도 안전하다(있는 건 갱신, 결과 미확정 경기는 건너뜀).</p>
+ * 다음 날 9:00에 한 번 더 받는다. 대상은 "시작일 - 2일 ≤ 오늘 ≤ 종료일 + 1일"인 바쇼뿐이라 바쇼 기간이 아니면
+ * 아무것도 하지 않는다. 개막 이틀 전부터 받는 건 첫날·둘째 날 대진이 그때 발표되기 때문(예정 대진, V6),
+ * 종료 다음 날까지 받는 건 결정전·수상이 폐막 후에 반영되기 때문.
+ * 임포트는 여러 번 돌려도 안전하다(있는 건 갱신, 결과 미확정 경기는 예정 대진으로).</p>
  *
  * <p>새 바쇼 등록(로스터·바쇼 메타 임포트)은 바쇼마다 한 번이라 자동화하지 않는다 — DEPLOYMENT 7절 1).
  * {@code app.auto-import.enabled=true}일 때만 돌고(운영 프로필), 마지막 실행 결과는 메모리에만 두어
@@ -113,13 +114,13 @@ public class BashoAutoImportScheduler {
 				results.size(), lastRun.torikumiCreated(), lastRun.warningCount(), error != null ? ", 오류: " + error : "");
 	}
 
-	/** 시작일 ≤ 오늘 ≤ 종료일 + 1일. 일정이 비어 있는 바쇼는 대상이 아니다. */
+	/** 시작일 - 2일 ≤ 오늘 ≤ 종료일 + 1일. 일정이 비어 있는 바쇼는 대상이 아니다. */
 	static boolean isDue(BashoEntity basho, LocalDate today) {
 		LocalDate start = basho.getStartDate();
 		LocalDate end = basho.getEndDate();
 		if (start == null || end == null) {
 			return false;
 		}
-		return !today.isBefore(start) && !today.isAfter(end.plusDays(1));
+		return !today.isBefore(start.minusDays(2)) && !today.isAfter(end.plusDays(1));
 	}
 }

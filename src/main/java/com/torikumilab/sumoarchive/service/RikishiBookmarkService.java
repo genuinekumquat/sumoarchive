@@ -5,11 +5,13 @@ import com.torikumilab.sumoarchive.domain.dto.RikishiBookmarkCardDTO;
 import com.torikumilab.sumoarchive.domain.entity.BanzukeEntity;
 import com.torikumilab.sumoarchive.domain.entity.BashoEntity;
 import com.torikumilab.sumoarchive.domain.entity.RikishiEntity;
+import com.torikumilab.sumoarchive.domain.entity.ScheduledBoutEntity;
 import com.torikumilab.sumoarchive.domain.entity.TorikumiEntity;
 import com.torikumilab.sumoarchive.domain.entity.constant.ResultType;
 import com.torikumilab.sumoarchive.repository.BanzukeRepository;
 import com.torikumilab.sumoarchive.repository.BashoRepository;
 import com.torikumilab.sumoarchive.repository.RikishiRepository;
+import com.torikumilab.sumoarchive.repository.ScheduledBoutRepository;
 import com.torikumilab.sumoarchive.repository.TorikumiRepository;
 import com.torikumilab.sumoarchive.util.KimariteDisplayUtil;
 import com.torikumilab.sumoarchive.util.RankDisplayUtil;
@@ -20,9 +22,11 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -46,6 +50,7 @@ public class RikishiBookmarkService {
 	private final BashoRepository bashoRepository;
 	private final BanzukeRepository banzukeRepository;
 	private final TorikumiRepository torikumiRepository;
+	private final ScheduledBoutRepository scheduledBoutRepository;
 
 	@Transactional(readOnly = true)
 	public BookmarkPageDTO getBookmarkPage(List<Integer> ids) {
@@ -61,13 +66,20 @@ public class RikishiBookmarkService {
 		BashoEntity basho = bashoRepository.findLatestWithBanzuke().orElse(null);
 		Map<Integer, BanzukeEntity> banzukeById = Map.of();
 		Map<Integer, List<TorikumiEntity>> boutsById = Map.of();
+		List<ScheduledBoutEntity> scheduled = List.of();
 		Integer lastDay = null;
+		Integer nextDay = null;
 		if (basho != null && !byId.isEmpty()) {
 			List<Integer> found = List.copyOf(byId.keySet());
-			banzukeById = banzukeRepository.findByBashoEntityIdAndRikishiEntityIdIn(basho.getId(), found).stream()
-					.collect(Collectors.toMap(b -> b.getRikishiEntity().getId(), b -> b, (a, b) -> a));
+			scheduled = scheduledBoutRepository.findByBashoAndRikishiIn(basho.getId(), found);
+			// 즐겨찾기 선수 + 다음 경기 상대의 반즈케를 한 번에 (상대 계급 표시용)
+			Set<Integer> withOpponents = new HashSet<>(found);
+			withOpponents.addAll(NextBouts.opponentIds(scheduled, found));
+			banzukeById = NextBouts.byRikishiId(
+					banzukeRepository.findByBashoEntityIdAndRikishiEntityIdIn(basho.getId(), List.copyOf(withOpponents)));
 			boutsById = groupByRikishi(torikumiRepository.findRegularByBashoAndRikishiIn(basho.getId(), found), byId.keySet());
 			lastDay = torikumiRepository.findMaxRegularDay(basho.getId());
+			nextDay = scheduledBoutRepository.findMinDay(basho.getId());
 		}
 
 		// 이미 삭제된 리키시 등 더 이상 존재하지 않는 id는 조용히 스킵한다.
@@ -76,10 +88,11 @@ public class RikishiBookmarkService {
 			RikishiEntity r = byId.get(id);
 			if (r != null) {
 				BanzukeEntity bz = banzukeById.get(id);
-				cards.add(toDto(r, bz == null ? null : current(id, bz, boutsById.getOrDefault(id, List.of()))));
+				cards.add(toDto(r, bz == null ? null : current(id, bz, boutsById.getOrDefault(id, List.of()),
+						NextBouts.first(id, scheduled, banzukeById))));
 			}
 		}
-		return new BookmarkPageDTO(basho == null ? null : bashoInfo(basho, today, lastDay), cards);
+		return new BookmarkPageDTO(basho == null ? null : bashoInfo(basho, today, lastDay, nextDay), cards);
 	}
 
 	private static Map<Integer, List<TorikumiEntity>> groupByRikishi(List<TorikumiEntity> bouts, java.util.Set<Integer> ids) {
@@ -94,7 +107,7 @@ public class RikishiBookmarkService {
 		return map;
 	}
 
-	static BookmarkPageDTO.Basho bashoInfo(BashoEntity basho, LocalDate today, Integer lastDay) {
+	static BookmarkPageDTO.Basho bashoInfo(BashoEntity basho, LocalDate today, Integer lastDay, Integer nextDay) {
 		BookmarkPageDTO.Status status;
 		if (basho.getStartDate() != null && today.isBefore(basho.getStartDate())) {
 			status = BookmarkPageDTO.Status.UPCOMING;
@@ -108,14 +121,15 @@ public class RikishiBookmarkService {
 				basho.getBashoYear() + "年" + basho.getBashoMonth().getDisplayNameJp(),
 				basho.getBashoMonth().getDisplayNameKr(),
 				basho.getBashoMonth().getDisplayNameJp(),
-				status, basho.getStartDate(), lastDay);
+				status, basho.getStartDate(), lastDay, nextDay);
 	}
 
 	/**
 	 * 이번 바쇼 성적. 공식 성적(반즈케)은 임포트 시점 값이라 대회 중엔 경기 기록보다 뒤처질 수 있어서,
 	 * 경기 기록의 승·패 수보다 적으면 경기 기록으로 센다 (RikishiDetailService와 같은 규칙).
 	 */
-	static RikishiBookmarkCardDTO.Current current(Integer rikishiId, BanzukeEntity bz, List<TorikumiEntity> bouts) {
+	static RikishiBookmarkCardDTO.Current current(Integer rikishiId, BanzukeEntity bz, List<TorikumiEntity> bouts,
+													 RikishiBookmarkCardDTO.NextBout nextBout) {
 		List<String> marks = new ArrayList<>();
 		int wins = 0;
 		int losses = 0;
@@ -135,9 +149,9 @@ public class RikishiBookmarkService {
 			absences = bz.getAbsences();
 		}
 		return new RikishiBookmarkCardDTO.Current(
-				withSide(RankDisplayUtil.sideDisplayKorean(bz.getSide()), RankDisplayUtil.rankDisplayKorean(bz.getRankName(), bz.getRankValue())),
-				withSide(RankDisplayUtil.sideDisplay(bz.getSide()), RankDisplayUtil.rankDisplay(bz.getRankName(), bz.getRankValue())),
-				wins, losses, absences, marks, lastBout(rikishiId, bouts));
+				NextBouts.withSide(RankDisplayUtil.sideDisplayKorean(bz.getSide()), RankDisplayUtil.rankDisplayKorean(bz.getRankName(), bz.getRankValue())),
+				NextBouts.withSide(RankDisplayUtil.sideDisplay(bz.getSide()), RankDisplayUtil.rankDisplay(bz.getRankName(), bz.getRankValue())),
+				wins, losses, absences, marks, lastBout(rikishiId, bouts), nextBout);
 	}
 
 	private static RikishiBookmarkCardDTO.LastBout lastBout(Integer rikishiId, List<TorikumiEntity> bouts) {
@@ -152,8 +166,8 @@ public class RikishiBookmarkService {
 					t.getDay(),
 					rikishiId.equals(t.getWinnerRikishiEntity().getId()),
 					fusen,
-					firstToken(opp.getShikonaKr() != null ? opp.getShikonaKr() : opp.getShikonaJp()),
-					firstToken(opp.getShikonaJp() != null ? opp.getShikonaJp() : opp.getShikonaKr()),
+					NextBouts.firstToken(opp.getShikonaKr() != null ? opp.getShikonaKr() : opp.getShikonaJp()),
+					NextBouts.firstToken(opp.getShikonaJp() != null ? opp.getShikonaJp() : opp.getShikonaKr()),
 					fusen || t.getKimarite() == null ? null : KimariteDisplayUtil.toKr(t.getKimarite()),
 					fusen || t.getKimarite() == null ? null : KimariteDisplayUtil.toJp(t.getKimarite()),
 					t.getId());
@@ -161,15 +175,6 @@ public class RikishiBookmarkService {
 		return null;
 	}
 
-	/** "아사노야마 히로키" / "朝乃山　広暉"처럼 이름이 붙어 있으면 시코나만 */
-	private static String firstToken(String name) {
-		return name == null ? null : name.strip().split("[\\s　]+")[0];
-	}
-
-	private static String withSide(String side, String rank) {
-		if (rank == null) return side;
-		return side == null ? rank : side + " " + rank;
-	}
 
 	private static RikishiBookmarkCardDTO toDto(RikishiEntity r, RikishiBookmarkCardDTO.Current current) {
 		return new RikishiBookmarkCardDTO(

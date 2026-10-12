@@ -58,6 +58,9 @@ public class RikishiDetailDTO {
 	private String sideDisplayKr; // "동" / "서" (한국어 화면용)
 	private String rankDisplayKr; // "마에가시라10", "요코즈나" 등 (한국어 화면용)
 
+	// 발표된 다음 경기(예정 대진, 대회 중 전날 발표). 현역이고 대진이 나와 있을 때만, 아니면 null
+	private RikishiBookmarkCardDTO.NextBout nextBout;
+
 	private List<ShikonaHistoryItemDTO> shikonaHistory; // 과거 시코나만, 오래된 순
 
 	// --- 커리어 레코드 ---

@@ -5,6 +5,7 @@ import com.torikumilab.sumoarchive.domain.dto.RikishiBookmarkCardDTO;
 import com.torikumilab.sumoarchive.domain.entity.BanzukeEntity;
 import com.torikumilab.sumoarchive.domain.entity.BashoEntity;
 import com.torikumilab.sumoarchive.domain.entity.RikishiEntity;
+import com.torikumilab.sumoarchive.domain.entity.ScheduledBoutEntity;
 import com.torikumilab.sumoarchive.domain.entity.TorikumiEntity;
 import com.torikumilab.sumoarchive.domain.entity.constant.BashoMonth;
 import com.torikumilab.sumoarchive.domain.entity.constant.Division;
@@ -14,6 +15,7 @@ import com.torikumilab.sumoarchive.domain.entity.constant.Side;
 import com.torikumilab.sumoarchive.repository.BanzukeRepository;
 import com.torikumilab.sumoarchive.repository.BashoRepository;
 import com.torikumilab.sumoarchive.repository.RikishiRepository;
+import com.torikumilab.sumoarchive.repository.ScheduledBoutRepository;
 import com.torikumilab.sumoarchive.repository.TorikumiRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -43,6 +45,8 @@ class RikishiBookmarkServiceTest {
 	private BanzukeRepository banzukeRepository;
 	@Mock
 	private TorikumiRepository torikumiRepository;
+	@Mock
+	private ScheduledBoutRepository scheduledBoutRepository;
 	@InjectMocks
 	private RikishiBookmarkService service;
 
@@ -57,11 +61,11 @@ class RikishiBookmarkServiceTest {
 	@Test
 	@DisplayName("바쇼 상태 - 개막 전·진행 중(시작일~종료일)·종료")
 	void bashoStatus() {
-		assertThat(RikishiBookmarkService.bashoInfo(kyushu, LocalDate.of(2026, 11, 7), null).status()).isEqualTo(BookmarkPageDTO.Status.UPCOMING);
-		assertThat(RikishiBookmarkService.bashoInfo(kyushu, LocalDate.of(2026, 11, 8), null).status()).isEqualTo(BookmarkPageDTO.Status.IN_PROGRESS);
-		assertThat(RikishiBookmarkService.bashoInfo(kyushu, LocalDate.of(2026, 11, 22), 15).status()).isEqualTo(BookmarkPageDTO.Status.IN_PROGRESS);
-		assertThat(RikishiBookmarkService.bashoInfo(kyushu, LocalDate.of(2026, 11, 23), 15).status()).isEqualTo(BookmarkPageDTO.Status.FINISHED);
-		assertThat(RikishiBookmarkService.bashoInfo(kyushu, LocalDate.of(2026, 11, 7), null).labelKr()).isEqualTo("2026년 11월 큐슈바쇼");
+		assertThat(RikishiBookmarkService.bashoInfo(kyushu, LocalDate.of(2026, 11, 7), null, null).status()).isEqualTo(BookmarkPageDTO.Status.UPCOMING);
+		assertThat(RikishiBookmarkService.bashoInfo(kyushu, LocalDate.of(2026, 11, 8), null, null).status()).isEqualTo(BookmarkPageDTO.Status.IN_PROGRESS);
+		assertThat(RikishiBookmarkService.bashoInfo(kyushu, LocalDate.of(2026, 11, 22), 15, null).status()).isEqualTo(BookmarkPageDTO.Status.IN_PROGRESS);
+		assertThat(RikishiBookmarkService.bashoInfo(kyushu, LocalDate.of(2026, 11, 23), 15, null).status()).isEqualTo(BookmarkPageDTO.Status.FINISHED);
+		assertThat(RikishiBookmarkService.bashoInfo(kyushu, LocalDate.of(2026, 11, 7), null, null).labelKr()).isEqualTo("2026년 11월 큐슈바쇼");
 	}
 
 	@Test
@@ -76,7 +80,13 @@ class RikishiBookmarkServiceTest {
 				bout(3, onosato, kirishima, onosato, ResultType.FUZEN, null, 103));
 		given(rikishiRepository.findAllById(List.of(4, 1, 3))).willReturn(List.of(onosato, kirishima, retired));
 		given(bashoRepository.findLatestWithBanzuke()).willReturn(Optional.of(kyushu));
-		given(banzukeRepository.findByBashoEntityIdAndRikishiEntityIdIn(anyInt(), anyList())).willReturn(List.of(onosatoBz, kirishimaBz));
+		BanzukeEntity hoshoryuBz = banzuke(hoshoryu, RankName.Yokozuna, Side.WEST, null);
+		given(banzukeRepository.findByBashoEntityIdAndRikishiEntityIdIn(anyInt(), anyList())).willReturn(List.of(onosatoBz, kirishimaBz, hoshoryuBz));
+		// 4일째 대진 발표: 키리시마 vs 호쇼류 (오노사토는 아직 없음)
+		given(scheduledBoutRepository.findByBashoAndRikishiIn(anyInt(), anyList())).willReturn(List.of(
+				ScheduledBoutEntity.builder().bashoEntity(kyushu).day(4).division(Division.Makuuchi)
+						.externalId("202611-4-1").eastRikishiEntity(hoshoryu).westRikishiEntity(kirishima).build()));
+		given(scheduledBoutRepository.findMinDay(10)).willReturn(4);
 		given(torikumiRepository.findRegularByBashoAndRikishiIn(anyInt(), anyList())).willReturn(bouts);
 		given(torikumiRepository.findMaxRegularDay(10)).willReturn(3);
 
@@ -84,6 +94,7 @@ class RikishiBookmarkServiceTest {
 
 		assertThat(page.basho().status()).isEqualTo(BookmarkPageDTO.Status.IN_PROGRESS);
 		assertThat(page.basho().lastDay()).isEqualTo(3);
+		assertThat(page.basho().nextDay()).isEqualTo(4);
 		assertThat(page.cards()).extracting(RikishiBookmarkCardDTO::rikishiId).containsExactly(4, 1, 3);
 		assertThat(page.cards().get(0).current()).isNull();
 
@@ -98,6 +109,8 @@ class RikishiBookmarkServiceTest {
 		assertThat(k.marks()).containsExactly("WIN", "FUSEN_LOSS");
 		assertThat(k.lastBout().win()).isFalse();
 		assertThat(k.lastBout().opponentKr()).isEqualTo("오노사토");
+		assertThat(k.nextBout()).isEqualTo(new RikishiBookmarkCardDTO.NextBout(4, "호쇼류", "豊昇龍", "서 요코즈나", "西 横綱"));
+		assertThat(o.nextBout()).isNull();
 	}
 
 	@Test
@@ -106,7 +119,7 @@ class RikishiBookmarkServiceTest {
 		BanzukeEntity bz = banzuke(onosato, RankName.Maegashira, Side.EAST, 1);
 		bz.updateRecord(8, 4, 3);
 		RikishiBookmarkCardDTO.Current c = RikishiBookmarkService.current(1,
-				bz, List.of(bout(1, onosato, hoshoryu, hoshoryu, ResultType.NORMAL, "oshidashi", 201)));
+				bz, List.of(bout(1, onosato, hoshoryu, hoshoryu, ResultType.NORMAL, "oshidashi", 201)), null);
 		assertThat(List.of(c.wins(), c.losses(), c.absences())).containsExactly(8, 4, 3);
 		assertThat(c.rankKr()).isEqualTo("동 마에가시라필두");
 		assertThat(c.lastBout().kimariteKr()).isNotBlank();

@@ -7,11 +7,13 @@ import com.torikumilab.sumoarchive.domain.dto.HeadToHeadGroupDTO;
 import com.torikumilab.sumoarchive.domain.dto.KimariteCountRow;
 import com.torikumilab.sumoarchive.domain.dto.KimariteStatDTO;
 import com.torikumilab.sumoarchive.domain.dto.MatchHistoryItemDTO;
+import com.torikumilab.sumoarchive.domain.dto.RikishiBookmarkCardDTO;
 import com.torikumilab.sumoarchive.domain.dto.RikishiDetailDTO;
 import com.torikumilab.sumoarchive.domain.dto.ShikonaHistoryItemDTO;
 import com.torikumilab.sumoarchive.domain.entity.BanzukeEntity;
 import com.torikumilab.sumoarchive.domain.entity.BashoEntity;
 import com.torikumilab.sumoarchive.domain.entity.RikishiEntity;
+import com.torikumilab.sumoarchive.domain.entity.ScheduledBoutEntity;
 import com.torikumilab.sumoarchive.domain.entity.TorikumiEntity;
 import com.torikumilab.sumoarchive.domain.entity.constant.AwardType;
 import com.torikumilab.sumoarchive.domain.entity.constant.Division;
@@ -23,6 +25,7 @@ import com.torikumilab.sumoarchive.repository.BashoRepository;
 import com.torikumilab.sumoarchive.repository.KinboshiRepository;
 import com.torikumilab.sumoarchive.repository.RikishiRepository;
 import com.torikumilab.sumoarchive.repository.RikishiShikonaHistoryRepository;
+import com.torikumilab.sumoarchive.repository.ScheduledBoutRepository;
 import com.torikumilab.sumoarchive.repository.TorikumiRepository;
 import com.torikumilab.sumoarchive.util.HangulIndexUtil;
 import com.torikumilab.sumoarchive.util.KanaIndexUtil;
@@ -72,6 +75,7 @@ public class RikishiDetailService {
 	private final TorikumiRepository torikumiRepository;
 	private final AwardRepository awardRepository;
 	private final KinboshiRepository kinboshiRepository;
+	private final ScheduledBoutRepository scheduledBoutRepository;
 	
 	public RikishiDetailDTO getRikishiDetail(Integer rikishiId) {
 		RikishiEntity r = rikishiRepository.findById(rikishiId)
@@ -153,6 +157,7 @@ public class RikishiDetailService {
 				.rankDisplay(latest != null ? RankDisplayUtil.rankDisplay(latest.getRankName(), latest.getRankValue()) : null)
 				.sideDisplayKr(latest != null ? RankDisplayUtil.sideDisplayKorean(latest.getSide()) : null)
 				.rankDisplayKr(latest != null ? RankDisplayUtil.rankDisplayKorean(latest.getRankName(), latest.getRankValue()) : null)
+				.nextBout(r.isActive() ? nextBout(rikishiId, latest) : null)
 				.shikonaHistory(history)
 				.totalWins(wins)
 				.totalLosses(losses)
@@ -490,6 +495,21 @@ public class RikishiDetailService {
 				(int) absences,
 				hasResult && lastDay >= 15
 		);
+	}
+
+	/** 최신 반즈케 바쇼의 예정 대진 중 가장 이른 경기 + 상대 계급 (쿼리 2번, 대진이 없으면 1번) */
+	private RikishiBookmarkCardDTO.NextBout nextBout(Integer rikishiId, BanzukeEntity latest) {
+		if (latest == null) {
+			return null;
+		}
+		Integer bashoId = latest.getBashoEntity().getId();
+		List<ScheduledBoutEntity> scheduled = scheduledBoutRepository.findByBashoAndRikishiIn(bashoId, List.of(rikishiId));
+		if (scheduled.isEmpty()) {
+			return null;
+		}
+		List<Integer> opponents = List.copyOf(NextBouts.opponentIds(scheduled, List.of(rikishiId)));
+		return NextBouts.first(rikishiId, scheduled,
+				NextBouts.byRikishiId(banzukeRepository.findByBashoEntityIdAndRikishiEntityIdIn(bashoId, opponents)));
 	}
 
 	private static boolean isSekitori(Division division) {

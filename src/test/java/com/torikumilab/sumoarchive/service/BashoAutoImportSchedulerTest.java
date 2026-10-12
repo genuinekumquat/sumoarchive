@@ -31,9 +31,11 @@ class BashoAutoImportSchedulerTest {
 	private final BashoEntity kyushu = basho(1, 2026, BashoMonth.NOV, LocalDate.of(2026, 11, 8), LocalDate.of(2026, 11, 22));
 
 	@Test
-	@DisplayName("자동 임포트 대상 기간 - 시작일부터 종료 다음 날까지")
+	@DisplayName("자동 임포트 대상 기간 - 개막 이틀 전(첫날·둘째 날 대진 발표)부터 종료 다음 날까지")
 	void isDue() {
-		assertThat(BashoAutoImportScheduler.isDue(kyushu, LocalDate.of(2026, 11, 7))).isFalse();  // 개막 전날
+		assertThat(BashoAutoImportScheduler.isDue(kyushu, LocalDate.of(2026, 11, 5))).isFalse();  // 개막 사흘 전
+		assertThat(BashoAutoImportScheduler.isDue(kyushu, LocalDate.of(2026, 11, 6))).isTrue();   // 개막 이틀 전(금) - 첫날·둘째 날 대진 발표
+		assertThat(BashoAutoImportScheduler.isDue(kyushu, LocalDate.of(2026, 11, 7))).isTrue();   // 개막 전날
 		assertThat(BashoAutoImportScheduler.isDue(kyushu, LocalDate.of(2026, 11, 8))).isTrue();   // 첫날
 		assertThat(BashoAutoImportScheduler.isDue(kyushu, LocalDate.of(2026, 11, 22))).isTrue();  // 센슈라쿠
 		assertThat(BashoAutoImportScheduler.isDue(kyushu, LocalDate.of(2026, 11, 23))).isTrue();  // 다음 날 (결정전·수상)

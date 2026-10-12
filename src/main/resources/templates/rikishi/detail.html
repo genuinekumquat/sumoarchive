@@ -163,6 +163,20 @@
             line-height: 1.4;
         }
 
+        /* 발표된 다음 경기 (대회 중 전날 발표, 예정 대진) */
+        .next-bout {
+            display: inline-block;
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 13px;
+            color: var(--sumi);
+            border-left: 3px solid var(--shu);
+            padding: 4px 10px;
+            margin: -8px 0 18px;
+            background: #fff;
+        }
+        .next-bout .label { color: var(--shu); font-weight: 700; margin-right: 6px; }
+        .next-bout .rank { color: var(--sumi-faint); font-size: 12px; }
+
         .shikona-history {
             font-family: 'Zen Kaku Gothic New', sans-serif;
             font-size: 12px;
@@ -1002,6 +1016,16 @@
                 </div>
                 <div class="shikona-kana" th:if="${#locale.language == 'ja'}" th:text="${rikishi.shikonaFullKr}">四股名</div>
                 <div class="shikona-kana" th:unless="${#locale.language == 'ja'}" th:text="${rikishi.shikonaFullJp}">四股名</div>
+
+                <!-- 다음 경기: 대회 중 전날 발표된 대진(예정 대진, V6). 없으면 안 보임 -->
+                <div class="next-bout" th:if="${rikishi.nextBout != null}"
+                     th:with="nb=${rikishi.nextBout}, ja=${#locale.language == 'ja'}">
+                    <span class="label" th:text="#{rikishi.nextBout}">다음 경기</span>
+                    <span th:text="#{bookmark.day(${nb.day})} + (${ja} ? ' 対 ' : ' vs ')">6일째 vs</span>
+                    <span class="rank" th:if="${(ja ? nb.opponentRankJp : nb.opponentRankKr) != null}"
+                          th:text="${ja ? nb.opponentRankJp : nb.opponentRankKr}">서 요코즈나</span>
+                    <strong th:text="${ja ? nb.opponentJp : nb.opponentKr}">호쇼류</strong>
+                </div>
 
                 <!-- 시코나 변경 이력 - 일본어 시코나 변경 이력은 아직 없어서(관리자가 한국어만 입력) ja 화면엔 생략 -->
                 <div class="shikona-history" th:if="${rikishi.shikonaHistory != null and !rikishi.shikonaHistory.isEmpty() and #locale.language != 'ja'}">

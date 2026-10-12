@@ -13,6 +13,7 @@ public record BookmarkPageDTO(Basho basho, List<RikishiBookmarkCardDTO> cards) {
 
 	/**
 	 * @param lastDay 이 바쇼에 적재된 마지막 일차(정규 경기 기준), 아직 없으면 null
+	 * @param nextDay 발표된 예정 대진 중 가장 이른 일차, 없으면 null
 	 */
 	public record Basho(
 			String labelKr,
@@ -21,6 +22,7 @@ public record BookmarkPageDTO(Basho basho, List<RikishiBookmarkCardDTO> cards) {
 			String nameJp,
 			Status status,
 			LocalDate startDate,
-			Integer lastDay
+			Integer lastDay,
+			Integer nextDay
 	) {}
 }

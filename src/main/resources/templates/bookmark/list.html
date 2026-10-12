@@ -90,6 +90,8 @@
         .bm-last { font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; color: var(--sumi-soft); text-decoration: none; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .bm-last:hover { color: var(--shu); }
         .bm-last .w { color: var(--shu); font-weight: 700; }
+        .bm-next { font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; color: var(--sumi); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .bm-next .rk { color: var(--sumi-faint); }
         .bm-summary {
             font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 13px; color: var(--sumi);
             border-left: 3px solid var(--shu); background: #fff; padding: 8px 12px; margin: 0 0 14px;
@@ -156,7 +158,9 @@
             entered: /*[[#{bookmark.entered}]]*/ '내 선수 {0}명 출전',
             record: /*[[#{bookmark.record}]]*/ '{0}승 {1}패',
             absent: /*[[#{bookmark.record.absent}]]*/ '{0}휴',
-            day: /*[[#{bookmark.day}]]*/ '{0}일째'
+            day: /*[[#{bookmark.day}]]*/ '{0}일째',
+            next: /*[[#{bookmark.next}]]*/ '다음 · {0} vs {1}',
+            nextAnnounced: /*[[#{bookmark.nextAnnounced}]]*/ '{0} 대진 발표'
         };
         var listEl = document.getElementById('bookmarkList');
         var emptyEl = document.getElementById('bookmarkEmpty');
@@ -195,6 +199,13 @@
                 (b.win ? '<span class="w">' + mark + '</span>' : mark) + ' ' + esc(opp) + (kim ? SEP + esc(kim) : '') + ' →</a>';
         }
 
+        // 발표된 다음 경기 (예정 대진, 링크 없음)
+        function nextBoutHtml(n) {
+            var rank = JA ? n.opponentRankJp : n.opponentRankKr;
+            var opp = (rank ? '<span class="rk">' + esc(rank) + '</span> ' : '') + esc(JA ? n.opponentJp : n.opponentKr);
+            return '<span class="bm-next">' + fmt(esc(MSG.next), esc(fmt(MSG.day, n.day)), opp) + '</span>';
+        }
+
         // 맨 위 한 줄: 진행 중이면 그날(적재된 마지막 일차) 내 선수 승패, 끝났거나 개막 전이면 출전 인원
         function renderSummary(basho, cards) {
             if (!basho) return;
@@ -219,6 +230,9 @@
                 if (w + l > 0) tail = fmt(MSG.today, w, l);
             }
             if (!tail && entered.length > 0) tail = fmt(MSG.entered, entered.length);
+            if (basho.nextDay && basho.status !== 'FINISHED') {
+                tail = (tail ? tail + SEP : '') + fmt(MSG.nextAnnounced, fmt(MSG.day, basho.nextDay));
+            }
             summaryEl.textContent = head + (tail ? SEP + tail : '');
             summaryEl.hidden = false;
         }
@@ -262,6 +276,7 @@
                             (cur && cur.marks.length ? '<span class="bm-marks">' + marksHtml(cur.marks) + '</span>' : '') +
                         '</a>' +
                         (cur && cur.lastBout ? lastBoutHtml(cur.lastBout) : '') +
+                        (cur && cur.nextBout ? nextBoutHtml(cur.nextBout) : '') +
                         '<a class="bm-link" href="/rikishi/' + id + '">' +
                             '<span class="bm-sub">' + esc(heya || MSG.unaffiliated) + ' · ' + esc(rank || '-') + '</span>' +
                             '<span class="bm-sub">' + esc(period) + ' · ' + esc(status) + '</span>' +

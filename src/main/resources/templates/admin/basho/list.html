@@ -95,7 +95,7 @@
     <div class="import-bar" th:with="run=${autoImport.lastRun}">
         <span class="desc">
             <strong>자동 임포트</strong>
-            <span th:text="${autoImport.enabled} ? '켜짐 — 바쇼 기간(시작일 ~ 종료 다음 날)에 매일 18:30·20:00·22:00·다음 날 9:00' : '꺼짐 (app.auto-import.enabled=false)'">켜짐</span>
+            <span th:text="${autoImport.enabled} ? '켜짐 — 개막 이틀 전 ~ 종료 다음 날, 매일 18:30·20:00·22:00·다음 날 9:00' : '꺼짐 (app.auto-import.enabled=false)'">켜짐</span>
             <span th:if="${autoImport.running}"> · 지금 실행 중</span>
             <br>
             <th:block th:if="${run == null}">최근 실행 없음 (앱 시작 후 바쇼 기간에 아직 돌지 않음)</th:block>

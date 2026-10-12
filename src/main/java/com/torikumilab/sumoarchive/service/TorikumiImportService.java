@@ -5,11 +5,13 @@ import com.torikumilab.sumoarchive.domain.dto.TorikumiImportResultDTO;
 import com.torikumilab.sumoarchive.domain.dto.sumoapi.SumoApiTorikumiDayDTO;
 import com.torikumilab.sumoarchive.domain.entity.BashoEntity;
 import com.torikumilab.sumoarchive.domain.entity.RikishiEntity;
+import com.torikumilab.sumoarchive.domain.entity.ScheduledBoutEntity;
 import com.torikumilab.sumoarchive.domain.entity.TorikumiEntity;
 import com.torikumilab.sumoarchive.domain.entity.constant.Division;
 import com.torikumilab.sumoarchive.domain.entity.constant.ResultType;
 import com.torikumilab.sumoarchive.repository.BashoRepository;
 import com.torikumilab.sumoarchive.repository.RikishiRepository;
+import com.torikumilab.sumoarchive.repository.ScheduledBoutRepository;
 import com.torikumilab.sumoarchive.repository.TorikumiRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -19,7 +21,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * sumo-api.com에서 특정 바쇼·디비전의 15일치 대전(+ 16일째로 오는 우승 결정전)을 가져와 upsert한다.
@@ -30,6 +34,10 @@ import java.util.List;
  * 동/서 중 한쪽이라도 우리 DB에 없으면(과거 바쇼면 주로 은퇴자) 그 경기는 스킵하고 목록에 남긴다.
  * {@code kimarite}는 API 로마자를 그대로 저장하고(표시는 {@code KimariteDisplayUtil}), "fusen"이면
  * {@code resultType=FUZEN} + kimarite null. 결정전은 16일째 경기로 판별해 {@code isExtraMatch=true}.</p>
+ *
+ * <p>결과가 아직 없는 경기(전날 발표된 대진)는 torikumi가 아니라 scheduled_bout에 넣고, 디비전 임포트가 끝나면
+ * 이번에 예정으로 보이지 않은 것(결과가 나왔거나 대진이 바뀐 것)을 지운다. 조회에 실패한 일차가 있으면
+ * 그날 예정 대진을 잘못 지우지 않도록 지우기는 건너뛴다.</p>
  */
 @Service
 @RequiredArgsConstructor
@@ -50,6 +58,7 @@ public class TorikumiImportService {
 	private final TorikumiRepository torikumiRepository;
 	private final RikishiRepository rikishiRepository;
 	private final RosterImportService rosterImportService;
+	private final ScheduledBoutRepository scheduledBoutRepository;
 
 	private enum Outcome { CREATED, UPDATED, SKIPPED }
 
@@ -68,6 +77,8 @@ public class TorikumiImportService {
 		int daysWithData = 0;
 		int matchesSeen = 0;
 		List<String> skipped = new ArrayList<>();
+		Set<String> scheduledSeen = new HashSet<>();
+		boolean fetchFailed = false;
 
 		for (int day = 1; day <= PLAYOFF_DAY; day++) {
 			SumoApiTorikumiDayDTO dto;
@@ -75,6 +86,7 @@ public class TorikumiImportService {
 				dto = sumoApiClient.getTorikumi(yyyymm, division, day);
 			} catch (RuntimeException e) {
 				skipped.add(day + "일차 조회 실패: " + e.getMessage());
+				fetchFailed = true;
 				continue;
 			}
 			List<SumoApiTorikumiDayDTO.Match> matches = (dto == null) ? null : dto.torikumi();
@@ -86,9 +98,13 @@ public class TorikumiImportService {
 			for (SumoApiTorikumiDayDTO.Match m : matches) {
 				matchesSeen++;
 				// 진행 중 바쇼는 다음 날 대진이 결과 없이(winnerId 0, kimarite "") 먼저 공개된다.
-				// 그대로 저장하면 승자 없는 경기가 화면에서 패배처럼 보이므로, 결과가 나온 뒤 재임포트 때 넣는다.
+				// torikumi에 넣으면 승자 없는 경기가 화면에서 패배처럼 보이므로 예정 대진(scheduled_bout)으로 두고,
+				// 결과가 나온 뒤 재임포트 때 torikumi로 넣는다.
 				if (isUndecided(m)) {
-					pending++;
+					if (upsertScheduled(basho, division, m, skipped)) {
+						scheduledSeen.add(m.id());
+						pending++;
+					}
 					continue;
 				}
 				try {
@@ -102,9 +118,17 @@ public class TorikumiImportService {
 				}
 			}
 			if (pending > 0) {
-				skipped.add(day + "일차 결과 미확정 " + pending + "경기 (재임포트 시 반영)");
+				skipped.add(day + "일차 예정 대진 " + pending + "경기 저장 (결과는 재임포트 시 반영)");
 			}
 			throttle();
+		}
+
+		if (!fetchFailed) {
+			for (ScheduledBoutEntity s : scheduledBoutRepository.findByBashoEntityIdAndDivision(bashoId, division)) {
+				if (!scheduledSeen.contains(s.getExternalId())) {
+					scheduledBoutRepository.delete(s); // 결과가 나왔거나(이제 torikumi에 있음) 대진이 바뀜
+				}
+			}
 		}
 
 		log.info("[TorikumiImport] {} {} - 신규 {}, 갱신 {}, 데이터 일차 {}, 경기 {}, 스킵 {}",
@@ -172,6 +196,31 @@ public class TorikumiImportService {
 				.isExtraMatch(m.day() != null && m.day() > MAX_DAY)
 				.build());
 		return Outcome.CREATED;
+	}
+
+	/** 예정 대진 저장. 필수 필드가 없거나 선수를 못 찾으면 false (목록에 사유를 남김) */
+	private boolean upsertScheduled(BashoEntity basho, Division division,
+									SumoApiTorikumiDayDTO.Match m, List<String> skipped) {
+		if (m.id() == null || m.day() == null || m.eastId() == null || m.westId() == null) {
+			skipped.add(matchLabel(m) + " (예정 대진, 필수 필드 없음)");
+			return false;
+		}
+		RikishiEntity east = resolveRikishi(m.eastId(), m.eastShikona());
+		RikishiEntity west = resolveRikishi(m.westId(), m.westShikona());
+		if (east == null || west == null) {
+			skipped.add(matchLabel(m) + " (예정 대진, 미매칭)");
+			return false;
+		}
+		ScheduledBoutEntity existing = scheduledBoutRepository.findByExternalId(m.id()).orElse(null);
+		if (existing != null) {
+			existing.update(m.day(), m.matchNo(), east, west);
+		} else {
+			scheduledBoutRepository.save(ScheduledBoutEntity.builder()
+					.bashoEntity(basho).day(m.day()).division(division).matchNo(m.matchNo())
+					.externalId(m.id()).eastRikishiEntity(east).westRikishiEntity(west)
+					.build());
+		}
+		return true;
 	}
 
 	/**

@@ -28,6 +28,7 @@ public record RikishiBookmarkCardDTO(
 	 *
 	 * @param marks    경기 결과를 날짜순으로: WIN·LOSS·FUSEN_WIN·FUSEN_LOSS (화면에서 ○●□■)
 	 * @param lastBout 가장 최근 경기, 아직 없으면(개막 전 등) null
+	 * @param nextBout 발표된 다음 경기(예정 대진), 없으면 null
 	 */
 	public record Current(
 			String rankKr,
@@ -36,7 +37,17 @@ public record RikishiBookmarkCardDTO(
 			int losses,
 			int absences,
 			List<String> marks,
-			LastBout lastBout
+			LastBout lastBout,
+			NextBout nextBout
+	) {}
+
+	/** 상대 계급은 그 바쇼 반즈케 기준(없으면 null) */
+	public record NextBout(
+			int day,
+			String opponentKr,
+			String opponentJp,
+			String opponentRankKr,
+			String opponentRankJp
 	) {}
 
 	public record LastBout(
