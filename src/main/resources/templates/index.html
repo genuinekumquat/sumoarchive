@@ -448,11 +448,12 @@
             white-space: nowrap;
         }
 
-        /* 실제 반즈케처럼 계급이 높을수록 시코나를 크게 */
+        /* 실제 반즈케처럼 계급이 높을수록 시코나를 크게. 굵기는 Noto Serif KR에서 불러오는 400·600·900만 쓴다
+           (700을 쓰면 900으로 그려져 요코즈나와 구분이 안 됨) */
         .r-Yokozuna   { font-size: 28px; font-weight: 900; }
-        .r-Ozeki      { font-size: 24px; font-weight: 700; }
+        .r-Ozeki      { font-size: 24px; font-weight: 600; }
         .r-Sekiwake,
-        .r-Komusubi   { font-size: 19.5px; font-weight: 700; }
+        .r-Komusubi   { font-size: 19.5px; font-weight: 600; }
         .r-Maegashira { font-size: 16.5px; font-weight: 400; }
         .r-Juryo, .r-Makushita, .r-Sandanme,
         .r-Jonidan, .r-Jonokuchi { font-size: 14px; font-weight: 400; }
@@ -477,7 +478,7 @@
 
         @media (max-width: 560px) {
             .brand-jp { font-size: 30px; }
-            .r-Yokozuna { font-size: 20.5px; }
+            .r-Yokozuna { font-size: 22px; }
             .r-Ozeki { font-size: 18.5px; }
             .r-Sekiwake, .r-Komusubi { font-size: 15.5px; }
             .r-Maegashira { font-size: 13.5px; }
