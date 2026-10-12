@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html th:lang="${#locale.language}" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="no-referrer">
+    <title th:text="#{site.title}">스모아카이브</title>
+    <th:block th:replace="~{fragments/common :: seo(#{seo.updates.title}, #{seo.updates.desc}, true)}"></th:block>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Yuji+Syuku&family=Noto+Serif+KR:wght@400;600;900&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --sumi: #1a1a18;
+            --sumi-soft: #56554e;
+            --sumi-faint: #86857f;
+            --washi: #f7f6f3;
+            --washi-line: rgba(26, 26, 24, 0.14);
+            --shu: #a3272c;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            background-color: var(--washi);
+            background-image:
+                    repeating-linear-gradient(90deg, rgba(26,26,24,0.022) 0px, rgba(26,26,24,0.022) 1px, transparent 1px, transparent 3px),
+                    repeating-linear-gradient(0deg, rgba(26,26,24,0.012) 0px, rgba(26,26,24,0.012) 1px, transparent 1px, transparent 5px);
+            color: var(--sumi);
+            font-family: 'Noto Serif KR', serif;
+            line-height: 1.75;
+            min-height: 100vh;
+        }
+        .page { max-width: 760px; margin: 0 auto; padding: 40px 24px 80px; }
+        a { color: inherit; }
+
+        header { position: relative; border: 3px double var(--sumi); padding: 22px 28px 18px; margin-bottom: 26px; }
+        .brand-row { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+        .brand-jp { font-family: 'Yuji Syuku', serif; font-size: 28px; letter-spacing: 3px; color: var(--sumi); text-decoration: none; }
+        .brand-kr { font-family: 'Noto Serif KR', serif; font-weight: 900; font-size: 15px; letter-spacing: 1px; color: var(--sumi-soft); }
+        .breadcrumb { margin-top: 10px; font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; letter-spacing: 1px; color: var(--sumi-faint); }
+        .breadcrumb a:hover { color: var(--shu); }
+        /* 언어 스위처 (fragments/common :: langSwitch) */
+        .lang-switch { margin-top: 10px; display: flex; align-items: center; gap: 6px; font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 11px; letter-spacing: 1px; }
+        .lang-switch a { color: var(--sumi-faint); text-decoration: none; }
+        .lang-switch a:hover { color: var(--shu); }
+        .lang-switch a.active { color: var(--sumi); font-weight: 700; }
+        .lang-switch .sep { color: var(--washi-line); }
+
+        h1 { font-size: 20px; letter-spacing: 1px; margin: 0 0 6px; }
+        .lead { font-size: 14px; color: var(--sumi-soft); margin: 0 0 22px; }
+        .entry { display: flex; gap: 18px; border-top: 1px solid var(--washi-line); padding: 16px 0 10px; }
+        .entry time {
+            flex: 0 0 92px;
+            font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 13px; font-weight: 700;
+            letter-spacing: 1px; color: var(--shu); padding-top: 1px;
+        }
+        .entry ul { margin: 0; padding-left: 18px; flex: 1; }
+        .entry li { font-size: 14px; margin-bottom: 6px; }
+        @media (max-width: 560px) {
+            .entry { flex-direction: column; gap: 6px; }
+            .entry time { flex-basis: auto; }
+        }
+
+        footer { text-align: center; margin-top: 40px; font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 11px; letter-spacing: 2px; color: var(--sumi-faint); }
+    </style>
+</head>
+<body>
+<div class="page">
+
+    <header>
+        <div class="brand-row">
+            <a class="brand-jp" th:href="@{/}">相撲archive</a>
+            <span class="brand-kr">스모아카이브</span>
+        </div>
+        <div class="breadcrumb"><a th:href="@{/}" th:text="#{common.nav.banzuke}">반즈케</a> &gt; <span th:text="#{footer.updates}">업데이트 소식</span></div>
+        <th:block th:replace="~{fragments/common :: langSwitch}"></th:block>
+    </header>
+
+    <!-- 내용은 resources/updates.json (UpdatesController). 한쪽 언어 문구가 없는 항목은 그 언어에서 숨긴다 -->
+    <h1 th:text="#{footer.updates}">업데이트 소식</h1>
+    <p class="lead" th:text="#{updates.lead}">사이트에서 새로 생기거나 바뀐 것을 날짜별로 모아둡니다.</p>
+
+    <th:block th:with="isJa=${#locale.language == 'ja'}">
+        <section class="entry" th:each="e : ${entries}">
+            <time th:datetime="${e.date}" th:text="${#temporals.format(e.date, 'yyyy.MM.dd')}">2026.10.12</time>
+            <ul>
+                <li th:each="item : ${e.items}" th:if="${(isJa ? item.ja : item.ko) != null}"
+                    th:text="${isJa ? item.ja : item.ko}">변경 내용</li>
+            </ul>
+        </section>
+    </th:block>
+
+    <footer><span th:text="#{main.footer}">SUMOARCHIVE — 韓国語で見る大相撲情報アーカイブ</span><th:block th:replace="~{fragments/common :: footerNote}"></th:block></footer>
+</div>
+</body>
+</html>

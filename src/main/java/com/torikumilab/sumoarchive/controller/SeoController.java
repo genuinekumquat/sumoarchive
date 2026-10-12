@@ -48,6 +48,8 @@ public class SeoController {
 				""");
 		url(xml, base + "/");
 		url(xml, base + "/?lang=ja");
+		url(xml, base + "/updates");
+		url(xml, base + "/updates?lang=ja");
 		for (Integer id : banzukeRepository.findDistinctRikishiIdsByDivisionIn(List.of(Division.Makuuchi, Division.Juryo))) {
 			url(xml, base + "/rikishi/" + id);
 			url(xml, base + "/rikishi/" + id + "?lang=ja");
