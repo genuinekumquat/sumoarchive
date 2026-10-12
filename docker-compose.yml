@@ -27,6 +27,8 @@ services:
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:?.env에 ADMIN_PASSWORD를 설정하세요}
       # 개인정보 처리 안내(/privacy)에 공개할 문의 이메일
       - CONTACT_EMAIL=${CONTACT_EMAIL:?.env에 CONTACT_EMAIL을 설정하세요}
+      # 진행 중인 바쇼 자동 임포트 (매일 저녁). 끄려면 .env에 AUTO_IMPORT_ENABLED=false
+      - AUTO_IMPORT_ENABLED=${AUTO_IMPORT_ENABLED:-true}
     depends_on:
       db:
         condition: service_healthy

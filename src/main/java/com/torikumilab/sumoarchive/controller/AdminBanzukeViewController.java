@@ -9,6 +9,7 @@ import com.torikumilab.sumoarchive.domain.entity.constant.Side;
 import com.torikumilab.sumoarchive.service.AwardImportService;
 import com.torikumilab.sumoarchive.service.BanzukeAdminService;
 import com.torikumilab.sumoarchive.service.BanzukeImportService;
+import com.torikumilab.sumoarchive.service.BashoAutoImportScheduler;
 import com.torikumilab.sumoarchive.service.BashoBatchImportService;
 import com.torikumilab.sumoarchive.service.BashoImportService;
 import com.torikumilab.sumoarchive.util.RankDisplayUtil;
@@ -36,6 +37,7 @@ public class AdminBanzukeViewController {
 	private final BanzukeImportService banzukeImportService;
 	private final AwardImportService awardImportService;
 	private final BashoBatchImportService bashoBatchImportService;
+	private final BashoAutoImportScheduler bashoAutoImportScheduler;
 
 	// 빈 <input type="number">("")를 null로 (요코즈나 등 번호 없는 계급). AdminRikishiViewController와 동일 기법.
 	@InitBinder
@@ -49,6 +51,7 @@ public class AdminBanzukeViewController {
 	public String bashoList(Model model) {
 		model.addAttribute("bashos", banzukeAdminService.listBashos());
 		model.addAttribute("thisYear", java.time.LocalDate.now().getYear());
+		model.addAttribute("autoImport", bashoAutoImportScheduler.status());
 		return "admin/basho/list";
 	}
 

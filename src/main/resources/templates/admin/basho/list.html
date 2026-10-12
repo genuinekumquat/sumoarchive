@@ -89,6 +89,31 @@
     <p class="saved-msg" th:if="${saved}">저장했습니다.</p>
     <p class="error-msg" th:if="${error}" th:text="${error}">오류</p>
 
+    <!-- 진행 중 바쇼 자동 임포트 상태 (BashoAutoImportScheduler). 결과는 메모리에만 있어 앱을 재시작하면 비워진다 -->
+    <div class="import-bar" th:with="run=${autoImport.lastRun}">
+        <span class="desc">
+            <strong>자동 임포트</strong>
+            <span th:text="${autoImport.enabled} ? '켜짐 — 바쇼 기간(시작일 ~ 종료 다음 날)에 매일 18:30·20:00·22:00·다음 날 9:00' : '꺼짐 (app.auto-import.enabled=false)'">켜짐</span>
+            <span th:if="${autoImport.running}"> · 지금 실행 중</span>
+            <br>
+            <th:block th:if="${run == null}">최근 실행 없음 (앱 시작 후 바쇼 기간에 아직 돌지 않음)</th:block>
+            <th:block th:if="${run != null}">
+                <span th:text="'마지막 실행 ' + ${#temporals.format(run.finishedAt, 'MM.dd HH:mm')}
+                    + ' — ' + ${#strings.listJoin(run.results.![bashoLabel], ', ')}
+                    + ' · 경기 신규 ' + ${run.torikumiCreated()} + ' · 경고 ' + ${run.warningCount()}">마지막 실행</span>
+                <span th:if="${run.error != null}" style="color: var(--shu);" th:text="' · 오류: ' + ${run.error}">오류</span>
+            </th:block>
+        </span>
+    </div>
+    <details th:if="${autoImport.lastRun != null and autoImport.lastRun.warningCount() > 0}" style="margin: -10px 0 16px; font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px;">
+        <summary th:text="'자동 임포트 경고 ' + ${autoImport.lastRun.warningCount()} + '건 보기'">경고 보기</summary>
+        <ul class="skip-list">
+            <th:block th:each="r : ${autoImport.lastRun.results}">
+                <li th:each="w : ${r.warnings}" th:text="${r.bashoLabel} + ' — ' + ${w}">경고</li>
+            </th:block>
+        </ul>
+    </details>
+
     <div class="saved-msg" th:if="${importResult}">
         <span th:text="'sumo-api 바쇼 임포트 (' + ${importResult.fromYear} + '~' + ${importResult.toYear} + ') — 신규 ' + ${importResult.created} + ' · 갱신 ' + ${importResult.updated} + ' · 스킵 ' + ${importResult.skipped.size()}">완료</span>
         <ul class="skip-list" th:if="${!importResult.skipped.isEmpty()}">
