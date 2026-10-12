@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- 관리자 페이지 탭 아이콘: 공개 사이트(相撲 두 글자)와 구분되게 한 글자. 글꼴은 시스템 명조체 -->
+  <rect width="64" height="64" rx="6" fill="#a3272c"/>
+  <text x="32" y="50" text-anchor="middle" font-size="48" font-weight="700" fill="#f7f6f3"
+        font-family="'Yu Mincho', 'Hiragino Mincho ProN', 'MS Mincho', 'Noto Serif CJK JP', 'Batang', serif">相</text>
+</svg>
