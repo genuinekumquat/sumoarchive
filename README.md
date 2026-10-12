@@ -1,216 +1,167 @@
-# 🏯 sumoarchive
+# 🏯 sumoarchive — 스모아카이브
 
 [![CI](https://github.com/genuinekumquat/sumoarchive/actions/workflows/ci.yml/badge.svg)](https://github.com/genuinekumquat/sumoarchive/actions/workflows/ci.yml)
 
 **한국어** | [日本語](README.ja.md)
 
-한국어로 오즈모(大相撲) 정보를 편하게 찾아보는 아카이브 웹 서비스입니다.
+**일본 오즈모(大相撲)의 반즈케·리키시·경기 결과를 한국어와 일본어로 찾아보는 아카이브 서비스입니다.**
+
+🔗 **https://sumoarchive.com** (2026년 10월 공개 · 운영 중)
+
+공식 정보 대부분이 일본어로만 나와 있어 한국 팬에게는 문턱이 높은 오즈모를, 한국어로도 편하게 즐길 수 있게 하려고 만들었습니다.
+화면·데이터·주소 모두 한국어/일본어 두 언어를 지원하고, 기획·설계부터 구현, AWS 운영까지 혼자 맡고 있습니다.
+
+| | |
+|---|---|
+| ![반즈케(메인)](docs/images/ko-main.png) | ![대진 탭](docs/images/ko-torikumi.png) |
+| **반즈케** — 연도·대회·디비전을 골라서 보기 | **대진** — 날짜별 결과와 전날 발표된 다음 날 대진 |
+| ![리키시 프로필](docs/images/ko-rikishi.png) | ![키마리테 경향](docs/images/ko-analysis.png) |
+| **리키시 프로필** — 성적·다음 경기·호시토리표 | **분석** — 결정기술 경향, 패배 유형, 상대 조건별 성적 |
+
+<p align="center"><img src="docs/images/ko-mobile.png" width="260" alt="모바일 화면"></p>
+
+### 숫자로 보기
+
+| 항목 | 내용 |
+|---|---|
+| 데이터 | 경기 **106,534건** · 리키시 **1,157명** · **46바쇼**(2019년~) · 마쿠우치~조노구치 **6개 디비전 전부** |
+| 테스트 | JUnit 5 + Mockito **110개**, GitHub Actions에서 매번 실행 (빈 DB에서 Flyway + 전체 테스트) |
+| 운영 | AWS EC2 + Docker Compose, 매일 S3 백업, 대회 기간에는 경기 결과를 **하루 4번 자동 반영** |
+| 사용 | 공개 직후 한국 스모 커뮤니티에 소개해 **약 100~150명** 방문 (Nginx 로그 집계) |
+| 개발 | 2026년 7월 설계 시작 → 9월 구현 → 10월 10일 공개 (노션 작업일지 42편) |
 
 ---
 
-## 1. 기획 의도
+## 목차
 
-일본 스모(오즈모)는 반즈케(番付)·시코나(四股名)·키마리테(決まり手) 등 고유 용어가 많고,
-공식 정보 대부분이 일본어로만 제공되어 한국어 사용자가 접근하기 어렵습니다.
-
-**sumoarchive는 한국어 사용자가 별도의 배경지식 없이도 리키시(선수) 프로필, 반즈케, 경기 결과를
-편하게 찾아보고 즐길 수 있게 하는 것을 목표로 만든 프로젝트입니다.**
-
-MVP(현재 단계) 이후에는 다음과 같은 방향으로 서비스를 확장할 계획입니다.
-
-- **키마리테 백과사전**: 지금은 원형 차트로 통계만 보여주는 결정기술(키마리테)에, 기술 설명·움직임을
-  텍스트/이미지로 풀어주는 사전 기능 추가
-- **반즈케 예측 시뮬레이터**: 직전 바쇼 성적을 바탕으로 다음 바쇼 반즈케(순위표) 변동을
-  가중치 연산으로 예측해보는 시뮬레이터
+1. [주요 기능](#1-주요-기능)
+2. [아키텍처](#2-아키텍처)
+3. [기술 스택](#3-기술-스택)
+4. [설계와 문제 해결](#4-설계와-문제-해결) ← 가장 보여드리고 싶은 부분입니다
+5. [운영](#5-운영)
+6. [로컬 실행 방법](#6-로컬-실행-방법)
+7. [문서](#7-문서)
 
 ---
 
-## 2. 목표 시나리오
+## 1. 주요 기능
 
-기능명세서(`docs/기능명세서.txt`) 기준으로, 사용자는 다음을 할 수 있습니다.
+**이용자 (로그인 없음)**
 
-1. **메인 화면**에서 로그인 없이 바로 최신 마쿠우치(幕內) 반즈케를 확인할 수 있다. `番付` 아래
-   **연도 · 대회 · 계급 드롭다운 3개**로 원하는 반즈케를 골라 비동기로 불러온다 — 연도를 바꾸면
-   그 해에 열린 대회만 대회 드롭다운에 다시 채워지고, 계급(마쿠우치/주료/마쿠시타/산단메/조니단/
-   조노구치)은 독립적으로 선택된다. 기본값은 최신 대회 · 마쿠우치 (본장소 개최 전이라도 발표된
-   반즈케면 노출).
-2. 반즈케 표에서 **리키시 이름을 클릭**해 해당 선수의 프로필 페이지로 이동할 수 있다.
-3. **검색창**에 한국어 시코나 / 일본어 시코나 / 과거에 쓰던 시코나까지 통합 검색해서, 동명이인이나
-   대물림 시코나(습명)가 있어도 실명·활동 시기·최고 계급·현재 상태(현역/은퇴/오야카타)를 보고
-   원하는 선수를 정확히 골라 들어갈 수 있다.
-4. **리키시 프로필 페이지**에서 기본 정보(본명·생년월일·출신·소속 헤야·신장/체중 등), 커리어 레코드
-   (통산 전적·유쇼·산쇼·킨보시), 키마리테 승리 기술 통계(원형 차트)를 한눈에 볼 수 있다.
-5. 프로필 하단 **호시토리표(星取表)**에서 데뷔 이후 전 바쇼 성적을 일차별로 확인하고, 개별 경기
-   아이콘(○/●/휴)을 클릭해 그 경기의 상세 정보를 슬라이드 패널로 바로 열어볼 수 있다.
-6. **토리쿠미(경기) 상세 페이지**에서 대회 정보(바쇼·일차), 동/서 대진, 결정기술(한/일 병기), 유튜브
-   하이라이트 영상을 확인할 수 있다.
-7. 토리쿠미 상세 화면에서 **닉네임/숫자 4자리 비밀번호로 익명 댓글**을 남기고, 본인이 남긴 댓글을
-   비밀번호로 직접 지울 수 있다.
-8. *(관리자)* `/admin/login`으로 로그인하면 댓글 관리 대시보드(`/admin/comments`)로 이동해, 사이트
-   전체 토리쿠미의 댓글을 최신순으로 한눈에 모아보고 부적절한 댓글을 비밀번호 검증 없이 즉시
-   블라인드 처리할 수 있다.
-9. **즐겨찾기 페이지**(`/bookmark`)에서 관심 리키시를 북마크해서(LocalStorage 기반, 로그인 불필요)
-   나만의 리스트를 만들고, 드래그 앤 드롭으로 순서를 바꿀 수 있다.
-10. *(관리자)* `/admin/rikishi`에서 리키시를 검색해 프로필 정보(기본 정보/계급/현역·은퇴/사진)를
-    직접 수정할 수 있다.
-11. *(관리자)* `/admin/basho`에서 새 바쇼를 만들고, 그 바쇼의 반즈케를 리키시 한 명씩
-    (디비전/계급/동서/번호) 추가·수정·삭제할 수 있다. 반즈케가 곧 계급의 source of truth라,
-    편집 결과는 리키시 상세 페이지·메인 대시보드에 그대로 반영된다.
-12. *(관리자)* `/admin/basho/{id}/torikumi`에서 그 바쇼의 대전을 일차·디비전별로 추가·수정·삭제할
-    수 있다 (동/서 리키시, 승자, 결정기술, 부전승패, 결정전 여부, 유튜브 URL, 한/일 해설).
-    입력한 대전은 토리쿠미 상세 페이지·리키시 호시토리표·키마리테 통계에 그대로 반영된다.
+- **반즈케** — 연도·대회·디비전(마쿠우치~조노구치)을 골라서 보기. 각 계급 1번은 「마에가시라필두」처럼 표기
+- **대진** — 날짜별 경기 결과(승패·결정기술)와 전날 발표된 다음 날 대진. 선수 옆에 「그 경기 전까지의 성적」 표시
+- **리키시 프로필** — 기본 정보, 기록된 전적, 다음 경기, 호시토리표(경기를 누르면 슬라이드 패널로 상세), 상대전적
+- **분석** — 결정기술 승/패 비율, 패배 유형 분석(같은 계급 평균 대비 약점·강점), 상대 계급·체격별 성적, 유독 약한/강한 상대
+- **검색** — 한국어·일본어 시코나, 바뀌기 전 시코나까지 통합 검색
+- **즐겨찾기** — 브라우저(localStorage)에만 저장. 이번 바쇼 계급·성적·마지막 경기·다음 경기를 한눈에
+- **경기 댓글** — 익명·숫자 4자리 비밀번호로 작성/삭제, 신고
+- **키마리테 사전** — 일본스모협회 공식 82수 + 비기(非技)를 분류해서 해설
+- **업데이트 소식**(`/updates`) · **개인정보 처리 안내**(`/privacy`)
+
+**관리자**
+
+- sumo-api.com 임포트(로스터·바쇼·반즈케·경기·우승/삼상/킨보시), 대회 중 자동 임포트 상태 확인
+- 반즈케·경기·리키시·헤야 수동 수정, 한국어 시코나 검수
+- 댓글 관리(신고 댓글 확인·가림)
+- 방문 통계(일별 방문자·페이지뷰, 많이 본 리키시, 유입처)
+
+화면·API 전체 목록은 [docs/api.md](docs/api.md), 사용 시나리오는 [docs/scenarios.md](docs/scenarios.md)에 있습니다.
+
+---
+
+## 2. 아키텍처
+
+```mermaid
+flowchart LR
+    U["브라우저<br/>(PC·모바일)"] -- "HTTPS" --> N
+    subgraph EC2["AWS EC2 t4g.small(ARM·서울) / Docker Compose"]
+        N["Nginx<br/>Let's Encrypt"] --> A["Spring Boot 3.5<br/>Java 21"]
+        A --> D[("MySQL 8.0<br/>Flyway V1~V6")]
+        B["cron 매일 4시<br/>backup-db.sh"] --> D
+    end
+    A -- "임포트(대회 중 하루 4번)" --> S["sumo-api.com"]
+    B -- "IAM 역할<br/>PutObject만" --> S3[("S3<br/>14일 후 자동 삭제")]
+    G["GitHub Actions CI"] -. "테스트·Docker 빌드 검증" .-> R["GitHub"]
+```
+
+- **DNS**: Cloudflare (프록시 끔 — IP 기반 요청 제한이 실제 접속 IP를 보도록)
+- **데이터 흐름**: sumo-api.com → 임포트 서비스(upsert라 여러 번 돌려도 안전) → MySQL → 화면. 결과가 나온 경기는 `torikumi`, 발표만 된 대진은 `scheduled_bout`에 따로 저장
+- **화면**: Thymeleaf 서버 렌더링이 기본이고, 반즈케·대진·즐겨찾기처럼 자주 바꿔 보는 부분만 fetch + JSON API
 
 ---
 
 ## 3. 기술 스택
 
-| 구분 | 스택 |
+| 구분 | 기술 |
 |---|---|
-| Language | Java 21 |
-| Framework | Spring Boot 3.5.16 (Spring MVC, Spring Data JPA) |
-| View | Thymeleaf (서버사이드 렌더링 + fragment 재사용) |
-| DB | MySQL 8.0 (`mysql-connector-j`), Hibernate ORM |
-| Frontend | Vanilla JS(fetch 기반 부분 갱신), Chart.js(CDN, 키마리테 도넛 차트), Google Fonts |
-| 인증 | Spring Security 미사용 — 세션(`HttpSession`) + 커스텀 인터셉터 기반 경량 구현 |
-| 빌드 | Gradle (Gradle Wrapper 포함) |
-| 기타 | Lombok |
+| 언어·프레임워크 | Java 21, Spring Boot 3.5 (MVC, Data JPA, Cache, Scheduling) |
+| DB | MySQL 8.0, Flyway |
+| 화면 | Thymeleaf, Vanilla JS, Chart.js |
+| 다국어 | Spring MessageSource (`messages.properties` / `messages_ja.properties`) |
+| 인증 | Spring Security 없이 세션 + 인터셉터 + 자체 CSRF 토큰 |
+| 테스트 | JUnit 5, Mockito, AssertJ, `@WebMvcTest` |
+| 인프라 | AWS (EC2 Graviton, S3, IAM), Docker Compose, Nginx, Let's Encrypt, Cloudflare DNS |
+| CI | GitHub Actions (MySQL 서비스 컨테이너, Docker 빌드, compose 검증) |
 
 ---
 
-## 4. 프로젝트 구조
+## 4. 설계와 문제 해결
 
-```
-sumoarchive/
-├── docs/                                  # 기능/테이블 명세서, ERD, DB 스키마 DDL
-│   ├── 기능명세서.txt
-│   ├── 테이블명세서_v1.txt / v2.txt
-│   ├── sumoarchive_db_schema.sql
-│   └── erd.png
-└── src/main/java/com/torikumilab/sumoarchive/
-    ├── controller/            # 화면(View) 컨트롤러 — Thymeleaf 뷰 이름 반환
-    │   ├── advice/              # ViewExceptionHandler (화면 쪽 404 등 공통 예외 처리)
-    │   └── api/                 # JSON API 컨트롤러 + ApiExceptionHandler
-    ├── config/                # WebConfig, AdminAuthInterceptor (/admin/** 세션 가드)
-    ├── domain/
-    │   ├── entity/              # JPA 엔티티 (+ constant 하위 enum)
-    │   └── dto/                 # 화면/응답 전용 DTO (표시용 문자열은 서버에서 조립)
-    ├── repository/            # Spring Data JPA 리포지토리 (+ QueryDSL 없이 커스텀 구현체)
-    ├── service/               # 비즈니스 로직 (+ exception 하위 도메인 예외)
-    ├── util/                  # RankDisplayUtil, KimariteDisplayUtil, YoutubeUrlUtil 등
-    ├── client/                # SumoApiClient (sumo-api.com 호출 래퍼)
-    └── DataSeeder.java        # 개발용 더미데이터 시더 (기본 비활성 — app.seed-demo=true일 때만)
-```
+실제로 겪은 문제와 원인·선택·결과를 정리했습니다. 자세한 내용은 각 커밋에 있습니다.
 
-`src/main/resources/`
-```
-templates/       # index, search/result, rikishi/detail, torikumi/detail, admin/login, error/404
-static/          # css, js, images
-application.properties                  # 커밋 대상 — 실제 비밀번호 없음
-application-local.properties.example    # 커밋 대상 — 로컬 설정 템플릿
-application-local.properties            # git 제외 — 실제 DB/관리자 비밀번호
-```
+### 4-1. 리키시 프로필 N+1: 한 번 조회에 쿼리 64~94번 → 23번 고정
+- **문제**: 바쇼가 11개뿐인 시점에도 프로필 한 번에 쿼리가 64~94번. 과거 데이터를 넣을수록 바쇼 수에 비례해 늘어나는 구조였습니다.
+- **원인**: 호시토리표를 만들 때 바쇼마다 「본인 경기」「상대 반즈케」「마지막 적재 일차」「전체 휴장 판정」을 따로 조회 (`show-sql` 로그를 세어서 확인).
+- **대응**: 통산 경기를 한 번에 가져와 메모리에서 바쇼별로 묶고, 상대 반즈케는 `IN` 한 번, 적재 일차는 `MAX(day)` 집계 한 번, `JOIN FETCH`로 지연 로딩 제거.
+- **결과**: 바쇼 수와 상관없이 **23번 고정**. 바꾸기 전후로 4명 × 한/일 8개 페이지 HTML이 완전히 같은지 확인한 뒤 반영. ([d091da9](https://github.com/genuinekumquat/sumoarchive/commit/d091da9))
 
----
+### 4-2. 발표된 대진을 통계를 오염시키지 않고 저장하기
+- **문제**: 대진은 전날 발표되는데(첫날·둘째 날은 개막 이틀 전), 임포트는 「결과가 있는 경기」만 저장해서 「다음 경기」를 보여줄 수 없었습니다.
+- **검토**: 기존 `torikumi` 테이블에 「승자 없음」으로 넣는 방법은, 호시토리표·승률·상성·킨보시 계산이 전부 「승자가 있다」는 전제라 곳곳에서 걸러내다 빠뜨릴 위험이 컸습니다.
+- **대응**: 예정 대진만 담는 **`scheduled_bout` 테이블을 따로 둠**(Flyway V6). 디비전 임포트마다 동기화해서 결과가 나왔거나 바뀐 대진은 지우고, **조회에 실패한 날이 있으면 지우기를 건너뛰어** 잘못 지우지 않게 했습니다. 자동 임포트 기간도 개막 이틀 전부터로 늘렸습니다.
+- **결과**: 기존 통계는 전혀 건드리지 않고 프로필·즐겨찾기·대진 탭에 「다음 경기」를 표시. ([01ecd5e](https://github.com/genuinekumquat/sumoarchive/commit/01ecd5e), [db714dd](https://github.com/genuinekumquat/sumoarchive/commit/db714dd))
 
-## 5. API 요약
+### 4-3. 개인정보를 저장하지 않는 방문 통계
+- **문제**: 공개 후 방문자 수를 보려면 서버의 Nginx 로그를 직접 집계해야 했습니다.
+- **검토**: 외부 분석 도구(JS 스니펫)보다, 관리자 화면에서 바로 보고 데이터도 우리 DB에 남는 직접 구현을 선택. 단, IP 주소는 저장하고 싶지 않았습니다.
+- **대응**:
+  - 순방문자는 「그날만 쓰는 랜덤 값 + IP + 브라우저」의 SHA-256을 메모리 Set에서만 세고 날짜가 바뀌면 버림. **DB에는 날짜별 합계만** 저장.
+  - 요청마다 DB에 쓰지 않고 메모리에서 세다가 **1분마다 `INSERT … ON DUPLICATE KEY UPDATE`로 한 번에 더함**. 버킷 교체는 읽기/쓰기 잠금으로, 저장 실패 시 다음 회차에 다시 더함.
+  - 봇은 User-Agent에 더해 `Accept-Language` 헤더가 없는 요청도 제외 (Nginx 로그 집계에서 새벽에도 꾸준히 남던 것들).
+- **결과**: 7·30·90일 추이, 많이 본 리키시, 유입처를 관리자 화면에서 확인. 개인정보 처리 안내에도 반영. ([a738e24](https://github.com/genuinekumquat/sumoarchive/commit/a738e24))
 
-### 화면(View) 라우트 — Thymeleaf 렌더링
+### 4-4. IP 위조로 요청 제한을 우회하는 문제 막기
+- **문제**: 댓글 도배·관리자 로그인 무차별 대입을 IP 기준으로 제한했는데, `X-Forwarded-For` 헤더의 첫 값을 그대로 믿고 있어서 요청마다 값을 바꾸면 제한을 피할 수 있었습니다.
+- **대응**: 헤더를 직접 읽지 않고 `server.forward-headers-strategy=native`(Tomcat RemoteIpValve)로, **직전 연결이 믿을 수 있는 프록시(Nginx)일 때만** 실제 IP로 바꾸도록 변경. 관리자 로그인 시 세션 교체와 CSRF 토큰도 추가. ([32ee4df](https://github.com/genuinekumquat/sumoarchive/commit/32ee4df))
 
-| Method | Path | 설명 |
-|---|---|---|
-| GET | `/` | 메인 대시보드 (최신 마쿠우치 반즈케 기본 노출) |
-| GET | `/search?keyword=&page=` | 리키시 통합 검색 결과 목록 |
-| GET | `/rikishi/{id}` | 리키시 상세 프로필 |
-| GET | `/torikumi/{id}` | 토리쿠미(경기) 상세 전체 페이지 |
-| GET | `/torikumi/{id}/fragment` | 위와 동일한 내용의 조각(fragment) — 슬라이드 패널 삽입용 |
-| GET | `/bookmark` | 즐겨찾기 페이지 (LocalStorage ID 배열로 카드 목록 구성) |
-| GET / POST | `/admin/login` | 관리자 로그인 폼 조회 / 로그인 처리 (성공 시 `/admin/comments`로 이동) |
-| POST | `/admin/logout` | 관리자 로그아웃 (세션 무효화) |
-| GET | `/admin/comments?page=` | 관리자 댓글 관리 대시보드 (`/admin/**`, 세션 `isAdmin` 가드) |
-| GET | `/admin/rikishi?keyword=&page=` | 관리자 리키시 목록/검색 |
-| GET / POST | `/admin/rikishi/{id}/edit` | 리키시 프로필 수정 폼 조회 / 저장 |
-| GET | `/admin/basho` | 관리자 바쇼 목록 (반즈케·토리쿠미 수 포함) |
-| GET / POST | `/admin/basho/new`, `/admin/basho` | 새 바쇼 생성 폼 조회 / 생성 (연·월 중복 차단) |
-| POST | `/admin/basho/import?fromYear=&toYear=` | sumo-api에서 연도 범위 바쇼 메타 임포트 (본장소 6개월, 미개최분 스킵) |
-| POST | `/admin/basho/import-year?year=` | 해당 연도 전 바쇼의 전 디비전(마쿠우치~조노구치) 반즈케(공식 승·패·휴 포함), 토리쿠미, 우승·산쇼·킨보시 일괄 임포트 |
-| POST | `/admin/basho/{bashoId}/import-all` | 바쇼 1건의 전체 데이터(반즈케·토리쿠미·수상) 일괄 임포트 |
-| POST | `/admin/basho/{bashoId}/banzuke/import?division=` , `/admin/basho/{bashoId}/torikumi/import?division=` | 바쇼·디비전 단위 반즈케 / 토리쿠미 임포트 (미매칭 리키시 스킵) |
-| POST | `/admin/basho/{bashoId}/awards/import` | 우승·산쇼(sumo-api) + 킨보시(반즈케·토리쿠미에서 파생) 갱신 (재실행 가능) |
-| GET / POST | `/admin/basho/{bashoId}/edit`, `.../{bashoId}` , `.../{bashoId}/delete` | 바쇼 기간 수정 폼 / 시작일·종료일 수정 / 삭제 (반즈케·토리쿠미가 비어야 삭제) |
-| GET | `/admin/basho/{bashoId}/banzuke?division=` | 바쇼별 반즈케 관리 (디비전 탭 + 행 추가 폼) |
-| POST | `/admin/basho/{bashoId}/banzuke` | 반즈케 행 추가 (리키시·바쇼 중복 차단) |
-| POST | `/admin/basho/{bashoId}/banzuke/{banzukeId}` , `.../delete` | 반즈케 행 수정 / 삭제 |
-| GET | `/admin/basho/{bashoId}/torikumi?day=&division=` | 바쇼별 대전 목록 (일차 링크 + 디비전 필터) |
-| GET / POST | `/admin/basho/{bashoId}/torikumi/new`, `/admin/basho/{bashoId}/torikumi` | 새 대전 폼 조회 / 생성 (같은 날·동서 조합 중복 차단) |
-| GET / POST | `/admin/basho/{bashoId}/torikumi/{id}/edit`, `.../{id}` , `.../{id}/delete` | 대전 편집 폼 / 수정 / 삭제 |
+### 4-5. 사용자 제보를 공식 자료와 대조해서 바로잡기
+- **문제**: 공개 다음 날, 커뮤니티에서 「키마리테 사전에 결정기술이 아닌 『하즈오시』가 왜 있나요?」라는 제보.
+- **원인**: 사전을 만들 때 일본스모협회 공식 목록과 대조하지 않았음. 확인해 보니 공식 결정기술 33개가 빠져 있었고, 실제 경기에 나온 26종이 로마자 그대로 표시되고 있었습니다.
+- **대응**: 협회 공식 82수 + 비기와 한 줄씩 대조해 사전을 다시 만들고, 설명 90개도 전부 협회 해설과 대조해 수정. **분류별 개수(7/13/18/6/19/19)를 테스트로 고정**해서 앞으로 어긋나면 테스트가 깨지게 했습니다.
+- **결과**: 실제 경기 기록에는 영향이 없다는 것(해당 0건)도 확인해서 제보자에게 답변. ([1156830](https://github.com/genuinekumquat/sumoarchive/commit/1156830), [4dc826c](https://github.com/genuinekumquat/sumoarchive/commit/4dc826c))
 
-### API 라우트 — JSON
-
-| Method | Path | 설명 |
-|---|---|---|
-| GET | `/api/banzuke?division=&bashoId=` | 디비전별 반즈케 목록 (탭 전환·바쇼 선택 시 비동기 호출; `bashoId` 생략 시 최신 바쇼) |
-| GET | `/api/search?keyword=&page=` | 리키시 검색 (페이지네이션) |
-| GET | `/api/rikishiEntity?ids=3,15,24` | 즐겨찾기 페이지용 — ID 목록으로 리키시 카드 조회 (요청 순서 유지) |
-| GET | `/api/torikumi/{torikumiId}/comments` | 해당 경기 댓글 전체 조회 |
-| POST | `/api/torikumi/{torikumiId}/comments` | 댓글 작성 (nickname, password, content) |
-| POST | `/api/torikumi/{torikumiId}/comments/{commentId}/delete` | 본인 댓글 삭제 (password 검증) |
-| POST | `/api/torikumi/{torikumiId}/comments/{commentId}/blind` | 관리자 블라인드 (세션 `isAdmin` 필요) |
-
-> 댓글 API는 등록/삭제/블라인드 모두 **그 경기의 갱신된 댓글 목록 전체**를 응답으로 돌려줘서,
-> 프론트는 응답을 그대로 다시 렌더링하기만 하면 되도록 설계했습니다.
+### 4-6. 운영을 「손으로 챙기지 않아도 되는」 구조로
+- **백업**: 매일 4시에 DB를 덤프해 S3로. EC2의 IAM 역할은 **그 폴더에 PutObject만** 허용(목록·삭제가 안 되는 것 확인)해서 서버가 털려도 백업은 지울 수 없게 했습니다. S3 수명 주기는 개인정보 처리 안내에 적은 기간(14일)과 맞췄습니다.
+- **대회 중 자동 임포트**: 18:30·20:00·22:00·다음 날 9:00에, 개막 이틀 전~종료 다음 날인 바쇼만 자동 임포트. 이전 실행이 아직 돌고 있으면 건너뛰고, 실패해도 다음 회차는 돌며, 결과는 관리자 화면에 표시. ([25e1eb3](https://github.com/genuinekumquat/sumoarchive/commit/25e1eb3))
+- **배포**: 백업 → `git pull` → `docker compose up -d --build`. SSH가 끊겨도 빌드가 멈추지 않게 서버에서 백그라운드로 실행. 절차는 [DEPLOYMENT.md](DEPLOYMENT.md)에 정리했습니다.
 
 ---
 
-## 6. 핵심 설계 포인트
+## 5. 운영
 
-- **표시 문자열은 서버에서 완성해서 내려줌**: "前頭10枚目", "3일째/3日目" 같은 표기 변환을
-  `RankDisplayUtil`/`KimariteDisplayUtil` 등 유틸로 서비스 계층에서 미리 만들어 DTO에 담고,
-  템플릿에서는 최소한의 분기만 하도록 설계했습니다.
-- **Thymeleaf fragment 재사용**: 토리쿠미 상세는 독립 페이지(`/torikumi/{id}`)와 리키시 프로필의
-  슬라이드 패널(`/torikumi/{id}/fragment`)이 완전히 같은 `th:fragment="content"`를 공유합니다.
-  패널은 그 fragment를 fetch로 받아 그대로 삽입하고, 삽입 후 `SumoComments.bind()`만 다시 호출해
-  댓글 기능까지 재사용합니다.
-- **배치 조회로 N+1 방지**: 토리쿠미/호시토리표에서 동서 두 선수(또는 여러 상대)의 반즈케를 조회할
-  때 `IN` 절 배치 쿼리 한 번으로 모아 조회한 뒤 Map으로 매핑합니다.
-- **소프트 딜리트 + 사유 구분**: 댓글 삭제는 물리 삭제 없이 `is_deleted` 플래그만 갱신하고,
-  `DeletedBy`(USER/ADMIN) enum으로 "작성자에 의해 삭제됨"과 "관리자에 의해 블라인드됨"을 구분
-  표시해 레이아웃과 맥락을 유지합니다.
-- **예외 처리를 화면/API로 이원화**: 같은 `EntityNotFoundException`이라도 `controller` 패키지(화면)는
-  `ViewExceptionHandler`가 404 페이지로, `controller.api` 패키지는 `ApiExceptionHandler`
-  (`@Order(HIGHEST_PRECEDENCE)`)가 JSON으로 각각 다르게 변환합니다.
-- **경량 관리자 인증**: Spring Security 없이 세션 속성 `isAdmin`만으로 관리자를 구분합니다.
-  `AdminAuthInterceptor` + `WebConfig`가 `/admin/**` 경로를 가드하고, 댓글 블라인드 API는
-  별도로 자체 세션 체크 후 `AdminOnlyException`(401)을 던지는 방식으로 이중 게이트를 둡니다.
-- **화면-API 재사용**: 댓글 관리 대시보드(`/admin/comments`)는 새 삭제 API를 만들지 않고, 토리쿠미
-  상세 화면이 쓰던 블라인드 API(`POST /api/torikumi/{id}/comments/{id}/blind`)를 fetch로 그대로
-  호출합니다.
-- **서버가 모르는 개인화**: 즐겨찾기는 DB에 전혀 저장하지 않고 브라우저 LocalStorage의 ID 배열이
-  유일한 저장소입니다. 서버는 그 배열을 절대 순서를 바꾸지 않고 그대로 응답 순서에 반영해서, 드래그로
-  바꾼 정렬이 새로고침 후에도 유지되도록 합니다.
-- **`<input type="date">`는 로케일 포맷을 믿지 않음**: `@DateTimeFormat(pattern = "yyyy-MM-dd")`을
-  명시하지 않으면 Spring이 요청 로케일(한국어) 기준 short style("94. 3. 1.")로 값을 내려줘서 브라우저가
-  날짜를 못 읽습니다. 관리자 리키시 수정 폼의 생년월일/데뷔일/은퇴일 모두 이 패턴을 명시했습니다.
+| 항목 | 내용 |
+|---|---|
+| 서버 | AWS EC2 t4g.small (2 vCPU·2GB, Ubuntu 24.04), 탄력적 IP, 보안 그룹으로 SSH는 집 IP만 |
+| HTTPS | Nginx + Let's Encrypt(자동 갱신), www → 정식 주소로 301 |
+| 백업 | 매일 DB 덤프 → 서버 + S3 (14일 보관) |
+| 로그 | 앱 로그 14일·500MB 상한, Nginx 접속 로그 14일, docker logs 크기 제한 |
+| 상태 확인 | Actuator `/actuator/health`(DB 연결 포함), Docker healthcheck |
+| 검색 | `robots.txt` · `sitemap.xml`(리키시 페이지 한/일), OG 태그 |
+| 비용 | 월 18달러 안팎 (AWS 신규 계정 크레딧으로 운영 중) |
 
 ---
 
-## 7. Infrastructure / 환경 설정
-
-- **DB**: MySQL 8.0. 스키마는 Flyway 마이그레이션(`src/main/resources/db/migration`)으로 관리하고,
-  Hibernate는 `ddl-auto=validate`로 엔티티와 테이블이 맞는지 검사만 합니다.
-- **시크릿 분리**: `application.properties`는 커밋되지만 실제 값이 없고, DB 계정과 관리자
-  로그인 계정은 `application-local.properties`(git 제외)에서만 관리합니다.
-  ```properties
-  spring.config.import=optional:classpath:application-local.properties
-  ```
-  로 로컬 설정을 선택적으로 불러오는 구조입니다.
-- **데이터 소스**: 초기에는 `DataSeeder`(개발용 더미)로 채웠으나, 지금은 **sumo-api.com**에서
-  실데이터를 가져옵니다. `DataSeeder`는 기본 비활성(`app.seed-demo=false`)이고,
-  관리자 `/admin/rikishi`의 "로스터 임포트" 버튼이 현역 헤야·리키시를, `/admin/basho`의
-  임포트 버튼들이 바쇼 메타와 전 디비전(마쿠우치~조노구치) 반즈케·토리쿠미·수상(우승·산쇼·킨보시) 데이터를
-  가져옵니다. 2019년 1월부터의 전 바쇼·전 디비전 데이터가 이 방식으로 적재되어 있습니다 (2020년 5월은 코로나로 중지).
-  외부 API 관련 설정: `sumo-api.base-url`, `app.seed-demo`.
-
-### 로컬 실행 방법
+## 6. 로컬 실행 방법
 
 ```bash
 # 1. MySQL에 스키마 생성 (예: sumo)
@@ -224,30 +175,25 @@ cp src/main/resources/application-local.properties.example \
 # 3. 실행 (테이블은 Flyway가 자동 생성, 데이터는 비어 있는 상태로 시작)
 ./gradlew bootRun
 
-# 4. 관리자 로그인 후 /admin/rikishi "로스터 임포트" → /admin/basho 연도 일괄 임포트로 데이터 채우기
+# 4. 관리자 로그인 후 /admin/rikishi "로스터 임포트" → /admin/basho 바쇼별 일괄 임포트로 데이터 채우기
 ```
 
-기본 접속: `http://localhost:8080` (포트를 바꾸려면 `application-local.properties`에 `server.port` 지정)
-관리자 로그인: `http://localhost:8080/admin/login` (로그인 성공 시 댓글 관리 대시보드로 이동)
+- 접속: `http://localhost:8080` (포트는 `application-local.properties`의 `server.port`로 변경)
+- 관리자 로그인: `http://localhost:8080/admin/login`
+- 비밀 값은 `application-local.properties`(git 제외), 운영은 `.env` + 환경변수로 관리합니다
 
 ---
 
-## 8. 다음 단계 (로드맵)
+## 7. 문서
 
-- [x] 관리자 댓글 관리 대시보드 (`/admin/comments` — 전체 댓글 조회 + 블라인드)
-- [x] 즐겨찾기 페이지 (`/bookmark`, LocalStorage 기반, 로그인 불필요, 드래그 정렬)
-- [x] 관리자 리키시 프로필 수정 (`/admin/rikishi` — 목록/검색 + 수정 폼)
-- [x] 관리자 반즈케 데이터 수동 갱신 (`/admin/basho` — 바쇼 생성·기간수정·삭제 + 반즈케 행 CRUD)
-- [x] 관리자 토리쿠미(대전) 입력 UI (`/admin/basho/{id}/torikumi` — 일차·디비전별 대전 CRUD)
-- [ ] 키마리테 상세 설명 백과사전
-- [ ] 반즈케 예측 시뮬레이터
-- [x] 외부 스모 데이터 API(sumo-api.com) 연동 — 로스터·바쇼·반즈케·토리쿠미·수상 임포트
-  (2019년~ 전 디비전. 마쿠시타 이하는 15일 중 7번이라 성적은 반즈케의 공식 승·패·휴 기준)
+- [docs/api.md](docs/api.md) — 화면·API 목록
+- [docs/scenarios.md](docs/scenarios.md) — 사용 시나리오
+- [DEPLOYMENT.md](DEPLOYMENT.md) — 운영 서버 구성·배포·백업·바쇼별 운영 절차
+- [docs/erd.png](docs/erd.png), [docs/sumoarchive_db_schema.sql](docs/sumoarchive_db_schema.sql) — DB 설계 (초기 버전. 현재 스키마는 `src/main/resources/db/migration`)
+- [docs/기능명세서.txt](docs/기능명세서.txt) — 기능 명세
+
+**다음 계획**: 반즈케 예측 시뮬레이터, 2000~2018년 데이터 추가, 검색엔진 등록
 
 ---
 
-## 9. 문서
-
-- [`docs/기능명세서.txt`](docs/기능명세서.txt) — 전체 기능 명세
-- [`docs/테이블명세서_v2.txt`](docs/테이블명세서_v2.txt), [`docs/sumoarchive_db_schema.sql`](docs/sumoarchive_db_schema.sql) — DB 설계
-- [`docs/erd.png`](docs/erd.png) — ERD 다이어그램
+<sub>경기 기록 데이터: [sumo-api.com](https://sumo-api.com). 개인이 운영하는 팬 사이트이며 일본스모협회(日本相撲協会)와 관련이 없습니다.</sub>

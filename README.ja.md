@@ -1,214 +1,167 @@
-# 🏯 sumoarchive
+# 🏯 sumoarchive — 相撲アーカイブ
 
 [![CI](https://github.com/genuinekumquat/sumoarchive/actions/workflows/ci.yml/badge.svg)](https://github.com/genuinekumquat/sumoarchive/actions/workflows/ci.yml)
 
 [한국어](README.md) | **日本語**
 
-韓国語で大相撲の情報を手軽に調べられるアーカイブWebサービスです。
+**大相撲の番付・力士・取組を、韓国語と日本語で調べられるアーカイブサービスです。**
+
+🔗 **https://sumoarchive.com** (2026年10月公開・運用中)
+
+韓国出身の開発者として、「日本語の資料しかなくて韓国のファンには敷居が高い大相撲を、韓国語でも楽しめるようにしたい」という思いから作りました。
+画面・データ・URLはすべて日韓2言語に対応しています。企画・設計から実装、AWSでの運用まで一人で担当しています。
+
+| | |
+|---|---|
+| ![番付(トップ)](docs/images/ja-main.png) | ![取組タブ](docs/images/ja-torikumi.png) |
+| **番付** — 年・場所・各段を選んで表示 | **取組** — 日ごとの結果と、前日に発表された翌日の取組 |
+| ![力士プロフィール](docs/images/ja-rikishi.png) | ![決まり手の傾向](docs/images/ja-analysis.png) |
+| **力士プロフィール** — 成績・次の取組・星取表 | **分析** — 決まり手の傾向、負け方の分析、相手別の成績 |
+
+<p align="center"><img src="docs/images/ja-mobile.png" width="260" alt="モバイル表示"></p>
+
+### 数字で見る
+
+| 項目 | 内容 |
+|---|---|
+| データ | 取組 **106,534件**・力士 **1,157人**・**46場所**(2019年〜)・幕内〜序ノ口の **全6階級** |
+| テスト | JUnit 5 + Mockito **110件**、GitHub Actions で毎回実行(空のDBから Flyway + 全テスト) |
+| 運用 | AWS EC2 + Docker Compose、毎日 S3 バックアップ、場所中は取組結果を **1日4回自動取込** |
+| 利用 | 公開直後、韓国の相撲コミュニティへの投稿で **約100〜150人** が訪問(Nginxログ集計) |
+| 開発 | 2026年7月 設計開始 → 9月 実装 → 10月10日 公開(作業記録は Notion に42回分) |
 
 ---
 
-## 1. 企画意図
+## 目次
 
-大相撲には番付・四股名・決まり手など独自の用語が多く、公式情報のほとんどが日本語でのみ提供されているため、
-韓国語ユーザーにとってはアクセスしづらいのが現状です。
-
-**sumoarchiveは、韓国語ユーザーが予備知識なしでも力士のプロフィール、番付、取組結果を
-気軽に調べて楽しめるようにすることを目標としたプロジェクトです。**
-
-MVP(現段階)以降は、次のような方向でサービスを拡張する予定です。
-
-- **決まり手事典**: 現在は円グラフで統計のみを表示している決まり手に、技の説明や動きを
-  テキスト・画像で解説する事典機能を追加
-- **番付予測シミュレーター**: 直前の場所の成績をもとに、次の場所の番付の変動を
-  重み付け計算で予測するシミュレーター
+1. [主な機能](#1-主な機能)
+2. [アーキテクチャ](#2-アーキテクチャ)
+3. [技術スタック](#3-技術スタック)
+4. [設計と課題解決](#4-設計と課題解決) ← いちばん見ていただきたい部分です
+5. [運用](#5-運用)
+6. [ローカルでの実行方法](#6-ローカルでの実行方法)
+7. [ドキュメント](#7-ドキュメント)
 
 ---
 
-## 2. 目標シナリオ
+## 1. 主な機能
 
-機能仕様書(`docs/기능명세서.txt`)に基づき、ユーザーは次のことができます。
+**利用者向け(ログイン不要)**
 
-1. **メイン画面**でログインなしに最新の幕内番付をすぐに確認できる。`番付` の下にある
-   **年・場所・階級の3つのドロップダウン**で見たい番付を選び、非同期で読み込む — 年を変えると
-   その年に開催された場所だけが場所ドロップダウンに再設定され、階級(幕内/十両/幕下/三段目/序二段/
-   序ノ口)は独立して選択できる。初期値は最新の場所・幕内(本場所開催前でも発表済みの番付であれば表示)。
-2. 番付表の**力士名をクリック**して、その力士のプロフィールページへ移動できる。
-3. **検索欄**で韓国語の四股名 / 日本語の四股名 / 過去に名乗っていた四股名までまとめて検索でき、同名の力士や
-   受け継がれた四股名(襲名)があっても、本名・活動時期・最高位・現在の状態(現役/引退/親方)を見て
-   目的の力士を正確に選べる。
-4. **力士プロフィールページ**で、基本情報(本名・生年月日・出身地・所属部屋・身長/体重など)、
-   キャリア成績(通算成績・優勝・三賞・金星)、決まり手別の勝ち技統計(円グラフ)をひと目で確認できる。
-5. プロフィール下部の**星取表**で、初土俵以降の全場所の成績を日ごとに確認でき、個別の取組
-   アイコン(○/●/休)をクリックすると、その取組の詳細をスライドパネルですぐに開ける。
-6. **取組詳細ページ**で、場所情報(場所・日目)、東/西の対戦、決まり手(韓国語・日本語併記)、
-   YouTubeのハイライト動画を確認できる。
-7. 取組詳細画面で**ニックネームと4桁の数字パスワードによる匿名コメント**を投稿でき、自分のコメントを
-   パスワードで削除できる。
-8. *(管理者)* `/admin/login` でログインするとコメント管理ダッシュボード(`/admin/comments`)へ移動し、
-   サイト全体の取組のコメントを新しい順にまとめて確認して、不適切なコメントをパスワード確認なしで即座に
-   非表示(ブラインド)にできる。
-9. **お気に入りページ**(`/bookmark`)で気になる力士をブックマークし(LocalStorageベース、ログイン不要)、
-   自分だけのリストを作ってドラッグ&ドロップで並べ替えられる。
-10. *(管理者)* `/admin/rikishi` で力士を検索し、プロフィール情報(基本情報/階級/現役・引退/写真)を
-    直接編集できる。
-11. *(管理者)* `/admin/basho` で新しい場所を作成し、その場所の番付を力士一人ずつ
-    (地位区分/階級/東西/枚数)追加・編集・削除できる。番付が階級の source of truth であるため、
-    編集結果は力士詳細ページやメインダッシュボードにそのまま反映される。
-12. *(管理者)* `/admin/basho/{id}/torikumi` で、その場所の取組を日目・地位区分ごとに追加・編集・削除
-    できる(東/西の力士、勝者、決まり手、不戦勝・不戦敗、優勝決定戦かどうか、YouTube URL、韓国語・日本語の解説)。
-    入力した取組は取組詳細ページ・力士の星取表・決まり手統計にそのまま反映される。
+- **番付** — 年・場所・階級(幕内〜序ノ口)を選んで表示。番付の各段の一枚目は「前頭筆頭」のように表記
+- **取組** — 日ごとの取組結果(勝敗・決まり手)と、前日に発表された翌日の取組。各力士の「その一番の前までの成績」も表示
+- **力士プロフィール** — 基本情報、記録上の成績、次の取組、星取表(取組をクリックするとスライドパネルで詳細)、対戦成績
+- **分析** — 決まり手の勝ち/負けの割合、負け方の分析(同じ階級の平均と比べた弱点・強み)、相手の地位・体格別の成績、特に勝ち越し・負け越している相手
+- **検索** — 韓国語・日本語の四股名、改名前の四股名までまとめて検索
+- **ごひいき(お気に入り)** — ブラウザ(localStorage)だけに保存。今場所の番付・成績・直近の取組・次の取組をまとめて表示
+- **取組ページのコメント** — 匿名・4桁の暗証番号で投稿/削除、通報
+- **決まり手事典** — 日本相撲協会の公式八十二手+非技を分類して解説
+- **更新情報**(`/updates`)・**個人情報の取り扱い**(`/privacy`)
+
+**管理者向け**
+
+- sumo-api.com からの取込(力士名簿・場所・番付・取組・優勝/三賞/金星)、場所中の自動取込の状況確認
+- 番付・取組・力士・部屋の手動修正、韓国語の四股名の確認
+- コメント管理(通報されたコメントの確認・非表示)
+- アクセス統計(日別の訪問者・PV、よく見られた力士、参照元)
+
+画面と API の一覧は [docs/api.ja.md](docs/api.ja.md)、利用シナリオは [docs/scenarios.ja.md](docs/scenarios.ja.md) にあります。
+
+---
+
+## 2. アーキテクチャ
+
+```mermaid
+flowchart LR
+    U["ブラウザ<br/>(PC・スマホ)"] -- "HTTPS" --> N
+    subgraph EC2["AWS EC2 t4g.small(ARM・ソウル)/ Docker Compose"]
+        N["Nginx<br/>Let's Encrypt"] --> A["Spring Boot 3.5<br/>Java 21"]
+        A --> D[("MySQL 8.0<br/>Flyway V1〜V6")]
+        B["cron 毎日4時<br/>backup-db.sh"] --> D
+    end
+    A -- "取込(場所中は1日4回)" --> S["sumo-api.com"]
+    B -- "IAMロール<br/>PutObjectのみ" --> S3[("S3<br/>14日で自動削除")]
+    G["GitHub Actions CI"] -. "テスト・Dockerビルド検証" .-> R["GitHub"]
+```
+
+- **DNS**: Cloudflare(プロキシなし。IPベースのレート制限が実際の接続元を見られるように)
+- **データの流れ**: sumo-api.com → 取込サービス(upsert、何度実行しても安全)→ MySQL → 画面。結果が出た取組は `torikumi`、発表のみの取組は `scheduled_bout` に分けて保存
+- **画面**: Thymeleaf のサーバーサイドレンダリングが基本。番付・取組・ごひいきなど切り替えが多い部分だけ fetch + JSON API
 
 ---
 
 ## 3. 技術スタック
 
-| 区分 | スタック |
+| 区分 | 技術 |
 |---|---|
-| Language | Java 21 |
-| Framework | Spring Boot 3.5.16 (Spring MVC, Spring Data JPA) |
-| View | Thymeleaf(サーバーサイドレンダリング + fragment の再利用) |
-| DB | MySQL 8.0 (`mysql-connector-j`), Hibernate ORM |
-| Frontend | Vanilla JS(fetch による部分更新)、Chart.js(CDN、決まり手ドーナツグラフ)、Google Fonts |
-| 認証 | Spring Security 不使用 — セッション(`HttpSession`)+ カスタムインターセプターによる軽量実装 |
-| ビルド | Gradle(Gradle Wrapper 同梱) |
-| その他 | Lombok |
+| 言語・FW | Java 21, Spring Boot 3.5 (MVC, Data JPA, Cache, Scheduling) |
+| DB | MySQL 8.0, Flyway |
+| 画面 | Thymeleaf, Vanilla JS, Chart.js |
+| 国際化 | Spring MessageSource(`messages.properties` / `messages_ja.properties`) |
+| 認証 | Spring Security 不使用 — セッション + インターセプター + 独自 CSRF トークン |
+| テスト | JUnit 5, Mockito, AssertJ, `@WebMvcTest` |
+| インフラ | AWS(EC2 Graviton, S3, IAM), Docker Compose, Nginx, Let's Encrypt, Cloudflare DNS |
+| CI | GitHub Actions(MySQL サービスコンテナ、Docker ビルド、compose 検証) |
 
 ---
 
-## 4. プロジェクト構成
+## 4. 設計と課題解決
 
-```
-sumoarchive/
-├── docs/                                  # 機能・テーブル仕様書、ERD、DBスキーマDDL
-│   ├── 기능명세서.txt
-│   ├── 테이블명세서_v1.txt / v2.txt
-│   ├── sumoarchive_db_schema.sql
-│   └── erd.png
-└── src/main/java/com/torikumilab/sumoarchive/
-    ├── controller/            # 画面(View)コントローラー — Thymeleaf のビュー名を返す
-    │   ├── advice/              # ViewExceptionHandler(画面側の404など共通例外処理)
-    │   └── api/                 # JSON API コントローラー + ApiExceptionHandler
-    ├── config/                # WebConfig, AdminAuthInterceptor(/admin/** のセッションガード)
-    ├── domain/
-    │   ├── entity/              # JPA エンティティ(+ constant 配下の enum)
-    │   └── dto/                 # 画面/レスポンス専用 DTO(表示用文字列はサーバー側で組み立て)
-    ├── repository/            # Spring Data JPA リポジトリ(+ QueryDSL を使わないカスタム実装)
-    ├── service/               # ビジネスロジック(+ exception 配下のドメイン例外)
-    ├── util/                  # RankDisplayUtil, KimariteDisplayUtil, YoutubeUrlUtil など
-    ├── client/                # SumoApiClient(sumo-api.com 呼び出しラッパー)
-    └── DataSeeder.java        # 開発用ダミーデータシーダー(デフォルト無効 — app.seed-demo=true の場合のみ)
-```
+実際に起きた問題と、その原因・選択肢・結果をまとめました。詳細は各コミットにあります。
 
-`src/main/resources/`
-```
-templates/       # index, search/result, rikishi/detail, torikumi/detail, admin/login, error/404
-static/          # css, js, images
-application.properties                  # コミット対象 — 実際のパスワードなし
-application-local.properties.example    # コミット対象 — ローカル設定テンプレート
-application-local.properties            # git 管理外 — 実際のDB/管理者パスワード
-```
+### 4-1. 力士プロフィールの N+1:1回の表示でクエリ64〜94回 → 23回に固定
+- **問題**: 力士プロフィールの表示に、場所が11場所分しかない段階でもクエリが64〜94回。過去データを入れるほど場所数に比例して増える構造でした。
+- **原因**: 星取表を作る際、場所ごとに「本人の取組」「相手の番付」「最終取込日」「全休判定」を別々に照会していた(`show-sql` のログを集計して特定)。
+- **対応**: 通算の取組を1回で取得してメモリで場所ごとにグループ化、相手の番付は `IN` 句1回、取込済みの日は `MAX(day)` の集計1回にまとめ、`JOIN FETCH` で遅延ロードを除去。
+- **結果**: 場所数に関係なく **23回で固定**。変更前後で4人 × 日韓の8ページの HTML が完全に一致することを確認してから反映。([d091da9](https://github.com/genuinekumquat/sumoarchive/commit/d091da9))
 
----
+### 4-2. 発表済みの取組を、統計を汚さずに保存する
+- **問題**: 取組は前日に発表されますが(初日・二日目は開催2日前)、取込は「結果のある取組」だけを保存していたため、「次の取組」を表示できませんでした。
+- **検討**: 既存の `torikumi` テーブルに「勝者なし」の行として入れる案は、星取表・勝率・相性・金星の計算がすべて「勝者がいる」前提のため、あちこちで除外漏れが起きる危険がありました。
+- **対応**: 予定の取組だけを持つ **`scheduled_bout` テーブルを別に作成**(Flyway V6)。階級ごとの取込のたびに同期し、結果が出たもの・変更されたものは削除。**照会に失敗した日がある場合は削除をスキップ**して、誤って消さないようにしました。自動取込の期間も開催2日前からに拡大。
+- **結果**: 既存の統計には一切手を入れずに、プロフィール・ごひいき・取組タブに「次の取組」を表示。([01ecd5e](https://github.com/genuinekumquat/sumoarchive/commit/01ecd5e), [db714dd](https://github.com/genuinekumquat/sumoarchive/commit/db714dd))
 
-## 5. API 概要
+### 4-3. 個人情報を保存しないアクセス統計
+- **問題**: 公開後、訪問者数を見るにはサーバーで Nginx のログを手作業で集計するしかありませんでした。
+- **検討**: 外部の解析ツール(JSスニペット)より、管理画面ですぐ見られて、データも自分のDBに残る自前実装を選択。ただし IP アドレスは保存したくない。
+- **対応**:
+  - ユニーク訪問者は「その日だけのランダム値 + IP + ブラウザ」の SHA-256 をメモリ上の Set でだけ数え、日付が変わると破棄。**DB には日別の合計値だけ**を保存。
+  - リクエストごとに DB へ書かず、メモリで集計して **1分ごとに `INSERT … ON DUPLICATE KEY UPDATE` でまとめて加算**。バケットの入れ替えは読み書きロックで、書き込み失敗時は次回に再加算。
+  - ボットは User-Agent に加え、`Accept-Language` ヘッダーがないリクエストも除外(Nginx ログの集計で深夜にも一定数残っていたもの)。
+- **結果**: 7・30・90日の推移、よく見られた力士、参照元を管理画面で確認可能。個人情報の取り扱いページにも反映。([a738e24](https://github.com/genuinekumquat/sumoarchive/commit/a738e24))
 
-### 画面(View)ルート — Thymeleaf レンダリング
+### 4-4. IP 偽装によるレート制限の回避を防ぐ
+- **問題**: コメント連投や管理者ログインの総当たりを IP 単位で制限していましたが、`X-Forwarded-For` ヘッダーの先頭の値をそのまま信じていたため、リクエストごとに値を変えれば制限を回避できました。
+- **対応**: ヘッダーを直接読むのをやめ、`server.forward-headers-strategy=native`(Tomcat RemoteIpValve)で、**直前の接続が信頼できるプロキシ(Nginx)のときだけ**実際のIPに置き換えるように変更。あわせて管理者ログイン時のセッション再発行と CSRF トークンを追加。([32ee4df](https://github.com/genuinekumquat/sumoarchive/commit/32ee4df))
 
-| Method | Path | 説明 |
-|---|---|---|
-| GET | `/` | メインダッシュボード(最新の幕内番付をデフォルト表示) |
-| GET | `/search?keyword=&page=` | 力士の統合検索結果一覧 |
-| GET | `/rikishi/{id}` | 力士詳細プロフィール |
-| GET | `/torikumi/{id}` | 取組詳細の全体ページ |
-| GET | `/torikumi/{id}/fragment` | 上記と同じ内容の断片(fragment)— スライドパネル挿入用 |
-| GET | `/bookmark` | お気に入りページ(LocalStorage の ID 配列でカード一覧を構成) |
-| GET / POST | `/admin/login` | 管理者ログインフォーム表示 / ログイン処理(成功時 `/admin/comments` へ移動) |
-| POST | `/admin/logout` | 管理者ログアウト(セッション無効化) |
-| GET | `/admin/comments?page=` | 管理者コメント管理ダッシュボード(`/admin/**`、セッション `isAdmin` ガード) |
-| GET | `/admin/rikishi?keyword=&page=` | 管理者用力士一覧/検索 |
-| GET / POST | `/admin/rikishi/{id}/edit` | 力士プロフィール編集フォーム表示 / 保存 |
-| GET | `/admin/basho` | 管理者用場所一覧(番付・取組の件数を含む) |
-| GET / POST | `/admin/basho/new`, `/admin/basho` | 新規場所作成フォーム表示 / 作成(年・月の重複を防止) |
-| POST | `/admin/basho/import?fromYear=&toYear=` | sumo-api から指定年範囲の場所メタ情報をインポート(本場所6場所、未開催分はスキップ) |
-| POST | `/admin/basho/import-year?year=` | 指定年の全場所の全階級(幕内〜序ノ口)の番付(公式の勝敗・休場数を含む)、取組、優勝・三賞・金星を一括インポート |
-| POST | `/admin/basho/{bashoId}/import-all` | 1場所分の全データ(番付・取組・表彰)を一括インポート |
-| POST | `/admin/basho/{bashoId}/banzuke/import?division=` , `/admin/basho/{bashoId}/torikumi/import?division=` | 場所・地位区分単位の番付 / 取組インポート(未マッチの力士はスキップ) |
-| POST | `/admin/basho/{bashoId}/awards/import` | 優勝・三賞(sumo-api)+ 金星(番付・取組から算出)を更新(再実行可) |
-| GET / POST | `/admin/basho/{bashoId}/edit`, `.../{bashoId}` , `.../{bashoId}/delete` | 場所期間編集フォーム / 初日・千秋楽の日付修正 / 削除(番付・取組が空の場合のみ削除可) |
-| GET | `/admin/basho/{bashoId}/banzuke?division=` | 場所ごとの番付管理(地位区分タブ + 行追加フォーム) |
-| POST | `/admin/basho/{bashoId}/banzuke` | 番付行の追加(力士・場所の重複を防止) |
-| POST | `/admin/basho/{bashoId}/banzuke/{banzukeId}` , `.../delete` | 番付行の編集 / 削除 |
-| GET | `/admin/basho/{bashoId}/torikumi?day=&division=` | 場所ごとの取組一覧(日目リンク + 地位区分フィルター) |
-| GET / POST | `/admin/basho/{bashoId}/torikumi/new`, `/admin/basho/{bashoId}/torikumi` | 新規取組フォーム表示 / 作成(同日・同じ東西の組み合わせの重複を防止) |
-| GET / POST | `/admin/basho/{bashoId}/torikumi/{id}/edit`, `.../{id}` , `.../{id}/delete` | 取組編集フォーム / 編集 / 削除 |
+### 4-5. 利用者からの指摘を、公式資料との照合で直す
+- **問題**: 公開翌日、コミュニティで「決まり手事典に、決まり手ではない『はず押し』が入っているのはなぜか」という指摘。
+- **原因**: 辞書を作るとき、日本相撲協会の公式一覧と照合していなかった。調べると公式の決まり手33手が抜けており、実際の取組に出ていた26手がローマ字のまま表示されていました。
+- **対応**: 協会の公式八十二手+非技と1件ずつ照合して辞書を作り直し、解説90件もすべて協会の解説と照らし合わせて修正。**分類ごとの件数(7/13/18/6/19/19)をテストで固定**し、今後ずれたらテストが落ちるようにしました。
+- **結果**: 実際の取組記録には影響がないこと(該当0件)も確認して、指摘してくれた方に回答。([1156830](https://github.com/genuinekumquat/sumoarchive/commit/1156830), [4dc826c](https://github.com/genuinekumquat/sumoarchive/commit/4dc826c))
 
-### API ルート — JSON
-
-| Method | Path | 説明 |
-|---|---|---|
-| GET | `/api/banzuke?division=&bashoId=` | 地位区分ごとの番付一覧(タブ切り替え・場所選択時に非同期呼び出し。`bashoId` 省略時は最新の場所) |
-| GET | `/api/search?keyword=&page=` | 力士検索(ページネーション) |
-| GET | `/api/rikishiEntity?ids=3,15,24` | お気に入りページ用 — ID リストで力士カードを取得(リクエスト順を維持) |
-| GET | `/api/torikumi/{torikumiId}/comments` | 該当取組のコメント全件取得 |
-| POST | `/api/torikumi/{torikumiId}/comments` | コメント投稿(nickname, password, content) |
-| POST | `/api/torikumi/{torikumiId}/comments/{commentId}/delete` | 自分のコメントを削除(password 検証) |
-| POST | `/api/torikumi/{torikumiId}/comments/{commentId}/blind` | 管理者によるブラインド(セッション `isAdmin` が必要) |
-
-> コメント API は投稿・削除・ブラインドのいずれも、**その取組の更新後のコメント一覧全体**をレスポンスとして返すため、
-> フロントエンドはレスポンスをそのまま再レンダリングするだけで済むように設計しています。
+### 4-6. 本番運用を「手作業に頼らない」形にする
+- **バックアップ**: 毎日4時に DB をダンプして S3 へ。EC2 の IAM ロールは **そのフォルダへの PutObject だけ**を許可(一覧・削除はできないことを確認)し、サーバーが乗っ取られてもバックアップは消せない構成。S3 のライフサイクルは個人情報の取り扱いページの記載(14日)と一致させています。
+- **場所中の自動取込**: 18:30・20:00・22:00・翌朝9:00 に、開催2日前〜千秋楽の翌日の場所だけを自動取込。前回の実行中なら飛ばし、失敗しても次の回は動き、結果は管理画面に表示。([25e1eb3](https://github.com/genuinekumquat/sumoarchive/commit/25e1eb3))
+- **デプロイ**: バックアップ → `git pull` → `docker compose up -d --build`。SSH が切れてもビルドが止まらないよう、サーバー側でバックグラウンド実行。手順は [DEPLOYMENT.md](DEPLOYMENT.md) にまとめています。
 
 ---
 
-## 6. 主な設計ポイント
+## 5. 運用
 
-- **表示用文字列はサーバー側で完成させて返す**: 「前頭10枚目」「3일째/3日目」のような表記変換は、
-  `RankDisplayUtil`/`KimariteDisplayUtil` などのユーティリティを使ってサービス層であらかじめ組み立てて DTO に格納し、
-  テンプレート側では最小限の分岐だけで済むように設計しています。
-- **Thymeleaf fragment の再利用**: 取組詳細は、単独ページ(`/torikumi/{id}`)と力士プロフィールの
-  スライドパネル(`/torikumi/{id}/fragment`)がまったく同じ `th:fragment="content"` を共有しています。
-  パネルはその fragment を fetch で受け取ってそのまま挿入し、挿入後に `SumoComments.bind()` を呼び直すだけで
-  コメント機能まで再利用します。
-- **バッチ取得による N+1 の回避**: 取組や星取表で東西両力士(または複数の対戦相手)の番付を取得する際は、
-  `IN` 句のバッチクエリ1回でまとめて取得し、Map にマッピングしています。
-- **ソフトデリート + 削除理由の区別**: コメント削除は物理削除を行わず `is_deleted` フラグのみを更新し、
-  `DeletedBy`(USER/ADMIN)enum で「投稿者により削除」と「管理者によりブラインド」を区別して
-  表示することで、レイアウトと文脈を保ちます。
-- **例外処理を画面/API で二分化**: 同じ `EntityNotFoundException` でも、`controller` パッケージ(画面)では
-  `ViewExceptionHandler` が404ページに、`controller.api` パッケージでは `ApiExceptionHandler`
-  (`@Order(HIGHEST_PRECEDENCE)`)が JSON に、それぞれ異なる形で変換します。
-- **軽量な管理者認証**: Spring Security を使わず、セッション属性 `isAdmin` だけで管理者を判別します。
-  `AdminAuthInterceptor` + `WebConfig` が `/admin/**` パスをガードし、コメントのブラインド API は
-  別途独自にセッションを確認して `AdminOnlyException`(401)を投げる二重ゲート方式にしています。
-- **画面と API の再利用**: コメント管理ダッシュボード(`/admin/comments`)は新たな削除 API を作らず、取組詳細画面で
-  使っていたブラインド API(`POST /api/torikumi/{id}/comments/{id}/blind`)を fetch でそのまま呼び出します。
-- **サーバーが関知しないパーソナライズ**: お気に入りは DB に一切保存せず、ブラウザの LocalStorage にある ID 配列が
-  唯一の保存先です。サーバーはその配列の順序を決して変えずにレスポンス順へ反映するため、ドラッグで
-  並べ替えた順序がリロード後も維持されます。
-- **`<input type="date">` ではロケールのフォーマットを信用しない**: `@DateTimeFormat(pattern = "yyyy-MM-dd")` を
-  明示しないと、Spring がリクエストのロケール(韓国語)基準の short style(「94. 3. 1.」)で値を返してしまい、
-  ブラウザが日付を読み取れません。管理者用力士編集フォームの生年月日/初土俵日/引退日はすべてこのパターンを明示しています。
+| 項目 | 内容 |
+|---|---|
+| サーバー | AWS EC2 t4g.small(2 vCPU・2GB、Ubuntu 24.04)、Elastic IP、セキュリティグループで SSH を自宅IPのみに制限 |
+| HTTPS | Nginx + Let's Encrypt(自動更新)、www → 正規ドメインへ 301 |
+| バックアップ | 毎日 DB ダンプ → サーバー内 + S3(14日保管) |
+| ログ | アプリログ 14日・500MB 上限、Nginx アクセスログ 14日、docker logs サイズ制限 |
+| 監視 | Actuator `/actuator/health`(DB接続込み)、Docker の healthcheck |
+| 検索 | `robots.txt`・`sitemap.xml`(力士ページ日韓)、OGP |
+| 費用 | 月18ドル前後(AWS の新規アカウントのクレジットで運用中) |
 
 ---
 
-## 7. インフラ / 環境設定
-
-- **DB**: MySQL 8.0。スキーマは Flyway マイグレーション(`src/main/resources/db/migration`)で管理し、
-  Hibernate は `ddl-auto=validate` でエンティティとテーブルの整合性を検査するだけです。
-- **シークレットの分離**: `application.properties` はコミットされますが実際の値は含まず、DB アカウントと
-  管理者ログインアカウントは `application-local.properties`(git 管理外)でのみ管理します。
-  ```properties
-  spring.config.import=optional:classpath:application-local.properties
-  ```
-  により、ローカル設定を任意で読み込む構成です。
-- **データソース**: 当初は `DataSeeder`(開発用ダミー)でデータを投入していましたが、現在は **sumo-api.com** から
-  実データを取得しています。`DataSeeder` はデフォルトで無効(`app.seed-demo=false`)で、
-  管理者画面 `/admin/rikishi` の「ロスターインポート」ボタンが現役の部屋・力士を、`/admin/basho` の
-  各インポートボタンが場所メタ情報と全階級(幕内〜序ノ口)の番付・取組・表彰(優勝・三賞・金星)データを取得します。
-  2019年1月以降の全場所・全階級のデータはこの方法で投入済みです(2020年5月はコロナで中止)。
-  外部 API 関連の設定: `sumo-api.base-url`, `app.seed-demo`。
-
-### ローカルでの実行方法
+## 6. ローカルでの実行方法
 
 ```bash
 # 1. MySQL にスキーマを作成(例: sumo)
@@ -222,32 +175,25 @@ cp src/main/resources/application-local.properties.example \
 # 3. 実行(テーブルは Flyway が自動作成、データは空の状態で起動)
 ./gradlew bootRun
 
-# 4. 管理者ログイン後、/admin/rikishi「ロスターインポート」→ /admin/basho の年一括インポートでデータを投入
+# 4. 管理者ログイン後、/admin/rikishi「ロスターインポート」→ /admin/basho の場所ごとの一括インポートでデータを投入
 ```
 
-デフォルトの接続先: `http://localhost:8080`(ポートを変更する場合は `application-local.properties` に `server.port` を指定)
-管理者ログイン: `http://localhost:8080/admin/login`(ログイン成功時はコメント管理ダッシュボードへ移動)
+- 接続先: `http://localhost:8080`(ポートは `application-local.properties` の `server.port` で変更可)
+- 管理者ログイン: `http://localhost:8080/admin/login`
+- 秘密情報は `application-local.properties`(git 管理外)、本番は `.env` + 環境変数で管理しています
 
 ---
 
-## 8. 今後の予定(ロードマップ)
+## 7. ドキュメント
 
-- [x] 管理者コメント管理ダッシュボード(`/admin/comments` — 全コメント閲覧 + ブラインド)
-- [x] お気に入りページ(`/bookmark`、LocalStorage ベース、ログイン不要、ドラッグで並べ替え)
-- [x] 管理者による力士プロフィール編集(`/admin/rikishi` — 一覧/検索 + 編集フォーム)
-- [x] 管理者による番付データの手動更新(`/admin/basho` — 場所の作成・期間編集・削除 + 番付行の CRUD)
-- [x] 管理者用取組入力 UI(`/admin/basho/{id}/torikumi` — 日目・地位区分ごとの取組 CRUD)
-- [ ] 決まり手の詳細解説事典
-- [ ] 番付予測シミュレーター
-- [x] 外部相撲データ API(sumo-api.com)との連携 — ロスター・場所・番付・取組・表彰のインポート
-  (2019年〜の全階級。幕下以下は15日間で7番のため、成績は番付の公式の勝敗・休場数を基準)
+- [docs/api.ja.md](docs/api.ja.md) — 画面・API 一覧
+- [docs/scenarios.ja.md](docs/scenarios.ja.md) — 利用シナリオ
+- [DEPLOYMENT.md](DEPLOYMENT.md) — 本番構築・デプロイ・バックアップ・場所ごとの運用手順(韓国語)
+- [docs/erd.png](docs/erd.png)、[docs/sumoarchive_db_schema.sql](docs/sumoarchive_db_schema.sql) — DB 設計(初期版。現在のスキーマは `src/main/resources/db/migration`)
+- [docs/기능명세서.txt](docs/기능명세서.txt) — 機能仕様書(韓国語)
+
+**今後の予定**: 番付予測シミュレーター、2000〜2018年のデータ追加、検索エンジンへの登録
 
 ---
 
-## 9. ドキュメント
-
-- [`docs/기능명세서.txt`](docs/기능명세서.txt) — 機能仕様書(全体)
-- [`docs/테이블명세서_v2.txt`](docs/테이블명세서_v2.txt), [`docs/sumoarchive_db_schema.sql`](docs/sumoarchive_db_schema.sql) — DB 設計
-- [`docs/erd.png`](docs/erd.png) — ERD 図
-
-> ※ `docs/` 配下の仕様書は韓国語で作成されています。
+<sub>取組データ: [sumo-api.com](https://sumo-api.com)。個人が運営するファンサイトであり、日本相撲協会とは関係ありません。</sub>
