@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>스모아카이브 관리자</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;900&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --sumi: #1a1a18;
+            --sumi-soft: #56554e;
+            --sumi-faint: #86857f;
+            --washi: #f7f6f3;
+            --washi-panel: #eceae4;
+            --washi-line: rgba(26, 26, 24, 0.14);
+            --shu: #a3272c;
+            --shu-faint: rgba(163, 39, 44, 0.10);
+        }
+        * { box-sizing: border-box; }
+        body { margin: 0; min-height: 100vh; background-color: var(--washi); color: var(--sumi); font-family: 'Noto Serif KR', serif; }
+        .page { max-width: 960px; margin: 0 auto; padding: 32px 24px 60px; }
+        header { border-bottom: 3px double var(--sumi); padding-bottom: 14px; margin-bottom: 22px; }
+        .header-top { display: flex; align-items: baseline; justify-content: space-between; }
+        h1 { font-size: 20px; margin: 0; letter-spacing: 1px; }
+        .sub { font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; color: var(--sumi-faint); }
+        .admin-nav { font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; margin-top: 10px; }
+        .admin-nav a { color: var(--sumi-soft); text-decoration: none; margin-right: 14px; }
+        .admin-nav a:hover, .admin-nav a.current { color: var(--shu); }
+        .logout-form button {
+            border: 1px solid var(--washi-line); background: transparent; color: var(--sumi-soft);
+            font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; padding: 6px 14px; cursor: pointer;
+        }
+        .logout-form button:hover { border-color: var(--sumi); color: var(--sumi); }
+
+        .filter-tabs { display: flex; gap: 6px; margin-bottom: 18px; font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12.5px; }
+        .filter-tabs a { padding: 6px 14px; border: 1px solid var(--washi-line); color: var(--sumi-soft); text-decoration: none; }
+        .filter-tabs a:hover { border-color: var(--sumi); color: var(--sumi); }
+        .filter-tabs a.current { border-color: var(--sumi); background: var(--sumi); color: var(--washi); }
+
+        .cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 24px; }
+        .card { border: 1px solid var(--washi-line); background: #fff; padding: 12px 14px; }
+        .card .k { font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 11px; letter-spacing: 1px; color: var(--sumi-faint); }
+        .card .v { font-size: 24px; font-weight: 600; margin-top: 2px; }
+        .card .s { font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 11.5px; color: var(--sumi-soft); }
+
+        h2 { font-size: 15px; margin: 26px 0 10px; letter-spacing: 0.5px; }
+        .legend { font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 11px; color: var(--sumi-faint); margin-bottom: 6px; }
+        .legend i { display: inline-block; width: 10px; height: 10px; vertical-align: -1px; margin: 0 4px 0 10px; }
+        .legend i.pv { background: var(--washi-panel); border: 1px solid var(--washi-line); }
+        .legend i.uv { background: var(--shu); }
+        /* 일별 막대: 페이지뷰(연한 막대) 안에 방문자(진한 막대)를 겹쳐 그린다. 높이는 기간 중 최대 페이지뷰 기준 */
+        .chart { display: flex; align-items: flex-end; gap: 2px; height: 180px; border-bottom: 1px solid var(--sumi); padding-top: 6px; }
+        .chart .col { flex: 1; height: 100%; display: flex; align-items: flex-end; position: relative; min-width: 2px; }
+        .chart .pv { width: 100%; background: var(--washi-panel); border: 1px solid var(--washi-line); border-bottom: none; position: relative; }
+        .chart .uv { position: absolute; left: 20%; right: 20%; bottom: 0; background: var(--shu); }
+        .chart .col:hover .pv { background: #dcd8cf; }
+        .axis { display: flex; justify-content: space-between; font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 11px; color: var(--sumi-faint); margin-top: 4px; }
+
+        .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+        table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+        thead th { text-align: left; font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 11px; letter-spacing: 1px; color: var(--sumi-faint); border-bottom: 1px solid var(--sumi); padding: 6px 8px; }
+        tbody td { padding: 7px 8px; border-bottom: 1px solid var(--washi-line); }
+        td.num { text-align: right; font-family: 'Zen Kaku Gothic New', sans-serif; white-space: nowrap; }
+        td.bar { width: 38%; }
+        td.bar span { display: block; height: 8px; background: var(--shu); opacity: 0.75; }
+        td a { color: inherit; text-decoration: none; }
+        td a:hover { color: var(--shu); }
+        .empty-note { padding: 18px 0; color: var(--sumi-faint); font-size: 13px; }
+        .note { font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 11.5px; color: var(--sumi-faint); line-height: 1.7; margin-top: 30px; border-top: 1px solid var(--washi-line); padding-top: 12px; }
+
+        @media (max-width: 720px) {
+            .cards { grid-template-columns: repeat(2, 1fr); }
+            .grid2 { grid-template-columns: 1fr; }
+            .chart { height: 140px; gap: 1px; }
+        }
+    </style>
+</head>
+<body>
+<div class="page">
+    <header>
+        <div class="header-top">
+            <div>
+                <h1>방문 통계</h1>
+                <div class="sub" th:text="${#temporals.format(s.from, 'yyyy.MM.dd')} + ' ~ ' + ${#temporals.format(s.to, 'yyyy.MM.dd')} + ' · 봇·관리자 제외'">기간</div>
+            </div>
+            <form class="logout-form" th:action="@{/admin/logout}" method="post">
+                <button type="submit">로그아웃</button>
+            </form>
+        </div>
+        <nav class="admin-nav">
+            <a th:href="@{/admin/comments}">댓글 관리</a>
+            <a th:href="@{/admin/rikishi}">리키시 관리</a>
+            <a th:href="@{/admin/heya}">헤야 관리</a>
+            <a th:href="@{/admin/basho}">반즈케 관리</a>
+            <a th:href="@{/admin/stats}" class="current">방문 통계</a>
+        </nav>
+    </header>
+
+    <nav class="filter-tabs">
+        <a th:each="p : ${periods}" th:href="@{/admin/stats(days=${p})}" th:classappend="${p == s.days} ? 'current'" th:text="'최근 ' + ${p} + '일'">최근 30일</a>
+    </nav>
+
+    <div class="cards">
+        <div class="card">
+            <div class="k">오늘 방문자</div>
+            <div class="v" th:text="${s.today.visitors}">0</div>
+            <div class="s" th:text="'페이지뷰 ' + ${s.today.pageViews}">페이지뷰 0</div>
+        </div>
+        <div class="card">
+            <div class="k">어제 방문자</div>
+            <div class="v" th:text="${s.yesterday.visitors}">0</div>
+            <div class="s" th:text="'페이지뷰 ' + ${s.yesterday.pageViews}">페이지뷰 0</div>
+        </div>
+        <div class="card">
+            <div class="k" th:text="${s.days} + '일 방문자 합계'">방문자 합계</div>
+            <div class="v" th:text="${#numbers.formatInteger(s.totalVisitors, 1, 'COMMA')}">0</div>
+            <div class="s" th:text="'하루 평균 ' + ${#numbers.formatDecimal(1.0 * s.totalVisitors / s.days, 1, 1)}">하루 평균</div>
+        </div>
+        <div class="card">
+            <div class="k" th:text="${s.days} + '일 페이지뷰'">페이지뷰</div>
+            <div class="v" th:text="${#numbers.formatInteger(s.totalPageViews, 1, 'COMMA')}">0</div>
+            <div class="s" th:text="'모바일 방문자 ' + ${s.mobilePercent} + '%'">모바일</div>
+        </div>
+    </div>
+
+    <h2>일별 추이</h2>
+    <div class="legend"><i class="pv"></i>페이지뷰 <i class="uv"></i>방문자</div>
+    <div class="chart">
+        <div class="col" th:each="d : ${s.daily}"
+             th:title="${#temporals.format(d.date, 'MM.dd (E)')} + ' — 방문자 ' + ${d.visitors} + ' · 페이지뷰 ' + ${d.pageViews}">
+            <div class="pv" th:style="'height:' + (${s.maxPageViews} > 0 ? ${d.pageViews * 100.0 / s.maxPageViews} : 0) + '%'">
+                <div class="uv" th:style="'height:' + (${d.pageViews} > 0 ? ${d.visitors * 100.0 / d.pageViews} : 0) + '%'"></div>
+            </div>
+        </div>
+    </div>
+    <div class="axis">
+        <span th:text="${#temporals.format(s.from, 'MM.dd')}">시작</span>
+        <span th:text="'최대 페이지뷰 ' + ${s.maxPageViews} + ' · 막대에 마우스를 올리면 숫자'">최대</span>
+        <span th:text="${#temporals.format(s.to, 'MM.dd')}">끝</span>
+    </div>
+
+    <div class="grid2">
+        <section>
+            <h2>많이 본 리키시</h2>
+            <table th:if="${!s.topRikishi.isEmpty()}">
+                <thead><tr><th>시코나</th><th></th><th style="text-align: right;">뷰</th></tr></thead>
+                <tbody>
+                <tr th:each="r : ${s.topRikishi}">
+                    <td><a th:href="@{'/rikishi/' + ${r.rikishiId}}" target="_blank" th:text="${r.label}">시코나</a></td>
+                    <td class="bar"><span th:style="'width:' + ${r.percent} + '%'"></span></td>
+                    <td class="num" th:text="${r.count}">0</td>
+                </tr>
+                </tbody>
+            </table>
+            <p class="empty-note" th:if="${s.topRikishi.isEmpty()}">아직 기록이 없습니다.</p>
+        </section>
+        <section>
+            <h2>페이지 종류</h2>
+            <table th:if="${!s.pageTypes.isEmpty()}">
+                <thead><tr><th>페이지</th><th></th><th style="text-align: right;">뷰</th></tr></thead>
+                <tbody>
+                <tr th:each="r : ${s.pageTypes}">
+                    <td th:text="${r.label}">페이지</td>
+                    <td class="bar"><span th:style="'width:' + ${r.percent} + '%'"></span></td>
+                    <td class="num" th:text="${r.count} + ' (' + ${r.percent} + '%)'">0</td>
+                </tr>
+                </tbody>
+            </table>
+            <p class="empty-note" th:if="${s.pageTypes.isEmpty()}">아직 기록이 없습니다.</p>
+
+            <h2>외부 유입</h2>
+            <table th:if="${!s.referrers.isEmpty()}">
+                <thead><tr><th>어디서</th><th></th><th style="text-align: right;">횟수</th></tr></thead>
+                <tbody>
+                <tr th:each="r : ${s.referrers}">
+                    <td th:text="${r.label}">유입처</td>
+                    <td class="bar"><span th:style="'width:' + ${r.percent} + '%'"></span></td>
+                    <td class="num" th:text="${r.count} + ' (' + ${r.percent} + '%)'">0</td>
+                </tr>
+                </tbody>
+            </table>
+            <p class="empty-note" th:if="${s.referrers.isEmpty()}">아직 기록이 없습니다.</p>
+        </section>
+    </div>
+
+    <p class="note">
+        · 방문자 = 그날 처음 본 IP+브라우저 조합. IP는 저장하지 않고 그날만 메모리에서 해시로 세므로, 기간 합계는 날짜별 방문자를 더한 값입니다(여러 날 온 사람은 여러 번).<br>
+        · 봇(브라우저 정보·언어 헤더로 판별)과 관리자로 로그인한 상태의 방문은 세지 않습니다. 숫자는 최대 1분 늦게 반영되고, 앱을 재시작한 날은 방문자가 조금 많게 잡힐 수 있습니다.<br>
+        · 외부 유입은 다른 사이트의 링크를 눌러 들어온 횟수입니다. 앱·일부 브라우저는 출처를 보내지 않아 실제보다 적게 잡힙니다.<br>
+        · 2026.10.10~12(이 기능 이전)의 숫자는 노션 「방문 현황」 페이지에 있습니다.
+    </p>
+</div>
+</body>
+</html>
