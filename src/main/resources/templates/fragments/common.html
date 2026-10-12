@@ -10,6 +10,9 @@
 <th:block th:fragment="seo(title, description, indexable)">
     <meta name="description" th:content="${description}">
     <meta name="robots" content="noindex, follow" th:unless="${indexable}">
+    <!-- 네이버 서치어드바이저 소유 확인 (공개되는 값, 2026.10.12). Google은 Cloudflare DNS TXT로 확인 -->
+    <meta name="naver-site-verification" content="857c80d83d15ceeeb2ee4dd8894ffb18fa41033c">
+
     <link rel="icon" href="/favicon.ico?v=3" sizes="16x16 32x32 48x48">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=3">
     <meta property="og:site_name" th:content="#{site.title}">
