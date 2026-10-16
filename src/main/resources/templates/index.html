@@ -757,7 +757,7 @@
     <footer><span th:text="#{main.footer}">SUMOARCHIVE — 韓国語で見る大相撲情報アーカイブ</span><th:block th:replace="~{fragments/common :: footerNote}"></th:block></footer>
 </div>
 
-<!-- 팝업 공지. 서버는 켜진 공지가 있을 때만 그리고, 띄울지는 아래 스크립트가 브라우저 기억(다시 보지 않기)을 보고 정한다. -->
+<!-- 팝업 공지. 서버는 켜진 공지가 있을 때만 그리고, 띄울지는 아래 스크립트가 브라우저 기억(오늘 하루 보지 않기·닫기)을 보고 정한다. -->
 <dialog class="notice-dialog" id="noticeDialog" th:if="${notice != null}" th:data-notice-id="${notice.id}"
         aria-labelledby="noticeTitle">
     <div class="notice-inner">
@@ -768,7 +768,7 @@
            th:text="#{main.notice.more} + ' ›'">자세히 보기 ›</a>
     </div>
     <div class="notice-actions">
-        <button type="button" class="notice-dismiss" th:text="#{main.notice.dismiss}">다시 보지 않기</button>
+        <button type="button" class="notice-dismiss" th:text="#{main.notice.dismiss}">오늘 하루 보지 않기</button>
         <button type="button" class="notice-close" th:text="#{main.notice.close}" autofocus>닫기</button>
     </div>
 </dialog>
@@ -1179,36 +1179,40 @@
         }
     })();
 
-    // 팝업 공지: 「다시 보지 않기」는 공지 id를 localStorage에, 「닫기」는 이번 방문(탭) 동안만 sessionStorage에 기억한다.
+    // 팝업 공지: 「오늘 하루 보지 않기」는 "공지 id@오늘 날짜"를 localStorage에 (다음 날이면 다시 뜸),
+    // 「닫기」는 이번 방문(탭) 동안만 sessionStorage에 기억한다.
     // 저장소를 못 쓰는 환경(사생활 보호 모드 등)에서는 그냥 매번 뜬다.
     (function () {
         var dialog = document.getElementById('noticeDialog');
         if (!dialog || typeof dialog.showModal !== 'function') return;
         var id = dialog.dataset.noticeId;
-        var DISMISS_KEY = 'sumoarchive_notice_dismissed';
+        var HIDE_TODAY_KEY = 'sumoarchive_notice_hidden';
         var CLOSE_KEY = 'sumoarchive_notice_closed';
+        // 방문자 기준 오늘 날짜 (toISOString은 UTC라 한국 오전 9시 전엔 어제가 되므로 직접 만든다)
+        var now = new Date();
+        var today = now.getFullYear() + '-' + (now.getMonth() + 1) + '-' + now.getDate();
         function read(storage, key) {
             try { return storage.getItem(key); } catch (e) { return null; }
         }
-        function write(storage, key) {
-            try { storage.setItem(key, id); } catch (e) { /* 저장 못 해도 닫기는 된다 */ }
+        function write(storage, key, value) {
+            try { storage.setItem(key, value); } catch (e) { /* 저장 못 해도 닫기는 된다 */ }
         }
-        if (read(localStorage, DISMISS_KEY) === id || read(sessionStorage, CLOSE_KEY) === id) return;
+        if (read(localStorage, HIDE_TODAY_KEY) === id + '@' + today || read(sessionStorage, CLOSE_KEY) === id) return;
 
         // 닫기 버튼·Esc·바깥 클릭·「자세히 보기」 어느 쪽이든 이번 방문 동안은 다시 안 띄운다.
         // dialog의 close 이벤트는 비동기라 바로 페이지를 옮기면 안 불릴 수 있어서, 닫는 순간 바로 기억한다.
         function close() {
-            write(sessionStorage, CLOSE_KEY);
+            write(sessionStorage, CLOSE_KEY, id);
             dialog.close();
         }
         dialog.querySelector('.notice-close').addEventListener('click', close);
         dialog.querySelector('.notice-dismiss').addEventListener('click', function () {
-            write(localStorage, DISMISS_KEY);
+            write(localStorage, HIDE_TODAY_KEY, id + '@' + today);
             close();
         });
         var more = dialog.querySelector('.notice-more');
-        if (more) more.addEventListener('click', function () { write(sessionStorage, CLOSE_KEY); });
-        dialog.addEventListener('cancel', function () { write(sessionStorage, CLOSE_KEY); }); // Esc
+        if (more) more.addEventListener('click', function () { write(sessionStorage, CLOSE_KEY, id); });
+        dialog.addEventListener('cancel', function () { write(sessionStorage, CLOSE_KEY, id); }); // Esc
         dialog.addEventListener('click', function (e) {
             if (e.target === dialog) close(); // 테두리 바깥(backdrop) 클릭
         });

@@ -26,7 +26,7 @@ public class MainController {
 		// "일문"/"키마리테" 탭은 반즈케 탭과 달리 바쇼·계급 선택이 없어서 서버에서 통째로 렌더링해 내려준다.
 		model.addAttribute("ichimonGroups", banzukeService.getIchimonStructure());
 		model.addAttribute("kimariteGroups", kimariteEncyclopediaService.getKimariteEncyclopedia());
-		// 팝업 공지 (없으면 null). "다시 보지 않기" 여부는 브라우저가 기억하므로 띄울지는 JS가 정한다.
+		// 팝업 공지 (없으면 null). "오늘 하루 보지 않기" 여부는 브라우저가 기억하므로 띄울지는 JS가 정한다.
 		model.addAttribute("notice", noticeService.findActive(locale).orElse(null));
 		return "index";
 	}
