@@ -511,6 +511,62 @@
             color: var(--sumi-faint);
         }
 
+        /* 팝업 공지 (관리자 /admin/notice). 네이티브 <dialog>라 Esc 닫기·포커스 가두기는 브라우저가 해준다. */
+        .notice-dialog {
+            width: min(420px, calc(100vw - 32px));
+            padding: 0;
+            border: 1px solid var(--sumi);
+            border-top: 4px solid var(--shu);
+            background: var(--washi);
+            color: var(--sumi);
+            box-shadow: 0 12px 40px rgba(26, 26, 24, 0.25);
+        }
+        .notice-dialog::backdrop { background: rgba(26, 26, 24, 0.45); }
+        .notice-inner { padding: 22px 22px 18px; }
+        .notice-label {
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 11px;
+            letter-spacing: 3px;
+            color: var(--shu);
+        }
+        .notice-title { font-size: 18px; font-weight: 600; margin: 6px 0 12px; line-height: 1.45; }
+        .notice-body {
+            margin: 0;
+            font-size: 14px;
+            line-height: 1.75;
+            color: var(--sumi-soft);
+            white-space: pre-line;
+            overflow-wrap: anywhere;
+            max-height: 50vh;
+            overflow-y: auto;
+        }
+        .notice-more {
+            display: inline-block;
+            margin-top: 12px;
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 13px;
+            color: var(--shu);
+            text-decoration: none;
+        }
+        .notice-more:hover { text-decoration: underline; }
+        .notice-actions {
+            display: flex;
+            border-top: 1px solid var(--washi-line);
+        }
+        .notice-actions button {
+            flex: 1;
+            border: none;
+            background: transparent;
+            padding: 13px 10px;
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 13px;
+            color: var(--sumi-soft);
+            cursor: pointer;
+        }
+        .notice-actions button + button { border-left: 1px solid var(--washi-line); }
+        .notice-actions button:hover { background: var(--washi-panel); color: var(--sumi); }
+        .notice-actions .notice-close { color: var(--sumi); font-weight: 700; }
+
         @media (max-width: 560px) {
             .brand-jp { font-size: 30px; }
             .r-Yokozuna { font-size: 22px; }
@@ -700,6 +756,22 @@
 
     <footer><span th:text="#{main.footer}">SUMOARCHIVE — 韓国語で見る大相撲情報アーカイブ</span><th:block th:replace="~{fragments/common :: footerNote}"></th:block></footer>
 </div>
+
+<!-- 팝업 공지. 서버는 켜진 공지가 있을 때만 그리고, 띄울지는 아래 스크립트가 브라우저 기억(다시 보지 않기)을 보고 정한다. -->
+<dialog class="notice-dialog" id="noticeDialog" th:if="${notice != null}" th:data-notice-id="${notice.id}"
+        aria-labelledby="noticeTitle">
+    <div class="notice-inner">
+        <div class="notice-label" th:text="#{main.notice.label}">공지</div>
+        <h2 class="notice-title" id="noticeTitle" th:text="${notice.title}">공지 제목</h2>
+        <p class="notice-body" th:text="${notice.body}">공지 본문</p>
+        <a class="notice-more" th:if="${notice.linkUrl != null}" th:href="${notice.linkUrl}"
+           th:text="#{main.notice.more} + ' ›'">자세히 보기 ›</a>
+    </div>
+    <div class="notice-actions">
+        <button type="button" class="notice-dismiss" th:text="#{main.notice.dismiss}">다시 보지 않기</button>
+        <button type="button" class="notice-close" th:text="#{main.notice.close}" autofocus>닫기</button>
+    </div>
+</dialog>
 
 <script th:inline="javascript">
     // 서버에서 내려준 바쇼 목록(최신순). 연/대회 드롭다운을 이걸로 구성한다.
@@ -1105,6 +1177,42 @@
             document.getElementById('tabKimarite').click();
             openGroup(location.hash);
         }
+    })();
+
+    // 팝업 공지: 「다시 보지 않기」는 공지 id를 localStorage에, 「닫기」는 이번 방문(탭) 동안만 sessionStorage에 기억한다.
+    // 저장소를 못 쓰는 환경(사생활 보호 모드 등)에서는 그냥 매번 뜬다.
+    (function () {
+        var dialog = document.getElementById('noticeDialog');
+        if (!dialog || typeof dialog.showModal !== 'function') return;
+        var id = dialog.dataset.noticeId;
+        var DISMISS_KEY = 'sumoarchive_notice_dismissed';
+        var CLOSE_KEY = 'sumoarchive_notice_closed';
+        function read(storage, key) {
+            try { return storage.getItem(key); } catch (e) { return null; }
+        }
+        function write(storage, key) {
+            try { storage.setItem(key, id); } catch (e) { /* 저장 못 해도 닫기는 된다 */ }
+        }
+        if (read(localStorage, DISMISS_KEY) === id || read(sessionStorage, CLOSE_KEY) === id) return;
+
+        // 닫기 버튼·Esc·바깥 클릭·「자세히 보기」 어느 쪽이든 이번 방문 동안은 다시 안 띄운다.
+        // dialog의 close 이벤트는 비동기라 바로 페이지를 옮기면 안 불릴 수 있어서, 닫는 순간 바로 기억한다.
+        function close() {
+            write(sessionStorage, CLOSE_KEY);
+            dialog.close();
+        }
+        dialog.querySelector('.notice-close').addEventListener('click', close);
+        dialog.querySelector('.notice-dismiss').addEventListener('click', function () {
+            write(localStorage, DISMISS_KEY);
+            close();
+        });
+        var more = dialog.querySelector('.notice-more');
+        if (more) more.addEventListener('click', function () { write(sessionStorage, CLOSE_KEY); });
+        dialog.addEventListener('cancel', function () { write(sessionStorage, CLOSE_KEY); }); // Esc
+        dialog.addEventListener('click', function (e) {
+            if (e.target === dialog) close(); // 테두리 바깥(backdrop) 클릭
+        });
+        dialog.showModal();
     })();
 </script>
 </body>

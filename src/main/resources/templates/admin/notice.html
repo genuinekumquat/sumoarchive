@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="/admin-favicon.svg">
+    <title>스모아카이브 관리자</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;900&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --sumi: #1a1a18; --sumi-soft: #56554e; --sumi-faint: #86857f;
+            --washi: #f7f6f3; --washi-line: rgba(26, 26, 24, 0.14);
+            --shu: #a3272c; --shu-faint: rgba(163, 39, 44, 0.10);
+        }
+        * { box-sizing: border-box; }
+        body { margin: 0; min-height: 100vh; background-color: var(--washi); color: var(--sumi); font-family: 'Noto Serif KR', serif; }
+        .page { max-width: 900px; margin: 0 auto; padding: 32px 24px 60px; }
+        a { color: inherit; }
+
+        header { border-bottom: 3px double var(--sumi); padding-bottom: 14px; margin-bottom: 20px; }
+        .header-top { display: flex; align-items: baseline; justify-content: space-between; }
+        h1 { font-size: 20px; margin: 0; letter-spacing: 1px; }
+        h2 { font-size: 15px; margin: 28px 0 10px; }
+        .admin-nav { font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; margin-top: 10px; }
+        .admin-nav a { color: var(--sumi-soft); text-decoration: none; margin-right: 14px; }
+        .admin-nav a:hover, .admin-nav a.current { color: var(--shu); }
+        .logout-form button {
+            border: 1px solid var(--washi-line); background: transparent; color: var(--sumi-soft);
+            font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; padding: 6px 14px; cursor: pointer;
+        }
+        .logout-form button:hover { border-color: var(--sumi); color: var(--sumi); }
+
+        .desc { font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 11.5px; color: var(--sumi-faint); margin: 0 0 12px; line-height: 1.6; }
+        .notice-form { border: 1px solid var(--washi-line); background: #fff; padding: 14px; display: grid; gap: 10px; }
+        .notice-form .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .notice-form label { display: grid; gap: 4px; font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 11px; color: var(--sumi-soft); }
+        .notice-form input[type=text], .notice-form textarea {
+            border: 1px solid var(--washi-line); padding: 7px 9px; background: #fff; color: var(--sumi);
+            font-family: 'Noto Serif KR', serif; font-size: 13px; width: 100%;
+        }
+        .notice-form textarea { min-height: 96px; resize: vertical; line-height: 1.6; }
+        .notice-form .actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .notice-form .check { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--sumi); }
+        button.primary, button.ghost {
+            font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; padding: 7px 14px; cursor: pointer; white-space: nowrap;
+        }
+        button.primary { border: 1px solid var(--sumi); background: var(--sumi); color: var(--washi); }
+        button.primary:hover { background: var(--shu); border-color: var(--shu); }
+        button.ghost { border: 1px solid var(--washi-line); background: transparent; color: var(--sumi-soft); }
+        button.ghost:hover { border-color: var(--sumi); color: var(--sumi); }
+        button.ghost.danger:hover { border-color: var(--shu); color: var(--shu); }
+
+        .notice-card { border: 1px solid var(--washi-line); background: #fff; margin-bottom: 12px; }
+        .notice-card.on { border-color: var(--shu); }
+        .card-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px; flex-wrap: wrap; }
+        .card-head .title { font-weight: 600; flex: 1; min-width: 180px; }
+        .badge { font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 11px; padding: 2px 8px; border: 1px solid var(--washi-line); color: var(--sumi-faint); }
+        .badge.on { border-color: var(--shu); background: var(--shu-faint); color: var(--shu); }
+        .badge.warn { color: var(--sumi-soft); }
+        .meta { font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 11px; color: var(--sumi-faint); }
+        .card-head form { margin: 0; }
+        details > summary { cursor: pointer; padding: 0 14px 12px; font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; color: var(--sumi-soft); }
+        details .notice-form { border: none; border-top: 1px solid var(--washi-line); }
+        .empty-note { padding: 30px 0; text-align: center; color: var(--sumi-faint); }
+
+        .saved-msg { background: var(--shu-faint); color: var(--shu); font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 13px; padding: 10px 14px; margin-bottom: 14px; }
+        .error-msg { border: 1px solid var(--shu); color: var(--shu); font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 13px; padding: 10px 14px; margin-bottom: 14px; }
+
+        @media (max-width: 640px) {
+            .page { padding: 24px 16px 48px; }
+            .notice-form .cols { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+<div class="page">
+    <header>
+        <div class="header-top">
+            <h1>공지 관리</h1>
+            <form class="logout-form" th:action="@{/admin/logout}" method="post">
+                <button type="submit">로그아웃</button>
+            </form>
+        </div>
+        <nav class="admin-nav">
+            <a th:href="@{/admin/comments}">댓글 관리</a>
+            <a th:href="@{/admin/rikishi}">리키시 관리</a>
+            <a th:href="@{/admin/heya}">헤야 관리</a>
+            <a th:href="@{/admin/basho}">반즈케 관리</a>
+            <a th:href="@{/admin/notice}" class="current">공지 관리</a>
+            <a th:href="@{/admin/stats}">방문 통계</a>
+        </nav>
+    </header>
+
+    <div class="saved-msg" th:if="${saved}" th:text="${saved}">저장했습니다.</div>
+    <p class="error-msg" th:if="${error}" th:text="${error}">오류</p>
+
+    <h2>새 공지</h2>
+    <p class="desc">
+        메인 화면에 들어오면 가운데 팝업으로 뜹니다. 켜진 공지는 하나뿐이라, 하나를 켜면 나머지는 꺼집니다.
+        방문자가 「다시 보지 않기」를 누르면 그 공지는 그 브라우저에서 다시 안 뜨니, 다시 알리고 싶으면 새 공지로 등록하세요.
+        일본어 제목·본문이 비어 있으면 일본어 화면에서는 뜨지 않습니다. 본문은 일반 텍스트이고 줄바꿈이 그대로 보입니다.
+    </p>
+    <form class="notice-form" th:action="@{/admin/notice}" method="post">
+        <div class="cols">
+            <label>한국어 제목 *<input type="text" name="titleKo" maxlength="100" required></label>
+            <label>일본어 제목<input type="text" name="titleJa" maxlength="100"></label>
+            <label>한국어 본문 *<textarea name="bodyKo" maxlength="1000" required></textarea></label>
+            <label>일본어 본문<textarea name="bodyJa" maxlength="1000"></textarea></label>
+        </div>
+        <label>「자세히 보기」 링크 (선택 · /updates 같은 사이트 내부 경로 또는 https:// 주소)
+            <input type="text" name="linkUrl" maxlength="255" placeholder="/updates">
+        </label>
+        <div class="actions">
+            <label class="check"><input type="checkbox" name="activate" value="true" checked> 등록하면서 바로 메인에 띄우기</label>
+            <button type="submit" class="primary">공지 등록</button>
+        </div>
+    </form>
+
+    <h2>공지 목록</h2>
+    <div class="empty-note" th:if="${rows.isEmpty()}">등록된 공지가 없습니다.</div>
+    <div class="notice-card" th:each="n : ${rows}" th:classappend="${n.active} ? 'on'">
+        <div class="card-head">
+            <span class="badge" th:classappend="${n.active} ? 'on'" th:text="${n.active} ? '메인에 뜨는 중' : '꺼짐'">꺼짐</span>
+            <span class="title" th:text="${n.titleKo}">공지 제목</span>
+            <span class="badge warn" th:if="${n.titleJa == null or n.bodyJa == null}">일본어 없음</span>
+            <span class="meta" th:text="'#' + ${n.id} + ' · ' + ${#temporals.format(n.createdAt, 'yyyy-MM-dd HH:mm')}">#1 · 2026-10-16</span>
+            <form th:action="@{'/admin/notice/' + ${n.id} + '/active'}" method="post">
+                <input type="hidden" name="active" th:value="${!n.active}">
+                <button type="submit" th:class="${n.active} ? 'ghost' : 'primary'" th:text="${n.active} ? '끄기' : '켜기'">켜기</button>
+            </form>
+            <form th:action="@{'/admin/notice/' + ${n.id} + '/delete'}" method="post"
+                  onsubmit="return confirm('이 공지를 삭제할까요? 되돌릴 수 없습니다.');">
+                <button type="submit" class="ghost danger">삭제</button>
+            </form>
+        </div>
+        <details>
+            <summary>내용 보기 · 수정</summary>
+            <form class="notice-form" th:action="@{'/admin/notice/' + ${n.id}}" method="post">
+                <div class="cols">
+                    <label>한국어 제목 *<input type="text" name="titleKo" maxlength="100" th:value="${n.titleKo}" required></label>
+                    <label>일본어 제목<input type="text" name="titleJa" maxlength="100" th:value="${n.titleJa}"></label>
+                    <label>한국어 본문 *<textarea name="bodyKo" maxlength="1000" th:text="${n.bodyKo}" required></textarea></label>
+                    <label>일본어 본문<textarea name="bodyJa" maxlength="1000" th:text="${n.bodyJa}"></textarea></label>
+                </div>
+                <label>「자세히 보기」 링크<input type="text" name="linkUrl" maxlength="255" th:value="${n.linkUrl}" placeholder="/updates"></label>
+                <div class="actions">
+                    <button type="submit" class="primary">수정 저장</button>
+                </div>
+            </form>
+        </details>
+    </div>
+</div>
+</body>
+</html>
