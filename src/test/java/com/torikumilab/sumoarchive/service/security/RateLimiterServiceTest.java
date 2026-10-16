@@ -34,6 +34,18 @@ class RateLimiterServiceTest {
 	}
 
 	@Test
+	@DisplayName("의견 보내기: 30초 쿨다운 이내 연속 전송 차단, 다른 IP는 영향 없음")
+	void feedback_whenWithinCooldown_throwsException() {
+		assertThatCode(() -> rateLimiterService.checkFeedbackAllowed("10.0.0.1"))
+				.doesNotThrowAnyException();
+		assertThatThrownBy(() -> rateLimiterService.checkFeedbackAllowed("10.0.0.1"))
+				.isInstanceOf(RateLimitExceededException.class)
+				.hasMessage("feedback.error.cooldown");
+		assertThatCode(() -> rateLimiterService.checkFeedbackAllowed("10.0.0.2"))
+				.doesNotThrowAnyException();
+	}
+
+	@Test
 	@DisplayName("댓글 삭제: 5분 내 5회 비밀번호 오류 누적 시 삭제 시도 차단")
 	void commentDelete_whenFailLimitReached_blocksFurtherAttempts() {
 		String ip = "192.168.1.101";

@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html th:lang="${#locale.language}" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="no-referrer">
+    <title th:text="#{site.title}">스모아카이브</title>
+    <th:block th:replace="~{fragments/common :: seo(#{seo.feedback.title}, #{seo.feedback.desc}, false)}"></th:block>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Yuji+Syuku&family=Noto+Serif+KR:wght@400;600;900&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --sumi: #1a1a18;
+            --sumi-soft: #56554e;
+            --sumi-faint: #86857f;
+            --washi: #f7f6f3;
+            --washi-line: rgba(26, 26, 24, 0.14);
+            --shu: #a3272c;
+            --shu-faint: rgba(163, 39, 44, 0.08);
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            background-color: var(--washi);
+            background-image:
+                    repeating-linear-gradient(90deg, rgba(26,26,24,0.022) 0px, rgba(26,26,24,0.022) 1px, transparent 1px, transparent 3px),
+                    repeating-linear-gradient(0deg, rgba(26,26,24,0.012) 0px, rgba(26,26,24,0.012) 1px, transparent 1px, transparent 5px);
+            color: var(--sumi);
+            font-family: 'Noto Serif KR', serif;
+            line-height: 1.75;
+            min-height: 100vh;
+        }
+        .page { max-width: 640px; margin: 0 auto; padding: 40px 24px 80px; }
+        a { color: inherit; }
+
+        header { position: relative; border: 3px double var(--sumi); padding: 22px 28px 18px; margin-bottom: 26px; }
+        .brand-row { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+        .brand-jp { font-family: 'Yuji Syuku', serif; font-size: 28px; letter-spacing: 3px; color: var(--sumi); text-decoration: none; }
+        .brand-kr { font-family: 'Noto Serif KR', serif; font-weight: 900; font-size: 15px; letter-spacing: 1px; color: var(--sumi-soft); }
+        .breadcrumb { margin-top: 10px; font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; letter-spacing: 1px; color: var(--sumi-faint); }
+        .breadcrumb a:hover { color: var(--shu); }
+        /* 언어 스위처 (fragments/common :: langSwitch) */
+        .lang-switch { margin-top: 10px; display: flex; align-items: center; gap: 6px; font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 11px; letter-spacing: 1px; }
+        .lang-switch a { color: var(--sumi-faint); text-decoration: none; }
+        .lang-switch a:hover { color: var(--shu); }
+        .lang-switch a.active { color: var(--sumi); font-weight: 700; }
+        .lang-switch .sep { color: var(--washi-line); }
+
+        h1 { font-size: 20px; letter-spacing: 1px; margin: 0 0 6px; }
+        .lead { font-size: 14px; color: var(--sumi-soft); margin: 0 0 22px; }
+
+        form { display: grid; gap: 18px; }
+        fieldset { border: none; margin: 0; padding: 0; }
+        .label, legend {
+            display: block; padding: 0; margin-bottom: 8px;
+            font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; font-weight: 700;
+            letter-spacing: 1px; color: var(--sumi-soft);
+        }
+        .categories { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .categories label {
+            display: flex; align-items: center; gap: 8px;
+            border: 1px solid var(--washi-line); background: #fff; padding: 10px 12px; cursor: pointer;
+            font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 13px; line-height: 1.4;
+        }
+        .categories label:has(input:checked) { border-color: var(--shu); background: var(--shu-faint); }
+        .categories input { accent-color: var(--shu); margin: 0; flex: none; }
+        textarea, input[type=text] {
+            width: 100%; border: 1px solid var(--washi-line); background: #fff; color: var(--sumi);
+            padding: 10px 12px; font-family: 'Noto Serif KR', serif; font-size: 15px; line-height: 1.6;
+        }
+        textarea { min-height: 160px; resize: vertical; }
+        textarea:focus, input[type=text]:focus { outline: 2px solid var(--sumi); outline-offset: -1px; }
+        .hint { margin: 6px 0 0; font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 11.5px; color: var(--sumi-faint); }
+        .from { font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; color: var(--sumi-faint); margin: 0; overflow-wrap: anywhere; }
+        .from code { color: var(--sumi-soft); }
+        /* 봇 차단용 칸: 사람에게는 보이지 않게 화면 밖으로 */
+        .hp { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+        button[type=submit] {
+            justify-self: start; border: 1px solid var(--sumi); background: var(--sumi); color: var(--washi);
+            font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 14px; font-weight: 700; letter-spacing: 2px;
+            padding: 11px 32px; cursor: pointer;
+        }
+        button[type=submit]:hover { background: var(--shu); border-color: var(--shu); }
+        .privacy-note { font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 11.5px; color: var(--sumi-faint); margin: 0; }
+        .error { border: 1px solid var(--shu); color: var(--shu); font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 13px; padding: 10px 14px; margin: 0 0 18px; }
+
+        .sent { border: 1px solid var(--washi-line); border-top: 4px solid var(--shu); background: #fff; padding: 26px 24px; text-align: center; }
+        .sent h1 { margin-bottom: 8px; }
+        .sent p { margin: 0 0 18px; font-size: 14px; color: var(--sumi-soft); }
+        .sent-links { display: flex; justify-content: center; gap: 18px; font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 13px; }
+        .sent-links a { color: var(--shu); text-decoration: none; }
+        .sent-links a:hover { text-decoration: underline; }
+
+        @media (max-width: 560px) {
+            .page { padding: 24px 16px 60px; }
+            header { padding: 18px 18px 14px; }
+            .categories { grid-template-columns: 1fr; }
+            button[type=submit] { justify-self: stretch; }
+        }
+
+        footer { text-align: center; margin-top: 40px; font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 11px; letter-spacing: 2px; color: var(--sumi-faint); }
+    </style>
+</head>
+<body>
+<div class="page">
+
+    <header>
+        <div class="brand-row">
+            <a class="brand-jp" th:href="@{/}">相撲archive</a>
+            <span class="brand-kr">스모아카이브</span>
+        </div>
+        <div class="breadcrumb"><a th:href="@{/}" th:text="#{common.nav.banzuke}">반즈케</a> &gt; <span th:text="#{footer.feedback}">의견·오류 보내기</span></div>
+        <th:block th:replace="~{fragments/common :: langSwitch}"></th:block>
+    </header>
+
+    <!-- 보낸 뒤 (PRG로 돌아온 화면) -->
+    <section class="sent" th:if="${sent}">
+        <h1 th:text="#{feedback.sent.title}">보내 주셔서 고마워요!</h1>
+        <p th:text="#{feedback.sent.body}">운영자가 확인하고 반영할게요.</p>
+        <div class="sent-links">
+            <a th:href="@{/}" th:text="#{feedback.sent.back}">메인으로</a>
+            <a th:href="@{/feedback}" th:text="#{feedback.sent.again}">하나 더 보내기</a>
+        </div>
+    </section>
+
+    <th:block th:unless="${sent}">
+        <h1 th:text="#{footer.feedback}">의견·오류 보내기</h1>
+        <p class="lead" th:text="#{feedback.lead}">틀린 기록, 깨진 화면, 있었으면 하는 기능 등 무엇이든 보내 주세요.</p>
+
+        <p class="error" role="alert" th:if="${error}" th:text="${error}">내용을 입력해 주세요.</p>
+
+        <form th:action="@{/feedback}" method="post">
+            <fieldset>
+                <legend th:text="#{feedback.category}">종류</legend>
+                <div class="categories">
+                    <label th:each="c : ${categories}">
+                        <input type="radio" name="category" th:value="${c.name()}" th:checked="${c.name() == category}">
+                        <span th:text="#{'feedback.category.' + ${c.name()}}">오류</span>
+                    </label>
+                </div>
+            </fieldset>
+
+            <div>
+                <label class="label" for="fb-content" th:text="#{feedback.content}">내용</label>
+                <textarea id="fb-content" name="content" required th:maxlength="${contentMax}"
+                          th:placeholder="#{feedback.content.placeholder}" th:text="${content}"></textarea>
+            </div>
+
+            <div>
+                <label class="label" for="fb-contact" th:text="#{feedback.contact}">답장 받을 연락처 (선택)</label>
+                <input type="text" id="fb-contact" name="contact" th:maxlength="${contactMax}" th:value="${contact}"
+                       autocomplete="email" th:placeholder="#{feedback.contact.placeholder}">
+            </div>
+
+            <p class="from" th:if="${from != null}">
+                <span th:text="#{feedback.page}">보낸 페이지</span>: <code th:text="${from}">/rikishi/1</code>
+            </p>
+            <input type="hidden" name="from" th:value="${from}">
+
+            <div class="hp" aria-hidden="true">
+                <label for="fb-website">Website</label>
+                <input type="text" id="fb-website" name="website" tabindex="-1" autocomplete="off">
+            </div>
+
+            <button type="submit" th:text="#{feedback.submit}">보내기</button>
+            <p class="privacy-note">
+                <span th:text="#{feedback.privacy}">IP 주소는 저장하지 않습니다.</span>
+                <a th:href="@{/privacy}" th:text="#{footer.privacy}">개인정보 처리 안내</a>
+            </p>
+        </form>
+    </th:block>
+
+    <footer><span th:text="#{main.footer}">SUMOARCHIVE — 韓国語で見る大相撲情報アーカイブ</span><th:block th:replace="~{fragments/common :: footerNote}"></th:block></footer>
+</div>
+</body>
+</html>

@@ -48,6 +48,7 @@
         <span th:text="#{footer.disclaimer}">개인이 운영하는 팬 사이트이며 일본스모협회(日本相撲協会)와 관련이 없습니다.</span>
         · <a th:href="@{/updates}" th:text="#{footer.updates}" style="color: inherit;">업데이트 소식</a>
         · <a th:href="@{/privacy}" th:text="#{footer.privacy}" style="color: inherit;">개인정보 처리 안내</a>
+        · <a th:href="@{/feedback(from=${currentPath})}" th:text="#{footer.feedback}" style="color: inherit;">의견·오류 보내기</a>
     </p>
 </th:block>
 

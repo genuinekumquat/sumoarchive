@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="/admin-favicon.svg">
+    <title>스모아카이브 관리자</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;900&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --sumi: #1a1a18; --sumi-soft: #56554e; --sumi-faint: #86857f;
+            --washi: #f7f6f3; --washi-line: rgba(26, 26, 24, 0.14);
+            --shu: #a3272c; --shu-faint: rgba(163, 39, 44, 0.10);
+        }
+        * { box-sizing: border-box; }
+        body { margin: 0; min-height: 100vh; background-color: var(--washi); color: var(--sumi); font-family: 'Noto Serif KR', serif; }
+        .page { max-width: 900px; margin: 0 auto; padding: 32px 24px 60px; }
+        a { color: inherit; }
+
+        header { border-bottom: 3px double var(--sumi); padding-bottom: 14px; margin-bottom: 20px; }
+        .header-top { display: flex; align-items: baseline; justify-content: space-between; }
+        h1 { font-size: 20px; margin: 0; letter-spacing: 1px; }
+        .admin-nav { font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; margin-top: 10px; }
+        .admin-nav a { color: var(--sumi-soft); text-decoration: none; margin-right: 14px; }
+        .admin-nav a:hover, .admin-nav a.current { color: var(--shu); }
+        .logout-form button {
+            border: 1px solid var(--washi-line); background: transparent; color: var(--sumi-soft);
+            font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; padding: 6px 14px; cursor: pointer;
+        }
+        .logout-form button:hover { border-color: var(--sumi); color: var(--sumi); }
+
+        .filter { display: flex; gap: 14px; font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 13px; margin-bottom: 16px; }
+        .filter a { text-decoration: none; color: var(--sumi-soft); padding-bottom: 3px; }
+        .filter a.current { color: var(--shu); border-bottom: 2px solid var(--shu); }
+        .count { display: inline-block; margin-left: 5px; background: var(--shu); color: #fff; font-size: 11px; padding: 0 6px; border-radius: 9px; }
+
+        .card { border: 1px solid var(--washi-line); border-left: 4px solid var(--shu); background: #fff; padding: 12px 14px; margin-bottom: 12px; }
+        .card.done { border-left-color: var(--washi-line); opacity: 0.6; }
+        .card-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; }
+        .badge { padding: 2px 8px; border: 1px solid var(--washi-line); color: var(--sumi-soft); }
+        .badge.BUG, .badge.DATA { border-color: var(--shu); color: var(--shu); }
+        .meta { color: var(--sumi-faint); }
+        .spacer { flex: 1; }
+        .card-head form { margin: 0; }
+        .card-head button {
+            font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; padding: 5px 12px; cursor: pointer;
+            border: 1px solid var(--washi-line); background: transparent; color: var(--sumi-soft);
+        }
+        .card-head button.primary { border-color: var(--sumi); background: var(--sumi); color: var(--washi); }
+        .card-head button.primary:hover { background: var(--shu); border-color: var(--shu); }
+        .card-head button.danger:hover { border-color: var(--shu); color: var(--shu); }
+        .content { margin: 10px 0 6px; font-size: 14px; line-height: 1.7; white-space: pre-line; overflow-wrap: anywhere; }
+        .extra { font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; color: var(--sumi-soft); display: flex; gap: 16px; flex-wrap: wrap; }
+        .extra a { color: var(--shu); }
+        .empty-note { padding: 40px 0; text-align: center; color: var(--sumi-faint); }
+        .pager { display: flex; justify-content: center; gap: 18px; margin-top: 18px; font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 13px; }
+        .pager a { text-decoration: none; color: var(--shu); }
+
+        .saved-msg { background: var(--shu-faint); color: var(--shu); font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 13px; padding: 10px 14px; margin-bottom: 14px; }
+        .error-msg { border: 1px solid var(--shu); color: var(--shu); font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 13px; padding: 10px 14px; margin-bottom: 14px; }
+        @media (max-width: 640px) { .page { padding: 24px 16px 48px; } }
+    </style>
+</head>
+<body>
+<div class="page">
+    <header>
+        <div class="header-top">
+            <h1>의견함</h1>
+            <form class="logout-form" th:action="@{/admin/logout}" method="post">
+                <button type="submit">로그아웃</button>
+            </form>
+        </div>
+        <nav class="admin-nav">
+            <a th:href="@{/admin/comments}">댓글 관리</a>
+            <a th:href="@{/admin/rikishi}">리키시 관리</a>
+            <a th:href="@{/admin/heya}">헤야 관리</a>
+            <a th:href="@{/admin/basho}">반즈케 관리</a>
+            <a th:href="@{/admin/notice}">공지 관리</a>
+            <a th:href="@{/admin/feedback}" class="current">의견함</a>
+            <a th:href="@{/admin/stats}">방문 통계</a>
+        </nav>
+    </header>
+
+    <div class="saved-msg" th:if="${saved}" th:text="${saved}">삭제했습니다.</div>
+    <p class="error-msg" th:if="${error}" th:text="${error}">오류</p>
+
+    <!-- 방문자가 /feedback(푸터 「의견·오류 보내기」)으로 보낸 것. 공개되지 않음, IP 미저장 -->
+    <nav class="filter">
+        <a th:href="@{/admin/feedback}" th:classappend="${!unhandled} ? 'current'">전체</a>
+        <a th:href="@{/admin/feedback(unhandled=true)}" th:classappend="${unhandled} ? 'current'">미처리<span class="count" th:if="${unhandledCount > 0}" th:text="${unhandledCount}">3</span></a>
+    </nav>
+
+    <div class="empty-note" th:if="${result.isEmpty()}" th:text="${unhandled} ? '처리할 의견이 없습니다.' : '아직 받은 의견이 없습니다.'">아직 받은 의견이 없습니다.</div>
+
+    <div class="card" th:each="f : ${result.content}" th:classappend="${f.handled} ? 'done'">
+        <div class="card-head">
+            <span class="badge" th:classappend="${f.category.name()}"
+                  th:text="${f.category.name() == 'BUG'} ? '오류' : (${f.category.name() == 'DATA'} ? '데이터' : (${f.category.name() == 'SUGGESTION'} ? '제안' : '기타'))">오류</span>
+            <span class="meta" th:text="'#' + ${f.id} + ' · ' + ${#temporals.format(f.createdAt, 'yyyy-MM-dd HH:mm')} + ' · ' + (${f.lang == 'ja'} ? '일본어 화면' : '한국어 화면')">#1 · 2026-10-16 12:00 · 한국어 화면</span>
+            <span class="spacer"></span>
+            <form th:action="@{'/admin/feedback/' + ${f.id} + '/handled'}" method="post">
+                <input type="hidden" name="handled" th:value="${!f.handled}">
+                <input type="hidden" name="unhandled" th:value="${unhandled}">
+                <button type="submit" th:class="${f.handled} ? '' : 'primary'" th:text="${f.handled} ? '미처리로 되돌리기' : '처리 완료'">처리 완료</button>
+            </form>
+            <form th:action="@{'/admin/feedback/' + ${f.id} + '/delete'}" method="post"
+                  onsubmit="return confirm('이 의견을 삭제할까요? 되돌릴 수 없습니다.');">
+                <input type="hidden" name="unhandled" th:value="${unhandled}">
+                <button type="submit" class="danger">삭제</button>
+            </form>
+        </div>
+        <p class="content" th:text="${f.content}">의견 내용</p>
+        <div class="extra">
+            <span th:if="${f.pagePath != null}">보낸 페이지: <a th:href="${f.pagePath}" target="_blank" rel="noopener" th:text="${f.pagePath}">/rikishi/1</a></span>
+            <span th:if="${f.contact != null}">연락처: <strong th:text="${f.contact}">a@example.com</strong></span>
+        </div>
+    </div>
+
+    <div class="pager" th:if="${result.totalPages > 1}">
+        <a th:if="${result.hasPrevious()}" th:href="@{/admin/feedback(page=${result.number - 1},unhandled=${unhandled})}">← 이전</a>
+        <span th:text="${result.number + 1} + ' / ' + ${result.totalPages}">1 / 2</span>
+        <a th:if="${result.hasNext()}" th:href="@{/admin/feedback(page=${result.number + 1},unhandled=${unhandled})}">다음 →</a>
+    </div>
+</div>
+</body>
+</html>

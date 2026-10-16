@@ -21,4 +21,11 @@ public class SeoModelAdvice {
 	public String currentUrl() {
 		return ServletUriComponentsBuilder.fromCurrentRequest().build().toUriString();
 	}
+
+	/** 현재 경로(+쿼리). 푸터 「의견·오류 보내기」 링크가 어느 페이지에서 보냈는지 넘길 때 쓴다. */
+	@ModelAttribute("currentPath")
+	public String currentPath() {
+		return ServletUriComponentsBuilder.fromCurrentRequest().scheme(null).host(null).port(null)
+				.build().toUriString();
+	}
 }

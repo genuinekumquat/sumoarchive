@@ -20,6 +20,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *    + 댓글 하나당 1시간 내 10회 오류 시 그 댓글 삭제를 잠금 (IP를 바꿔 가며 시도하는 경우 방어)
  * 3) 관리자 로그인: 5분 내 최대 5회 실패 허용 (무차별 대입 방어)
  * 4) 댓글 신고: 같은 IP의 같은 댓글 중복 신고는 24시간 동안 무시, IP당 10분에 10건까지 (신고 도배 방지)
+ * 5) 의견 보내기: 30초 쿨다운 & 1시간당 최대 5건
  */
 @Service
 public class RateLimiterService {
@@ -48,6 +49,11 @@ public class RateLimiterService {
 	private static final long REPORT_WINDOW_MILLIS = 600_000;          // 10분
 	private static final int REPORT_MAX = 10;                          // 10분당 10건
 	private static final long REPORT_DEDUP_MILLIS = 86_400_000;        // 같은 댓글 재신고 무시 24시간
+
+	private final Map<String, Deque<Long>> feedbackHistory = new ConcurrentHashMap<>();
+	private static final long FEEDBACK_COOLDOWN_MILLIS = 30_000;       // 30초 최소 간격
+	private static final long FEEDBACK_WINDOW_MILLIS = 3_600_000;      // 1시간
+	private static final int FEEDBACK_MAX = 5;                         // 1시간당 5건
 
 	// ===== 1. 댓글 작성 =====
 
@@ -162,6 +168,31 @@ public class RateLimiterService {
 		return true;
 	}
 
+	// ===== 5. 의견 보내기 (도배 방지) =====
+
+	public synchronized void checkFeedbackAllowed(String clientIp) {
+		long now = System.currentTimeMillis();
+		Deque<Long> history = feedbackHistory.computeIfAbsent(clientIp, k -> new ArrayDeque<>());
+
+		if (!history.isEmpty()) {
+			long last = history.peekLast();
+			if (now - last < FEEDBACK_COOLDOWN_MILLIS) {
+				long waitSec = (FEEDBACK_COOLDOWN_MILLIS - (now - last) + 999) / 1000;
+				throw new RateLimitExceededException("feedback.error.cooldown", waitSec);
+			}
+		}
+
+		while (!history.isEmpty() && now - history.peekFirst() > FEEDBACK_WINDOW_MILLIS) {
+			history.pollFirst();
+		}
+
+		if (history.size() >= FEEDBACK_MAX) {
+			throw new RateLimitExceededException("feedback.error.limit", FEEDBACK_MAX);
+		}
+
+		history.addLast(now);
+	}
+
 	// ===== 주기적 메모리 청소 (10분마다 실행) =====
 
 	@Scheduled(fixedRate = 600_000)
@@ -172,6 +203,7 @@ public class RateLimiterService {
 		pruneMap(commentPinFailHistory, now, COMMENT_LOCK_WINDOW_MILLIS);
 		pruneMap(adminLoginFailHistory, now, FAIL_WINDOW_MILLIS);
 		pruneMap(commentReportHistory, now, REPORT_WINDOW_MILLIS);
+		pruneMap(feedbackHistory, now, FEEDBACK_WINDOW_MILLIS);
 		reportedByIp.values().removeIf(at -> now - at > REPORT_DEDUP_MILLIS);
 	}
 
