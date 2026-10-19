@@ -10,6 +10,14 @@
 <th:block th:fragment="seo(title, description, indexable)">
     <meta name="description" th:content="${description}">
     <meta name="robots" content="noindex, follow" th:unless="${indexable}">
+    <!-- 대표 주소·언어판 짝 (2026.10.19). 언어가 세션 기준이라 같은 경로가 한/일로 나와 중복으로 보이지 않게,
+         한국어판 = 경로 그대로, 일본어판 = ?lang=ja 로 알려준다 (sitemap.xml과 같은 규칙). 색인 제외 페이지는 생략 -->
+    <th:block th:if="${indexable and koUrl != null}">
+        <link rel="canonical" th:href="${#locale.language == 'ja'} ? ${jaUrl} : ${koUrl}">
+        <link rel="alternate" hreflang="ko" th:href="${koUrl}">
+        <link rel="alternate" hreflang="ja" th:href="${jaUrl}">
+        <link rel="alternate" hreflang="x-default" th:href="${koUrl}">
+    </th:block>
     <!-- 네이버 서치어드바이저 소유 확인 (공개되는 값, 2026.10.12). Google은 Cloudflare DNS TXT로 확인 -->
     <meta name="naver-site-verification" content="857c80d83d15ceeeb2ee4dd8894ffb18fa41033c">
 
