@@ -118,7 +118,7 @@
     <header>
         <div class="brand-row">
             <a class="brand-jp" th:href="@{/}">相撲archive</a>
-            <span class="brand-kr">스모아카이브</span>
+            <span class="brand-kr" th:text="#{site.title}">스모아카이브</span>
         </div>
         <div class="breadcrumb"><a th:href="@{/}" th:text="#{common.nav.banzuke}">반즈케</a> &gt; <span th:text="#{bookmark.title}">즐겨찾기</span></div>
         <th:block th:replace="~{fragments/common :: langSwitch}"></th:block>

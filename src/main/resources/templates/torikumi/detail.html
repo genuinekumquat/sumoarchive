@@ -105,7 +105,7 @@
     <header>
         <div class="brand-row">
             <a class="brand-jp" th:href="@{/}">相撲archive</a>
-            <span class="brand-kr">스모아카이브</span>
+            <span class="brand-kr" th:text="#{site.title}">스모아카이브</span>
         </div>
         <div class="breadcrumb" th:with="ja=${#locale.language == 'ja'}, t=${torikumi}">
             <a th:href="@{/}" th:text="#{common.nav.banzuke}">반즈케</a> &gt;
