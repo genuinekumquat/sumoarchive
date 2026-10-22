@@ -533,7 +533,7 @@ docker compose start app
 - [x] **DB 자동 백업**: `scripts/backup-db.sh` + cron, 14일 보관 (6절)
 - [x] **로그 보존**: docker logs 컨테이너당 10MB x 5개 제한, 앱 로그는 `sumo_app_logs` 볼륨에 파일로 저장(14일·500MB, 날짜·10MB 단위 gzip)
 - [x] **백업 외부 보관**: 매일 4시 cron, `S3_URI`로 S3 업로드(수명 주기 14일, 6절 1). EC2 역할은 그 폴더에 PutObject만 (목록·삭제 불가 확인)
-- [ ] **업타임 모니터 등록**: `/actuator/health`를 외부 모니터에 등록
+- [x] **업타임 모니터 등록**: UptimeRobot(무료) HTTP/S 모니터, `https://sumoarchive.com/actuator/health` 5분 간격, 이메일 알림 (2026-10-22, 테스트 알림 DOWN·UP 수신 확인). health가 DOWN이면 503이라 HTTP/S 방식으로 DB 장애까지 잡힌다
 - [ ] **AWS 비용 관리**: Budgets 알림, 크레딧 만료일 확인 후 계속 쓸지·옮길지(9절) 결정 (0절 AWS)
 
 ---
