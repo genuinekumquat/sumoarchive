@@ -7,6 +7,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 @Entity
 @Table(name = "rikishi")
@@ -52,6 +53,10 @@ public class RikishiEntity {
 	
 	@Column(name = "birthplace", length = 255)
 	private String birthplace;
+
+	// 관리자가 출신지(원문)를 직접 고쳤으면 true. 로스터 동기화(updateFromApi)가 birthplace를 덮어쓰지 않는다 (V9).
+	@Column(name = "birthplace_manual", nullable = false)
+	private boolean birthplaceManual;
 
 	@Column(name = "nationality", length = 100)
 	private String nationality;
@@ -157,7 +162,8 @@ public class RikishiEntity {
 	/**
 	 * sumo-api 로스터 재임포트(동기화) 시 호출.
 	 * 한국어 시코나(shikonaKr), 한국어 뒷이름(givenNameKr), 출신지(originKr), 프로필 사진(photoUrl),
-	 * 특기(fightingStyle), 최고위(highestRank) 등 수동 검수 및 서비스 전용 데이터는 일체 건드리지 않고,
+	 * 특기(fightingStyle), 최고위(highestRank), 관리자가 고친 출신지 원문(birthplaceManual) 등
+	 * 수동 검수 및 서비스 전용 데이터는 일체 건드리지 않고,
 	 * sumo-api에서 실시간으로 변동되는 기본 신체 스펙(키, 몸무게), 현역 상태, 소속 헤야 등을 안전하게 갱신한다.
 	 */
 	public void updateFromApi(
@@ -178,7 +184,7 @@ public class RikishiEntity {
 		if (givenNameJp != null && !givenNameJp.isBlank()) this.givenNameJp = givenNameJp;
 		if (shikonaEn != null && !shikonaEn.isBlank()) this.shikonaEn = shikonaEn;
 		if (birthdate != null) this.birthdate = birthdate;
-		if (birthplace != null && !birthplace.isBlank()) {
+		if (!birthplaceManual && birthplace != null && !birthplace.isBlank()) {
 			this.birthplace = birthplace;
 			if (this.nationality == null || this.nationality.isBlank()) {
 				this.nationality = nationality;
@@ -226,6 +232,11 @@ public class RikishiEntity {
 		this.givenNameJp = givenNameJp;
 		this.name = name;
 		this.birthdate = birthdate;
+		// 출신지 원문을 바꿨을 때만 수동으로 표시한다 (다른 칸만 고쳐 저장한 경우는 그대로 자동 갱신).
+		// 비우면 다시 자동 — 다음 로스터 동기화가 sumo-api 값으로 채운다.
+		if (!Objects.equals(this.birthplace, birthplace)) {
+			this.birthplaceManual = birthplace != null;
+		}
 		this.birthplace = birthplace;
 		this.nationality = nationality;
 		this.height = height;

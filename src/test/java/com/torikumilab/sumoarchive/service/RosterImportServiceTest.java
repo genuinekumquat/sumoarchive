@@ -101,6 +101,64 @@ class RosterImportServiceTest {
 	}
 
 	@Test
+	@DisplayName("관리자가 고친 출신지(원문)는 로스터 동기화가 덮어쓰지 않는다")
+	void importRoster_whenBirthplaceEditedByAdmin_keepsIt() {
+		RikishiEntity rikishi = RikishiEntity.builder()
+				.externalApiId(662)
+				.shikonaEn("Hoshoryu")
+				.birthplace("Mongolia, Ulaanbaatar")
+				.build();
+		saveProfileWithBirthplace(rikishi, "モンゴル・ウランバートル");
+		givenRoster(rikishi, "Mongolia, Ulaanbaatar");
+
+		rosterImportService.importRoster();
+
+		assertThat(rikishi.isBirthplaceManual()).isTrue();
+		assertThat(rikishi.getBirthplace()).isEqualTo("モンゴル・ウランバートル");
+		assertThat(rikishi.getWeight()).isEqualTo(BigDecimal.valueOf(145)); // 다른 스펙은 그대로 갱신
+	}
+
+	@Test
+	@DisplayName("출신지는 그대로 두고 다른 칸만 저장했거나, 출신지를 비웠으면 동기화가 계속 갱신한다")
+	void importRoster_whenBirthplaceNotEdited_keepsUpdating() {
+		RikishiEntity unchanged = RikishiEntity.builder()
+				.externalApiId(662)
+				.shikonaEn("Hoshoryu")
+				.birthplace("Mongolia")
+				.build();
+		saveProfileWithBirthplace(unchanged, "Mongolia");
+		givenRoster(unchanged, "Mongolia, Ulaanbaatar");
+
+		rosterImportService.importRoster();
+
+		assertThat(unchanged.isBirthplaceManual()).isFalse();
+		assertThat(unchanged.getBirthplace()).isEqualTo("Mongolia, Ulaanbaatar");
+
+		// 직접 고쳤다가 비우면 다시 자동
+		RikishiEntity cleared = RikishiEntity.builder().externalApiId(662).shikonaEn("Hoshoryu").build();
+		saveProfileWithBirthplace(cleared, "モンゴル");
+		saveProfileWithBirthplace(cleared, null);
+		assertThat(cleared.isBirthplaceManual()).isFalse();
+	}
+
+	/** 관리자 프로필 저장: 출신지만 바꾸고 나머지는 지금 값 그대로 */
+	private static void saveProfileWithBirthplace(RikishiEntity r, String birthplace) {
+		r.updateProfile(r.getShikonaKr(), r.getShikonaJp(), r.getGivenNameKr(), r.getGivenNameJp(), r.getName(),
+				r.getBirthdate(), birthplace, r.getNationality(), r.getHeight(), r.getWeight(), r.getHeyaEntity(),
+				r.getHighestRank(), r.getFightingStyle(), r.getDebutDate(), true, r.getRetiredDate(),
+				r.getOyakataNameKr(), r.getOyakataNameJp(), r.getPhotoUrl(), r.getOriginKr());
+	}
+
+	private void givenRoster(RikishiEntity existing, String shusshin) {
+		given(heyaRepository.findAll()).willReturn(List.of());
+		given(rikishiRepository.findAll()).willReturn(List.of(existing));
+		SumoApiRikishiDTO api = new SumoApiRikishiDTO(662L, "Hoshoryu", "豊昇龍 智勝", null, "Ozeki",
+				"1999-05-22", shusshin, 188, 145, "201711", null);
+		given(sumoApiClient.getActiveRikishis(500, 0))
+				.willReturn(new SumoApiRikishiPageDTO(500, 0, 1, List.of(api)));
+	}
+
+	@Test
 	@DisplayName("신규 리키시는 Insert되고 자동 음차가 생성되어야 한다")
 	void importRoster_whenNewRikishi_insertsWithInitialTransliteration() {
 		// given: DB가 비어있는 상태
