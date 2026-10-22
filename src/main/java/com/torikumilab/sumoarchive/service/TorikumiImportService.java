@@ -17,6 +17,7 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -62,6 +63,7 @@ public class TorikumiImportService {
 
 	private enum Outcome { CREATED, UPDATED, SKIPPED }
 
+	@CacheEvict(value = LeagueStatsService.CACHE, allEntries = true) // 리그 평균(패배 유형·체격 차) 재계산
 	@Transactional
 	public TorikumiImportResultDTO importDivision(Integer bashoId, Division division) {
 		BashoEntity basho = bashoRepository.findById(bashoId)

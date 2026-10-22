@@ -12,7 +12,6 @@ import com.torikumilab.sumoarchive.repository.BashoRepository;
 import com.torikumilab.sumoarchive.repository.TorikumiRepository;
 import com.torikumilab.sumoarchive.repository.TorikumiRepository.DivisionKimariteCountRow;
 import com.torikumilab.sumoarchive.repository.TorikumiRepository.OpponentBoutRow;
-import com.torikumilab.sumoarchive.repository.TorikumiRepository.PhysiqueDiffRow;
 import com.torikumilab.sumoarchive.repository.TorikumiRepository.WinRateRow;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -81,6 +80,7 @@ public class RikishiAnalysisService {
 
 	private final TorikumiRepository torikumiRepository;
 	private final BashoRepository bashoRepository;
+	private final LeagueStatsService leagueStatsService;
 
 	/**
 	 * 패배 유형 요약. 기간 필터는 키마리테 차트와 같은 규칙(두 바쇼 시작일 사이, 없으면 통산).
@@ -107,10 +107,10 @@ public class RikishiAnalysisService {
 		// 공정하게 비교하도록, 디비전별 리그 비율을 이 선수가 그 디비전에서 진 경기 수로 가중 평균한다.
 		Map<Division, Map<LossType, Long>> leagueByDivision = new EnumMap<>(Division.class);
 		Map<Division, Long> leagueTotalByDivision = new EnumMap<>(Division.class);
-		for (DivisionKimariteCountRow row : torikumiRepository.findKimariteByDivision()) {
-			leagueByDivision.computeIfAbsent(row.getDivision(), d -> new EnumMap<>(LossType.class))
-					.merge(LossType.of(row.getKimarite()), row.getCnt(), Long::sum);
-			leagueTotalByDivision.merge(row.getDivision(), row.getCnt(), Long::sum);
+		for (LeagueStatsService.DivisionKimariteCount row : leagueStatsService.kimariteByDivision()) {
+			leagueByDivision.computeIfAbsent(row.division(), d -> new EnumMap<>(LossType.class))
+					.merge(LossType.of(row.kimarite()), row.count(), Long::sum);
+			leagueTotalByDivision.merge(row.division(), row.count(), Long::sum);
 		}
 
 		boolean smallSample = total < MIN_LOSSES;
@@ -179,16 +179,16 @@ public class RikishiAnalysisService {
 		// 리그 평균: 한 경기를 동쪽·서쪽 두 시점으로 센다 (서쪽 시점은 차이 부호가 반대, 승수는 경기 수 - 동쪽 승수).
 		Map<WeightBucket, Tally> leagueWeight = new EnumMap<>(WeightBucket.class);
 		Map<HeightBucket, Tally> leagueHeight = new EnumMap<>(HeightBucket.class);
-		for (PhysiqueDiffRow r : torikumiRepository.findPhysiqueDiffStats()) {
-			long bouts = r.getBouts().longValue();
-			long eastWins = r.getEastWins().longValue();
-			if (r.getWeightDiff() != null) {
-				double dw = r.getWeightDiff().doubleValue();
+		for (LeagueStatsService.PhysiqueDiff r : leagueStatsService.physiqueDiff()) {
+			long bouts = r.bouts();
+			long eastWins = r.eastWins();
+			if (r.weightDiff() != null) {
+				double dw = r.weightDiff();
 				leagueWeight.computeIfAbsent(WeightBucket.of(dw), k -> new Tally()).add(bouts, eastWins);
 				leagueWeight.computeIfAbsent(WeightBucket.of(-dw), k -> new Tally()).add(bouts, bouts - eastWins);
 			}
-			if (r.getHeightDiff() != null) {
-				double dh = r.getHeightDiff().doubleValue();
+			if (r.heightDiff() != null) {
+				double dh = r.heightDiff();
 				leagueHeight.computeIfAbsent(HeightBucket.of(dh), k -> new Tally()).add(bouts, eastWins);
 				leagueHeight.computeIfAbsent(HeightBucket.of(-dh), k -> new Tally()).add(bouts, bouts - eastWins);
 			}

@@ -40,7 +40,7 @@ public class RosterImportService {
 	private final HeyaRepository heyaRepository;
 
 	@Transactional
-	@CacheEvict(value = {"banzuke", "ichimonStructure"}, allEntries = true)
+	@CacheEvict(value = {"banzuke", "ichimonStructure", LeagueStatsService.CACHE}, allEntries = true) // 키·체중이 바뀌면 체격 차 리그 평균도
 	public RosterImportResultDTO importRoster() {
 		List<SumoApiRikishiDTO> apiRikishis = fetchAllActive();
 		log.info("[RosterImport] sumo-api 현역 리키시 {}명 수신", apiRikishis.size());

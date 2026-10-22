@@ -15,10 +15,10 @@ import com.torikumilab.sumoarchive.repository.TorikumiRepository;
 import com.torikumilab.sumoarchive.repository.TorikumiRepository.DivisionKimariteCountRow;
 import com.torikumilab.sumoarchive.repository.TorikumiRepository.OpponentBoutRow;
 import com.torikumilab.sumoarchive.repository.TorikumiRepository.PhysiqueDiffRow;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -43,8 +43,13 @@ class RikishiAnalysisServiceTest {
 	@Mock
 	private BashoRepository bashoRepository;
 
-	@InjectMocks
 	private RikishiAnalysisService service;
+
+	// 리그 집계는 캐시 서비스를 거치지만 단위 테스트에서는 캐시 없이 같은 목 저장소를 그대로 쓴다
+	@BeforeEach
+	void setUp() {
+		service = new RikishiAnalysisService(torikumiRepository, bashoRepository, new LeagueStatsService(torikumiRepository));
+	}
 
 	// 마쿠우치 리그 분포: 밀려서 30 / 잡혀서 30 / 고꾸라짐 20 / 던져짐 15 / 뒤 3 / 기타 2 (합 100)
 	private static final List<DivisionKimariteCountRow> MAKUUCHI_LEAGUE = List.of(

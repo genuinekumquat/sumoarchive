@@ -78,7 +78,7 @@ public class RikishiAdminService {
 	}
 
 	@Transactional
-	@CacheEvict(value = {"banzuke", "ichimonStructure"}, allEntries = true)
+	@CacheEvict(value = {"banzuke", "ichimonStructure", LeagueStatsService.CACHE}, allEntries = true)
 	public void updateProfile(Integer rikishiId, RikishiEditFormDTO form) {
 		RikishiEntity r = rikishiRepository.findById(rikishiId)
 				.orElseThrow(() -> new EntityNotFoundException("리키시를 찾을 수 없습니다. id=" + rikishiId));

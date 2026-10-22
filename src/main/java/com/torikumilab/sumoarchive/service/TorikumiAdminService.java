@@ -17,6 +17,7 @@ import com.torikumilab.sumoarchive.util.KimariteDisplayUtil;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -81,6 +82,7 @@ public class TorikumiAdminService {
 		return KimariteDisplayUtil.krSuggestions();
 	}
 
+	@CacheEvict(value = LeagueStatsService.CACHE, allEntries = true)
 	@Transactional
 	public void addMatch(Integer bashoId, TorikumiFormDTO form) {
 		BashoEntity basho = findBasho(bashoId);
@@ -108,6 +110,7 @@ public class TorikumiAdminService {
 				.build());
 	}
 
+	@CacheEvict(value = LeagueStatsService.CACHE, allEntries = true)
 	@Transactional
 	public void updateMatch(Integer bashoId, Integer torikumiId, TorikumiFormDTO form) {
 		findBasho(bashoId);
@@ -124,6 +127,7 @@ public class TorikumiAdminService {
 		);
 	}
 
+	@CacheEvict(value = LeagueStatsService.CACHE, allEntries = true)
 	@Transactional
 	public void deleteMatch(Integer bashoId, Integer torikumiId) {
 		findBasho(bashoId);

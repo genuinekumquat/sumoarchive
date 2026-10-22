@@ -77,6 +77,7 @@ public class RikishiDetailService {
 	private final KinboshiRepository kinboshiRepository;
 	private final ScheduledBoutRepository scheduledBoutRepository;
 	private final HighestRankService highestRankService;
+	private final LeagueStatsService leagueStatsService;
 	
 	public RikishiDetailDTO getRikishiDetail(Integer rikishiId) {
 		RikishiEntity r = rikishiRepository.findById(rikishiId)
@@ -281,11 +282,8 @@ public class RikishiDetailService {
 			}
 		}
 
-		Map<Integer, Map<Division, Integer>> loadedDaysByBasho = new HashMap<>();
-		for (TorikumiRepository.LoadedDayRow row : torikumiRepository.findLoadedDays(bashoIds)) {
-			loadedDaysByBasho.computeIfAbsent(row.getBashoId(), k -> new HashMap<>())
-					.put(row.getDivision(), row.getLastDay());
-		}
+		// 바쇼·지위별 적재 일차는 리키시와 무관해서 캐시된 전 바쇼 값을 쓴다 (LeagueStatsService)
+		Map<Integer, Map<Division, Integer>> loadedDaysByBasho = leagueStatsService.loadedDaysByBasho();
 
 		return banzukeHistory.stream()
 				.map(b -> {

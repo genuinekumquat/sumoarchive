@@ -90,17 +90,17 @@ public interface TorikumiRepository extends JpaRepository<TorikumiEntity, Intege
 														 @Param("to") LocalDate to);
 
 
-	// 호시토리표용 - 여러 바쇼의 (바쇼, 지위)별 적재된 마지막 일차를 한 번에. 결정전 제외.
+	// 호시토리표용 - 전 바쇼의 (바쇼, 지위)별 적재된 마지막 일차. 결정전 제외.
 	// 행이 있으면 그 바쇼·지위 토리쿠미가 적재된 것(全休 판정), 바쇼별 MAX는 휴장 칸 채우기 상한
 	// (진행 중 바쇼의 아직 안 열린 날을 휴장으로 세지 않기 위함, 끝난 바쇼는 15).
+	// 리키시마다 같은 값이라 LeagueStatsService가 캐시한다 (예전엔 그 리키시의 바쇼들로 좁혀 매번 조회).
 	@Query("""
     SELECT t.bashoEntity.id AS bashoId, t.division AS division, MAX(t.day) AS lastDay
     FROM TorikumiEntity t
-    WHERE t.bashoEntity.id IN :bashoIds
-      AND t.isExtraMatch = false
+    WHERE t.isExtraMatch = false
     GROUP BY t.bashoEntity.id, t.division
 """)
-	List<LoadedDayRow> findLoadedDays(@Param("bashoIds") Collection<Integer> bashoIds);
+	List<LoadedDayRow> findAllLoadedDays();
 
 	interface LoadedDayRow {
 		Integer getBashoId();
