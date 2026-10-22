@@ -76,7 +76,7 @@ flowchart LR
     U["ブラウザ<br/>(PC・スマホ)"] -- "HTTPS" --> N
     subgraph EC2["AWS EC2 t4g.small(ARM・ソウル)/ Docker Compose"]
         N["Nginx<br/>Let's Encrypt"] --> A["Spring Boot 3.5<br/>Java 21"]
-        A --> D[("MySQL 8.0<br/>Flyway V1〜V8")]
+        A --> D[("MySQL 8.0<br/>Flyway V1〜V9")]
         B["cron 毎日4時<br/>backup-db.sh"] --> D
     end
     A -- "取込(場所中は1日4回)" --> S["sumo-api.com"]
