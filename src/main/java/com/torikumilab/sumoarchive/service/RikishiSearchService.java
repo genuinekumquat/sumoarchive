@@ -36,7 +36,7 @@ public class RikishiSearchService {
 		// 최고위: 직접 입력값, 없으면 반즈케로 계산 (한 페이지 리키시를 한 번에)
 		Map<Integer, HighestRankService.HighestRank> highest = highestRankService.resolveAll(rows.getContent().stream()
 				.map(row -> new HighestRankService.Subject(row.rikishiId(), row.highestRank(),
-						row.debutYear() != null ? YearMonth.of(row.debutYear(), 1) : null))
+						row.debutYear() != null ? YearMonth.of(row.debutYear(), 1) : null, false))
 				.toList());
 		return rows.map(row -> toDto(row, highest.get(row.rikishiId())));
 	}

@@ -24,7 +24,9 @@ import java.util.stream.Collectors;
  *
  * <p>관리자가 직접 입력한 {@code highest_rank}가 있으면 그 값, 없으면 적재된 반즈케 중 가장 높은 지위
  * (같은 지위면 처음 오른 바쇼)로 계산한다. 반즈케는 2019년부터만 있어서, 그 전에 데뷔한 리키시의 계산값은
- * 실제 최고위보다 낮을 수 있다 → {@code partial}로 표시하고, 틀린 경우만 관리자가 직접 입력한다.</p>
+ * 실제 최고위보다 낮을 수 있다 → {@code partial}로 표시한다. 단 sumo-api 전체 계급 이력과 대조해 같다고 확인된
+ * 리키시({@code highest_rank_verified})와 요코즈나(더 높은 지위가 없음)는 빼고, 실제가 더 높았던 리키시는
+ * {@code highest_rank}에 직접 입력해 둔다.</p>
  */
 @Service
 @RequiredArgsConstructor
@@ -43,19 +45,19 @@ public class HighestRankService {
 	/**
 	 * @param rank      화면 표기 ("마에가시라3" / "前頭3枚目", 직접 입력값은 "오제키" / "大関")
 	 * @param since     처음 오른 바쇼 ("2024년 5월 나츠바쇼" / "2024年05月場所"). 직접 입력값이면 null
-	 * @param partial   2019년 전 데뷔(또는 데뷔일 모름)라 적재된 기록만으로 계산한 값
+	 * @param partial   2019년 전 데뷔(또는 데뷔일 모름)라 적재된 기록만으로 계산했고, 실제와 같은지 확인되지 않은 값
 	 */
 	public record HighestRank(String rank, String rankJp, String since, String sinceJp, boolean partial) {
 	}
 
 	/**
 	 * 계산에 필요한 리키시 정보. 검색 결과처럼 데뷔 연도만 있으면 그해 1월로 둔다
-	 * (기록 시작이 1월 바쇼라 연도만으로도 판단이 같다).
+	 * (기록 시작이 1월 바쇼라 연도만으로도 판단이 같다). 검색·즐겨찾기 카드는 partial을 쓰지 않아 verified를 몰라도 된다.
 	 */
-	public record Subject(Integer rikishiId, String manualHighestRank, YearMonth debut) {
+	public record Subject(Integer rikishiId, String manualHighestRank, YearMonth debut, boolean verified) {
 		public static Subject of(RikishiEntity r) {
 			return new Subject(r.getId(), r.getHighestRank(),
-					r.getDebutDate() != null ? YearMonth.from(r.getDebutDate()) : null);
+					r.getDebutDate() != null ? YearMonth.from(r.getDebutDate()) : null, r.isHighestRankVerified());
 		}
 	}
 
@@ -94,7 +96,8 @@ public class HighestRankService {
 			return null;
 		}
 		BashoEntity basho = best.getBashoEntity();
-		boolean partial = dataStart == null || s.debut() == null || s.debut().isBefore(YearMonth.from(dataStart));
+		boolean partial = !s.verified() && best.getRankName() != RankName.Yokozuna
+				&& (dataStart == null || s.debut() == null || s.debut().isBefore(YearMonth.from(dataStart)));
 		return new HighestRank(
 				RankDisplayUtil.rankDisplayKorean(best.getRankName(), best.getRankValue()),
 				RankDisplayUtil.rankDisplay(best.getRankName(), best.getRankValue()),

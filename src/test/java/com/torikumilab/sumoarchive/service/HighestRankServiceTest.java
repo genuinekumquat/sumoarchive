@@ -20,7 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class HighestRankServiceTest {
 
 	private static final LocalDate DATA_START = LocalDate.of(2019, 1, 13);
-	private static final Subject DEBUT_2020 = new Subject(1, null, YearMonth.of(2020, 3));
+	private static final Subject DEBUT_2020 = new Subject(1, null, YearMonth.of(2020, 3), false);
 
 	@Test
 	@DisplayName("가장 높은 지위와 처음 오른 바쇼 - 떨어졌다 다시 올라와도 처음 오른 바쇼")
@@ -58,7 +58,7 @@ class HighestRankServiceTest {
 	@Test
 	@DisplayName("관리자 직접 입력값이 있으면 그 값 (바쇼 없음)")
 	void manualWins() {
-		Subject manual = new Subject(1, "Ozeki", YearMonth.of(2005, 1));
+		Subject manual = new Subject(1, "Ozeki", YearMonth.of(2005, 1), false);
 
 		HighestRank h = HighestRankService.resolve(manual,
 				List.of(banzuke(2020, BashoMonth.JAN, RankName.Maegashira, 4)), DATA_START);
@@ -74,10 +74,22 @@ class HighestRankServiceTest {
 	void partialAndEmpty() {
 		List<BanzukeEntity> history = List.of(banzuke(2020, BashoMonth.JAN, RankName.Maegashira, 4));
 
-		assertThat(HighestRankService.resolve(new Subject(1, null, YearMonth.of(2015, 3)), history, DATA_START).partial()).isTrue();
-		assertThat(HighestRankService.resolve(new Subject(1, null, null), history, DATA_START).partial()).isTrue();
-		assertThat(HighestRankService.resolve(new Subject(1, null, YearMonth.of(2019, 1)), history, DATA_START).partial()).isFalse();
+		assertThat(HighestRankService.resolve(new Subject(1, null, YearMonth.of(2015, 3), false), history, DATA_START).partial()).isTrue();
+		assertThat(HighestRankService.resolve(new Subject(1, null, null, false), history, DATA_START).partial()).isTrue();
+		assertThat(HighestRankService.resolve(new Subject(1, null, YearMonth.of(2019, 1), false), history, DATA_START).partial()).isFalse();
 		assertThat(HighestRankService.resolve(DEBUT_2020, List.of(), DATA_START)).isNull();
+	}
+
+	@Test
+	@DisplayName("2019년 전 데뷔여도 전체 이력과 대조해 확인됐거나(verified), 요코즈나면 partial이 아니다")
+	void verifiedOrYokozunaIsNotPartial() {
+		YearMonth debut2010 = YearMonth.of(2010, 1);
+		List<BanzukeEntity> maegashira = List.of(banzuke(2020, BashoMonth.JAN, RankName.Maegashira, 4));
+		List<BanzukeEntity> yokozuna = List.of(banzuke(2019, BashoMonth.JAN, RankName.Yokozuna, 1));
+
+		assertThat(HighestRankService.resolve(new Subject(1, null, debut2010, true), maegashira, DATA_START).partial()).isFalse();
+		assertThat(HighestRankService.resolve(new Subject(1, null, debut2010, false), yokozuna, DATA_START).partial()).isFalse();
+		assertThat(HighestRankService.resolve(new Subject(1, null, debut2010, false), maegashira, DATA_START).partial()).isTrue();
 	}
 
 	private static BanzukeEntity banzuke(int year, BashoMonth month, RankName rankName, Integer rankValue) {
