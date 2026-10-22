@@ -76,6 +76,7 @@ public class RikishiDetailService {
 	private final AwardRepository awardRepository;
 	private final KinboshiRepository kinboshiRepository;
 	private final ScheduledBoutRepository scheduledBoutRepository;
+	private final HighestRankService highestRankService;
 	
 	public RikishiDetailDTO getRikishiDetail(Integer rikishiId) {
 		RikishiEntity r = rikishiRepository.findById(rikishiId)
@@ -124,6 +125,7 @@ public class RikishiDetailService {
 		String shikonaJp = r.getShikonaJp() != null ? r.getShikonaJp() : firstToken(r.getShikonaEn());
 
 		String fightingStyleJp = r.getFightingStyle() != null ? FIGHTING_STYLE_JP.get(r.getFightingStyle()) : null;
+		HighestRankService.HighestRank highest = highestRankService.resolve(r, banzukeHistory);
 
 		return RikishiDetailDTO.builder()
 				.id(r.getId())
@@ -146,8 +148,11 @@ public class RikishiDetailService {
 				.fightingStyle(r.getFightingStyle())
 				.fightingStyleJp(fightingStyleJp)
 				.debutDate(r.getDebutDate())
-				.highestRank(RankDisplayUtil.toKorean(r.getHighestRank()))
-				.highestRankJp(RankDisplayUtil.toJapanese(r.getHighestRank()))
+				.highestRank(highest != null ? highest.rank() : null)
+				.highestRankJp(highest != null ? highest.rankJp() : null)
+				.highestRankSince(highest != null ? highest.since() : null)
+				.highestRankSinceJp(highest != null ? highest.sinceJp() : null)
+				.highestRankPartial(highest != null && highest.partial())
 				.isActive(r.isActive())
 				.retiredDate(r.getRetiredDate())
 				.oyakataNameKr(r.getOyakataNameKr())

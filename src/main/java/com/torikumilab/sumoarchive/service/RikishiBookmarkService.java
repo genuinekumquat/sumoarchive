@@ -51,6 +51,7 @@ public class RikishiBookmarkService {
 	private final BanzukeRepository banzukeRepository;
 	private final TorikumiRepository torikumiRepository;
 	private final ScheduledBoutRepository scheduledBoutRepository;
+	private final HighestRankService highestRankService;
 
 	@Transactional(readOnly = true)
 	public BookmarkPageDTO getBookmarkPage(List<Integer> ids) {
@@ -82,13 +83,16 @@ public class RikishiBookmarkService {
 			nextDay = scheduledBoutRepository.findMinDay(basho.getId());
 		}
 
+		Map<Integer, HighestRankService.HighestRank> highest = highestRankService.resolveAll(
+				byId.values().stream().map(HighestRankService.Subject::of).toList());
+
 		// 이미 삭제된 리키시 등 더 이상 존재하지 않는 id는 조용히 스킵한다.
 		List<RikishiBookmarkCardDTO> cards = new ArrayList<>();
 		for (Integer id : ids) {
 			RikishiEntity r = byId.get(id);
 			if (r != null) {
 				BanzukeEntity bz = banzukeById.get(id);
-				cards.add(toDto(r, bz == null ? null : current(id, bz, boutsById.getOrDefault(id, List.of()),
+				cards.add(toDto(r, highest.get(id), bz == null ? null : current(id, bz, boutsById.getOrDefault(id, List.of()),
 						NextBouts.first(id, scheduled, banzukeById))));
 			}
 		}
@@ -176,17 +180,18 @@ public class RikishiBookmarkService {
 	}
 
 
-	private static RikishiBookmarkCardDTO toDto(RikishiEntity r, RikishiBookmarkCardDTO.Current current) {
+	private static RikishiBookmarkCardDTO toDto(RikishiEntity r, HighestRankService.HighestRank highest,
+												 RikishiBookmarkCardDTO.Current current) {
 		return new RikishiBookmarkCardDTO(
 				r.getId(),
 				r.getShikonaKr(),
 				r.getShikonaJp(),
 				r.getHeyaEntity() != null ? r.getHeyaEntity().getNameKr() : null,
-				RankDisplayUtil.toKorean(r.getHighestRank()),
+				highest != null ? highest.rank() : null,
 				formatPeriod(r.getDebutDate(), r.getRetiredDate()),
 				statusLabel(r),
 				r.getHeyaEntity() != null ? r.getHeyaEntity().getNameJp() : null,
-				RankDisplayUtil.toJapanese(r.getHighestRank()),
+				highest != null ? highest.rankJp() : null,
 				formatPeriodJp(r.getDebutDate(), r.getRetiredDate()),
 				statusLabelJp(r),
 				current

@@ -47,6 +47,8 @@ class RikishiBookmarkServiceTest {
 	private TorikumiRepository torikumiRepository;
 	@Mock
 	private ScheduledBoutRepository scheduledBoutRepository;
+	@Mock
+	private HighestRankService highestRankService;
 	@InjectMocks
 	private RikishiBookmarkService service;
 

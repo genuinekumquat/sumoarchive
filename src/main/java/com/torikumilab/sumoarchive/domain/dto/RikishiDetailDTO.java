@@ -42,8 +42,12 @@ public class RikishiDetailDTO {
 	private String fightingStyleJp; // 일본어 화면용. fightingStyle이 null이면 null
 
 	private LocalDate debutDate;
+	// 최고위: 관리자 직접 입력값, 없으면 반즈케로 계산 (HighestRankService). 둘 다 없으면 null
 	private String highestRank;
 	private String highestRankJp; // 일본어 화면용
+	private String highestRankSince;   // 계산값일 때 처음 오른 바쇼 ("2024년 5월 나츠바쇼"), 직접 입력값이면 null
+	private String highestRankSinceJp;
+	private boolean highestRankPartial; // 2019년 전 데뷔라 적재된 기록(2019년~)만으로 계산한 값
 
 	private boolean isActive;
 	private LocalDate retiredDate;     // 현역이면 null

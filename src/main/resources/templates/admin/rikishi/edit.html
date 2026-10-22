@@ -142,7 +142,7 @@
             </p>
             <div class="field-row">
                 <div class="field">
-                    <label>최고 계급</label>
+                    <label>최고 계급 <span style="color:var(--sumi-faint);font-size:11px;">미지정이면 반즈케 기록(2019년~)에서 자동 계산 — 그 전에 더 높았던 베테랑만 입력</span></label>
                     <select th:field="*{highestRank}">
                         <option value="">(미지정)</option>
                         <option th:each="rn : ${rankOptions}" th:value="${rn.key}" th:text="${rn.value}">오제키</option>

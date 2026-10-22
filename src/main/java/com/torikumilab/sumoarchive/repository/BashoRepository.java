@@ -29,6 +29,13 @@ public interface BashoRepository extends JpaRepository<BashoEntity, Integer> {
 		return findAllWithBanzukeOrderByStartDateDesc().stream().findFirst();
 	}
 
+	// 최고위 계산이 어디부터의 기록인지 (반즈케가 들어간 가장 이른 바쇼 = 2019년 1월). 없으면 null.
+	@Query("""
+        SELECT MIN(b.startDate) FROM BashoEntity b
+        WHERE EXISTS (SELECT 1 FROM BanzukeEntity z WHERE z.bashoEntity = b)
+    """)
+	LocalDate findEarliestStartDateWithBanzuke();
+
 	// 관리자 바쇼 목록용. bashoMonth는 @Enumerated(STRING)이라 그걸로 정렬하면 varchar 알파벳순이
 	// 되어 월 순서가 깨진다. 생성 폼에서 시작일을 필수로 받으므로 startDate 정렬이 정확하다.
 	List<BashoEntity> findAllByOrderByStartDateDesc();

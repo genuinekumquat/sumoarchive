@@ -52,6 +52,14 @@ public interface BanzukeRepository extends JpaRepository<BanzukeEntity, Integer>
 """)
 	List<BanzukeEntity> findByRikishiIdOrderByBashoDesc(@Param("rikishiId") Integer rikishiId);
 	
+	// 검색·즐겨찾기 최고위 계산용 - 여러 리키시의 반즈케 전체를 바쇼와 함께 한 번에
+	@Query("""
+    SELECT b FROM BanzukeEntity b
+    JOIN FETCH b.bashoEntity
+    WHERE b.rikishiEntity.id IN :rikishiIds
+""")
+	List<BanzukeEntity> findByRikishiIdsFetchBasho(@Param("rikishiIds") Collection<Integer> rikishiIds);
+
 	// 통산 출전 바쇼 수
 	@Query("SELECT COUNT(b) FROM BanzukeEntity b WHERE b.rikishiEntity.id = :rikishiId")
 	long countByRikishiId(@Param("rikishiId") Integer rikishiId);

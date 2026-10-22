@@ -1061,9 +1061,13 @@
                     </div>
                     <div class="summary-cell">
                         <div class="summary-label" th:text="#{rikishi.label.highestrank}">최고위</div>
-                        <!-- highest_rank는 관리자가 직접 입력하는 값이라 비어 있는 리키시가 많음 -->
+                        <!-- 관리자 직접 입력값, 없으면 반즈케로 계산(처음 오른 바쇼 표시). 2019년 전 데뷔는 기록 기준임을 밝힌다 -->
                         <div class="summary-value" th:if="${!#strings.isEmpty(rikishi.highestRank)}"
                              th:text="${ja} ? ${rikishi.highestRankJp} : ${rikishi.highestRank}">오제키</div>
+                        <div class="summary-sub" th:if="${rikishi.highestRankSince != null}"
+                             th:with="partial=${rikishi.highestRankPartial and recordSinceYear != null}"
+                             th:text="${ja ? rikishi.highestRankSinceJp + (partial ? ' · ' + recordSinceYear + '年〜の記録' : '')
+                                           : rikishi.highestRankSince + (partial ? ' · ' + recordSinceYear + '년~ 기록 기준' : '')}">2024년 5월 나츠바쇼</div>
                         <div class="summary-value empty" th:if="${#strings.isEmpty(rikishi.highestRank)}" th:text="${ja} ? '記録なし' : '기록 없음'">기록 없음</div>
                     </div>
                 </div>
