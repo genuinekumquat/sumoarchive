@@ -120,6 +120,10 @@ public final class RankDisplayUtil {
 			return stored;
 		}
 		String[] parts = stored.strip().split("\\s+", 2);
+		RankName numbered = numberedRank(parts);
+		if (numbered != null) {
+			return rankDisplayKorean(numbered, Integer.parseInt(parts[1]));
+		}
 		String kr = KR_LABEL.get(parts[0]);
 		if (kr == null) {
 			return stored;
@@ -148,10 +152,29 @@ public final class RankDisplayUtil {
 			return stored;
 		}
 		String[] parts = stored.strip().split("\\s+", 2);
+		RankName numbered = numberedRank(parts);
+		if (numbered != null) {
+			return rankDisplay(numbered, Integer.parseInt(parts[1]));
+		}
 		String jp = JP_LABEL.get(parts[0]);
 		if (jp == null) {
 			return stored;
 		}
 		return parts.length > 1 ? jp + " " + parts[1] : jp;
+	}
+
+	/**
+	 * "Maegashira 4"처럼 계급 이름 + 숫자만 있는 저장값이면 그 계급 (반즈케 표기 규칙 "마에가시라4"·"前頭4枚目"으로
+	 * 맞추기 위해). sumo-api 전체 계급 이력으로 채운 최고위가 이 형태다. 아니면 null.
+	 */
+	private static RankName numberedRank(String[] parts) {
+		if (parts.length != 2 || !parts[1].matches("\\d{1,3}")) {
+			return null;
+		}
+		try {
+			return RankName.valueOf(parts[0]);
+		} catch (IllegalArgumentException e) {
+			return null;
+		}
 	}
 }

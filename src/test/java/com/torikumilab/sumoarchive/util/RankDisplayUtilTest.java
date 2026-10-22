@@ -27,4 +27,16 @@ class RankDisplayUtilTest {
 		assertThat(RankDisplayUtil.rankDisplayKorean(RankName.Juryo, 2)).isEqualTo("주료2");
 		assertThat(RankDisplayUtil.rankDisplayKorean(RankName.Ozeki, 1)).isEqualTo("오제키");
 	}
+
+	@Test
+	@DisplayName("저장된 최고위 문자열 - 번호가 붙으면 반즈케 표기 규칙, 이름만이면 그대로 변환")
+	void storedRankText() {
+		assertThat(RankDisplayUtil.toKorean("Maegashira 4")).isEqualTo("마에가시라4");
+		assertThat(RankDisplayUtil.toJapanese("Maegashira 4")).isEqualTo("前頭4枚目");
+		assertThat(RankDisplayUtil.toJapanese("Juryo 1")).isEqualTo("十両筆頭");
+		assertThat(RankDisplayUtil.toKorean("Sekiwake 1")).isEqualTo("세키와케");
+		assertThat(RankDisplayUtil.toKorean("Ozeki")).isEqualTo("오제키");
+		assertThat(RankDisplayUtil.toJapanese("Ozeki")).isEqualTo("大関");
+		assertThat(RankDisplayUtil.toKorean("오야카타")).isEqualTo("오야카타");
+	}
 }
