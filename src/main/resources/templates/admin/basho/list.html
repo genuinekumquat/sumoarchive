@@ -105,6 +105,7 @@
                 <span th:text="'마지막 실행 ' + ${#temporals.format(run.finishedAt, 'MM.dd HH:mm')}
                     + ' — ' + ${#strings.listJoin(run.results.![bashoLabel], ', ')}
                     + ' · 경기 신규 ' + ${run.torikumiCreated()} + ' · 경고 ' + ${run.warningCount()}">마지막 실행</span>
+                <span th:if="${run.failureCount() > 0}" style="color: var(--shu);" th:text="' · 실패 ' + ${run.failureCount()} + '건 (경고 목록의 「임포트 실패」)'">실패</span>
                 <span th:if="${run.error != null}" style="color: var(--shu);" th:text="' · 오류: ' + ${run.error}">오류</span>
             </th:block>
         </span>

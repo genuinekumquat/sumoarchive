@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -35,6 +36,11 @@ public class BashoAutoImportScheduler {
 
 	/** 바쇼 일정·경기 시각 기준 (컨테이너 시간대 Asia/Seoul과 같은 시각) */
 	private static final ZoneId ZONE = ZoneId.of("Asia/Tokyo");
+
+	/** 바쇼 기간에 이 시간 넘게 실행이 없으면 스케줄러가 멈춘 것으로 본다 */
+	static final int STALE_HOURS = 15;
+
+	private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("MM-dd HH:mm");
 
 	private final BashoRepository bashoRepository;
 	private final BashoBatchImportService bashoBatchImportService;
@@ -65,12 +71,54 @@ public class BashoAutoImportScheduler {
 		public int warningCount() {
 			return results.stream().mapToInt(r -> r.warnings().size()).sum();
 		}
+
+		/** 디비전·수상 단계 중 예외로 끝난 수 (미매칭·미확정 같은 일반 경고는 세지 않는다) */
+		public int failureCount() {
+			return results.stream().mapToInt(BashoBatchImportService.BashoBatchResult::failureCount).sum();
+		}
+
+		public boolean failed() {
+			return error != null || failureCount() > 0;
+		}
 	}
 
 	public record Status(boolean enabled, boolean running, LastRun lastRun) {}
 
 	public Status status() {
 		return new Status(enabled, running.get(), lastRun);
+	}
+
+	/** 외부 감시(UptimeRobot)용 판정. ok=false면 /status/auto-import가 503을 돌려준다. */
+	public record Alert(boolean ok, String message) {}
+
+	/**
+	 * 마지막 실행이 실패했거나, 바쇼 기간인데 {@value #STALE_HOURS}시간 넘게 실행이 없으면(스케줄러 멈춤) 실패.
+	 * 회차 사이 가장 긴 간격은 9:00 → 18:30(9시간 반)이라 여유를 두었다.
+	 * 앱을 재시작하면 lastRun이 비어서 다음 회차까지는 확인할 수 없다 → 그동안은 정상으로 본다.
+	 */
+	public Alert alert(LocalDateTime now) {
+		if (!enabled) {
+			return new Alert(true, "OK - 자동 임포트 꺼짐");
+		}
+		LastRun run = lastRun;
+		if (run != null && run.failed()) {
+			return new Alert(false, "FAIL - 마지막 실행 " + run.finishedAt().format(TIME) + " 실패 "
+					+ (run.error() != null ? "(오류)" : run.failureCount() + "건") + " — 관리자 바쇼 화면 확인");
+		}
+		boolean due = bashoRepository.findAllByOrderByStartDateDesc().stream()
+				.anyMatch(b -> isDue(b, now.toLocalDate()));
+		if (due && run != null && run.finishedAt().isBefore(now.minusHours(STALE_HOURS))) {
+			return new Alert(false, "FAIL - 바쇼 기간인데 " + STALE_HOURS + "시간 넘게 실행 없음 (마지막 "
+					+ run.finishedAt().format(TIME) + ")");
+		}
+		if (run == null) {
+			return new Alert(true, "OK - 앱 시작 후 실행 기록 없음" + (due ? " (다음 회차 대기)" : ""));
+		}
+		return new Alert(true, "OK - 마지막 실행 " + run.finishedAt().format(TIME));
+	}
+
+	public Alert alert() {
+		return alert(LocalDateTime.now(ZONE));
 	}
 
 	@Scheduled(cron = "0 30 18 * * *", zone = "Asia/Tokyo")

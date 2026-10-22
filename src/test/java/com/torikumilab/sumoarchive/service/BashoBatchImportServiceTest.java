@@ -20,6 +20,8 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -73,10 +75,34 @@ class BashoBatchImportServiceTest {
 			verify(torikumiImportService).importDivision(1, d);
 		}
 		assertThat(result.warnings()).isEmpty();
+		assertThat(result.failureCount()).isZero();
 		assertThat(result.banzukeCreated()).isEqualTo(593);
 		assertThat(result.torikumiCreated()).isEqualTo(2213);
 		assertThat(result.yushoCreated()).isEqualTo(2);
 		assertThat(result.sanshoCreated()).isEqualTo(3);
 		assertThat(result.kinboshiCreated()).isEqualTo(1);
+	}
+
+	@Test
+	@DisplayName("sumo-api가 멈추면 단계별 예외는 경고에 남기고 실패 수로도 센다 (자동 임포트 실패 알림용)")
+	void importBashoFullCountsFailures() {
+		BashoEntity basho = BashoEntity.builder()
+				.bashoYear(2026)
+				.bashoMonth(BashoMonth.NOV)
+				.startDate(LocalDate.of(2026, 11, 8))
+				.endDate(LocalDate.of(2026, 11, 22))
+				.externalBashoId("202611")
+				.build();
+		given(bashoRepository.findById(1)).willReturn(Optional.of(basho));
+		RuntimeException down = new IllegalStateException("sumo-api 응답 없음");
+		given(banzukeImportService.importDivision(eq(1), any())).willThrow(down);
+		given(torikumiImportService.importDivision(eq(1), any())).willThrow(down);
+		given(awardImportService.importForBasho(1)).willThrow(down);
+
+		BashoBatchImportService.BashoBatchResult result = bashoBatchImportService.importBashoFull(1);
+
+		// 반즈케 6 + 토리쿠미 6 + 수상 1
+		assertThat(result.failureCount()).isEqualTo(13);
+		assertThat(result.warnings()).hasSize(13).allMatch(w -> w.contains("임포트 실패"));
 	}
 }

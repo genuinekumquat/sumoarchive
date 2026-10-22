@@ -11,6 +11,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -55,7 +56,7 @@ class BashoAutoImportSchedulerTest {
 		BashoEntity sept = basho(3, 2026, BashoMonth.SEP, LocalDate.of(2026, 9, 13), LocalDate.of(2026, 9, 27));
 		given(bashoRepository.findAllByOrderByStartDateDesc()).willReturn(List.of(kyushu, sept));
 		given(bashoBatchImportService.importBashoFull(1)).willReturn(new BashoBatchImportService.BashoBatchResult(
-				"2026년 11월 큐슈바쇼", 0, 700, 330, 0, 0, 0, 0, List.of("JURYO 3일차 결과 미확정 2경기 (재임포트 시 반영)")));
+				"2026년 11월 큐슈바쇼", 0, 700, 330, 0, 0, 0, 0, List.of("JURYO 3일차 결과 미확정 2경기 (재임포트 시 반영)"), 0));
 
 		BashoAutoImportScheduler scheduler = new BashoAutoImportScheduler(bashoRepository, bashoBatchImportService, true);
 		scheduler.runIfDue(LocalDate.of(2026, 11, 10));
@@ -102,6 +103,49 @@ class BashoAutoImportSchedulerTest {
 
 		verify(bashoRepository, never()).findAllByOrderByStartDateDesc();
 		assertThat(scheduler.status().enabled()).isFalse();
+	}
+
+	@Test
+	@DisplayName("알림 판정 - 단계 실패·오류면 FAIL, 일반 경고만 있으면 OK")
+	void alertOnFailure() {
+		given(bashoRepository.findAllByOrderByStartDateDesc()).willReturn(List.of(kyushu));
+		given(bashoBatchImportService.importBashoFull(1)).willReturn(new BashoBatchImportService.BashoBatchResult(
+				"2026년 11월 큐슈바쇼", 0, 0, 0, 0, 0, 0, 0, List.of("Makuuchi 토리쿠미 임포트 실패: timeout"), 1));
+		BashoAutoImportScheduler scheduler = new BashoAutoImportScheduler(bashoRepository, bashoBatchImportService, true);
+
+		scheduler.runIfDue(LocalDate.of(2026, 11, 10));
+		BashoAutoImportScheduler.Alert alert = scheduler.alert(LocalDateTime.of(2026, 11, 10, 19, 0));
+
+		assertThat(alert.ok()).isFalse();
+		assertThat(alert.message()).startsWith("FAIL").contains("실패 1건").doesNotContain("timeout"); // 공개 주소라 오류 원문은 숨김
+
+		// 다음 회차가 성공하면 다시 OK (UptimeRobot이 UP 메일)
+		given(bashoBatchImportService.importBashoFull(1)).willReturn(new BashoBatchImportService.BashoBatchResult(
+				"2026년 11월 큐슈바쇼", 0, 700, 330, 0, 0, 0, 0, List.of("JURYO 3일차 결과 미확정 2경기 (재임포트 시 반영)"), 0));
+		scheduler.runIfDue(LocalDate.of(2026, 11, 10));
+		assertThat(scheduler.alert(scheduler.status().lastRun().finishedAt().plusMinutes(1)).ok()).isTrue();
+	}
+
+	@Test
+	@DisplayName("알림 판정 - 바쇼 기간에 15시간 넘게 실행이 없으면 FAIL, 바쇼 기간 밖·재시작 직후(기록 없음)·꺼짐은 OK")
+	void alertOnStale() {
+		given(bashoRepository.findAllByOrderByStartDateDesc()).willReturn(List.of(kyushu));
+		BashoAutoImportScheduler scheduler = new BashoAutoImportScheduler(bashoRepository, bashoBatchImportService, true);
+
+		assertThat(scheduler.alert(LocalDateTime.of(2026, 11, 10, 12, 0)).ok()).isTrue(); // 재시작 직후 - 기록 없음
+
+		// 11/10 9:00 회차가 성공으로 끝난 상태
+		LocalDateTime finished = LocalDateTime.of(2026, 11, 10, 9, 1);
+		ReflectionTestUtils.setField(scheduler, "lastRun", new BashoAutoImportScheduler.LastRun(
+				finished.minusMinutes(1), finished, List.of(), null));
+
+		assertThat(scheduler.alert(LocalDateTime.of(2026, 11, 10, 18, 29)).ok()).isTrue();  // 18:30 회차 직전 (가장 긴 간격)
+		assertThat(scheduler.alert(finished.plusHours(BashoAutoImportScheduler.STALE_HOURS - 1)).ok()).isTrue();
+		assertThat(scheduler.alert(finished.plusHours(BashoAutoImportScheduler.STALE_HOURS).plusMinutes(1))).extracting("ok").isEqualTo(false);
+		assertThat(scheduler.alert(LocalDateTime.of(2026, 12, 20, 12, 0)).ok()).isTrue();    // 바쇼 기간 밖
+
+		assertThat(new BashoAutoImportScheduler(bashoRepository, bashoBatchImportService, false)
+				.alert(LocalDateTime.of(2026, 11, 10, 12, 0)).ok()).isTrue();
 	}
 
 	private static BashoEntity basho(int id, int year, BashoMonth month, LocalDate start, LocalDate end) {

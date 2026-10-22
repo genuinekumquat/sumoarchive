@@ -41,7 +41,10 @@ public class BashoBatchImportService {
 			int yushoCreated,
 			int sanshoCreated,
 			int kinboshiCreated,
-			List<String> warnings
+			List<String> warnings,
+			// 반즈케·토리쿠미·수상 단계 중 예외로 끝난 수 (경고에도 「… 임포트 실패」로 한 줄씩 들어간다).
+			// 미매칭·미확정 같은 일반 경고와 구분해 자동 임포트 실패 알림(/status/auto-import)에 쓴다
+			int failureCount
 	) {}
 
 	public record YearBatchResult(
@@ -65,6 +68,7 @@ public class BashoBatchImportService {
 		log.info("[BashoBatchImport] {} 일괄 임포트 시작 (전 디비전)", label);
 
 		List<String> warnings = new ArrayList<>();
+		int failures = 0;
 		int bzCreated = 0;
 		int bzUpdated = 0;
 		int tkCreated = 0;
@@ -79,6 +83,7 @@ public class BashoBatchImportService {
 				warnings.addAll(res.unmatched());
 			} catch (Exception e) {
 				warnings.add(div + " 반즈케 임포트 실패: " + e.getMessage());
+				failures++;
 			}
 		}
 
@@ -91,6 +96,7 @@ public class BashoBatchImportService {
 				warnings.addAll(res.skipped());
 			} catch (Exception e) {
 				warnings.add(div + " 토리쿠미 임포트 실패: " + e.getMessage());
+				failures++;
 			}
 		}
 
@@ -104,13 +110,14 @@ public class BashoBatchImportService {
 			warnings.addAll(res.skipped());
 		} catch (Exception e) {
 			warnings.add("수상/킨보시 임포트 실패: " + e.getMessage());
+			failures++;
 		}
 
 		log.info("[BashoBatchImport] {} 완료 - 반즈케: 신규 {}/갱신 {}, 토리쿠미: 신규 {}/갱신 {}, 우승 {}, 삼상 {}, 킨보시 {}",
 				label, bzCreated, bzUpdated, tkCreated, tkUpdated, yusho, sansho, kinboshi);
 
 		return new BashoBatchResult(
-				label, bzCreated, bzUpdated, tkCreated, tkUpdated, yusho, sansho, kinboshi, warnings
+				label, bzCreated, bzUpdated, tkCreated, tkUpdated, yusho, sansho, kinboshi, warnings, failures
 		);
 	}
 
