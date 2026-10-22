@@ -460,6 +460,16 @@ gunzip -c /var/backups/sumoarchive/sumo_20260930_040000.sql.gz \
 docker compose start app
 ```
 
+> ⚠ 백업 파일에는 `CREATE DATABASE `sumo`` / `USE `sumo``가 들어 있다. **다른 DB 이름으로 복원해 볼 때**(리허설, 로컬 확인)는
+> 그 두 줄을 바꾸지 않으면 그 MySQL의 `sumo`를 덮어쓴다:
+> `gunzip -c 백업.sql.gz | sed -e '/^CREATE DATABASE/s/`sumo`/`sumo_restore_test`/' -e '/^USE /s/`sumo`/`sumo_restore_test`/' | mysql ...`
+
+### 3) 복원 리허설 기록
+- **2026-10-22**: 운영 백업 `sumo_20261022_153215.sql.gz`(3.2MB)를 서버에서 받아 sha256 일치 확인 → 로컬 MySQL 8.0의 `sumo_restore_test`로 복원(**8초**)
+  → 16개 테이블 행 수를 운영과 비교, 모두 일치(경기 106,534 · 반즈케 28,948 · 리키시 1,157 등). `flyway_schema_history`만 9 vs 10인데,
+  백업이 V10 배포 직전에 떠진 것이라 정상 → 그 DB에 최신 코드로 앱을 띄우니 Flyway가 V10을 자동 적용, health UP·프로필 정상. 확인 후 테스트 DB 삭제
+- 서버의 IAM 역할은 S3 쓰기만 되므로, 서버가 통째로 사라진 경우의 백업 파일은 AWS 콘솔(S3 → 버킷 → `sumoarchive/db/`)에서 내려받는다
+
 ---
 
 ## 7. 바쇼 운영 절차 (새 바쇼 데이터 넣기)
