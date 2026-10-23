@@ -125,9 +125,13 @@ public class RosterImportService {
 		HeyaEntity heya = null;
 		if (api.heya() != null && !api.heya().isBlank()) {
 			String heyaName = api.heya().strip();
-			heya = heyaRepository.findAll().stream()
+			List<HeyaEntity> allHeyas = heyaRepository.findAll();
+			Map<Integer, HeyaEntity> heyaById = new HashMap<>();
+			allHeyas.forEach(h -> heyaById.put(h.getId(), h));
+			heya = allHeyas.stream()
 					.filter(h -> h.getNameEn() != null && h.getNameEn().equalsIgnoreCase(heyaName))
 					.findFirst()
+					.map(h -> resolveMerged(h, heyaById))
 					.orElseGet(() -> {
 						String kr = ShikonaKrTransliterator.fromRomaji(heyaName);
 						return heyaRepository.save(HeyaEntity.builder()
@@ -190,10 +194,14 @@ public class RosterImportService {
 	private record HeyaImportResult(Map<String, HeyaEntity> heyaByEnMap, int createdCount) {}
 
 	private HeyaImportResult syncHeyas(List<SumoApiRikishiDTO> apiRikishis) {
+		List<HeyaEntity> all = heyaRepository.findAll();
+		Map<Integer, HeyaEntity> byId = new HashMap<>();
+		all.forEach(h -> byId.put(h.getId(), h));
 		Map<String, HeyaEntity> byEn = new HashMap<>();
-		for (HeyaEntity h : heyaRepository.findAll()) {
+		for (HeyaEntity h : all) {
 			if (h.getNameEn() != null && !h.getNameEn().isBlank()) {
-				byEn.put(h.getNameEn().strip().toLowerCase(), h);
+				// 관리자가 합친 헤야(개명·흡수)의 옛 영문명은 합친 대상 헤야로 - sumo-api가 개명을 늦게 반영해도 소속이 되돌아가지 않게
+				byEn.put(h.getNameEn().strip().toLowerCase(), resolveMerged(h, byId));
 			}
 		}
 
@@ -224,6 +232,19 @@ public class RosterImportService {
 			}
 		}
 		return new HeyaImportResult(byEn, created);
+	}
+
+	/** 합치기를 따라가 최종 헤야를 돌려준다 (A→B→C면 C). 잘못 지정돼 고리가 생겨도 멈추도록 횟수 제한. */
+	static HeyaEntity resolveMerged(HeyaEntity heya, Map<Integer, HeyaEntity> byId) {
+		HeyaEntity current = heya;
+		for (int i = 0; i < 10 && current.getMergedIntoHeyaId() != null; i++) {
+			HeyaEntity next = byId.get(current.getMergedIntoHeyaId());
+			if (next == null) {
+				break;
+			}
+			current = next;
+		}
+		return current;
 	}
 
 	// ===== 신규 리키시 생성 =====

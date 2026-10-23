@@ -23,6 +23,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * 헤야 페이지(/heya/{id}). 소속 선수는 rikishi.is_active 대신 최신 반즈케에 오른 선수로 정한다 -
@@ -54,6 +55,17 @@ public class HeyaService {
 			counts.put((Integer) row[0], (Long) row[1]);
 		}
 		return counts;
+	}
+
+	/** 관리자가 다른 헤야로 합친(개명·흡수) 헤야면 최종 대상 헤야 id - 옛 주소를 새 헤야 페이지로 보낼 때 쓴다. */
+	public Optional<Integer> mergedTarget(Integer heyaId) {
+		HeyaEntity heya = heyaRepository.findById(heyaId).orElse(null);
+		if (heya == null || heya.getMergedIntoHeyaId() == null) {
+			return Optional.empty();
+		}
+		Map<Integer, HeyaEntity> byId = new HashMap<>();
+		heyaRepository.findAll().forEach(h -> byId.put(h.getId(), h));
+		return Optional.of(RosterImportService.resolveMerged(heya, byId).getId());
 	}
 
 	public HeyaPageDTO getHeyaPage(Integer heyaId) {

@@ -14,9 +14,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -197,6 +199,50 @@ class RosterImportServiceTest {
 
 		verify(rikishiRepository, times(1)).save(any(RikishiEntity.class));
 		verify(heyaRepository, times(1)).save(any(HeyaEntity.class));
+	}
+
+	@Test
+	@DisplayName("관리자가 합친 헤야(개명)의 옛 영문명을 받으면 합친 대상 헤야로 넣는다 - sumo-api가 개명을 늦게 반영하는 경우")
+	void importRoster_mergedHeya_resolvesToTarget() {
+		HeyaEntity minatogawa = HeyaEntity.builder().nameEn("Minatogawa").nameKr("미나토가와").nameJp("湊川").build();
+		ReflectionTestUtils.setField(minatogawa, "id", 118);
+		HeyaEntity tokiwayama = HeyaEntity.builder().nameEn("Tokiwayama").nameKr("토키와야마").nameJp("常盤山").build();
+		ReflectionTestUtils.setField(tokiwayama, "id", 120);
+		tokiwayama.mergeInto(118);
+
+		RikishiEntity takanosho = RikishiEntity.builder()
+				.externalApiId(37).shikonaKr("타카노쇼").shikonaEn("Takanosho").heyaEntity(minatogawa).build();
+		given(heyaRepository.findAll()).willReturn(List.of(minatogawa, tokiwayama));
+		given(rikishiRepository.findAll()).willReturn(List.of(takanosho));
+		SumoApiRikishiDTO api = new SumoApiRikishiDTO(37L, "Takanosho", "隆の勝 伸明", "Tokiwayama", "Maegashira 4 East",
+				"1994-11-14", "Chiba-ken, Kashiwa-shi", 184, 176, "201003", null);
+		given(sumoApiClient.getActiveRikishis(500, 0)).willReturn(new SumoApiRikishiPageDTO(500, 0, 1, List.of(api)));
+
+		RosterImportResultDTO result = rosterImportService.importRoster();
+
+		assertThat(takanosho.getHeyaEntity()).isSameAs(minatogawa); // 옛 이름으로 되돌아가지 않음
+		assertThat(result.heyaCreated()).isEqualTo(0);
+		verify(heyaRepository, never()).save(any(HeyaEntity.class));
+	}
+
+	@Test
+	@DisplayName("합치기 따라가기 - 여러 번 합쳐졌으면 끝까지, 잘못 지정된 고리에서도 멈춘다")
+	void resolveMerged_followsChain() {
+		HeyaEntity a = HeyaEntity.builder().nameEn("A").nameKr("A").nameJp("A").build();
+		HeyaEntity b = HeyaEntity.builder().nameEn("B").nameKr("B").nameJp("B").build();
+		HeyaEntity c = HeyaEntity.builder().nameEn("C").nameKr("C").nameJp("C").build();
+		ReflectionTestUtils.setField(a, "id", 1);
+		ReflectionTestUtils.setField(b, "id", 2);
+		ReflectionTestUtils.setField(c, "id", 3);
+		a.mergeInto(2);
+		b.mergeInto(3);
+		Map<Integer, HeyaEntity> byId = Map.of(1, a, 2, b, 3, c);
+
+		assertThat(RosterImportService.resolveMerged(a, byId)).isSameAs(c);
+		assertThat(RosterImportService.resolveMerged(c, byId)).isSameAs(c);
+
+		c.mergeInto(1); // 고리
+		assertThat(RosterImportService.resolveMerged(a, byId)).isNotNull();
 	}
 
 	@Test

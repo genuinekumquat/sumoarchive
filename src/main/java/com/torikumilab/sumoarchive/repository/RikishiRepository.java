@@ -1,10 +1,13 @@
 package com.torikumilab.sumoarchive.repository;
 
+import com.torikumilab.sumoarchive.domain.entity.HeyaEntity;
 import com.torikumilab.sumoarchive.domain.entity.RikishiEntity;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -28,6 +31,11 @@ public interface RikishiRepository extends JpaRepository<RikishiEntity, Integer>
 	// 슬라이스 5 한국어 시코나 자동 채우기/재생성 대상:
 	// 아직 한국어 시코나가 없거나(미입력) 자동 음차값인(관리자 검수 전) 리키시.
 	// 관리자가 저장해 shikonaKrAuto=false가 된 행은 제외한다.
+	// 헤야 합치기: 옛 헤야 소속 선수를 전부 새 헤야로
+	@Modifying(clearAutomatically = true)
+	@Query("UPDATE RikishiEntity r SET r.heyaEntity = :target WHERE r.heyaEntity = :source")
+	int moveHeya(@Param("source") HeyaEntity source, @Param("target") HeyaEntity target);
+
 	@Query("SELECT r FROM RikishiEntity r WHERE r.shikonaKr IS NULL OR r.shikonaKrAuto = true")
 	List<RikishiEntity> findKoreanShikonaAutofillTargets();
 

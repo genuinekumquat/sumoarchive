@@ -5,6 +5,7 @@ import com.torikumilab.sumoarchive.domain.dto.HeyaNameAutofillResultDTO;
 import com.torikumilab.sumoarchive.domain.dto.IchimonOptionDTO;
 import com.torikumilab.sumoarchive.domain.entity.HeyaEntity;
 import com.torikumilab.sumoarchive.repository.HeyaRepository;
+import com.torikumilab.sumoarchive.repository.RikishiRepository;
 import com.torikumilab.sumoarchive.util.ShikonaKrTransliterator;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -30,14 +32,18 @@ import java.util.TreeMap;
 public class HeyaAdminService {
 
 	private final HeyaRepository heyaRepository;
+	private final RikishiRepository rikishiRepository;
 	private final HeyaService heyaService;
 
 	/** 손볼 헤야(새로 생겼거나 이름이 바뀐 헤야)를 맨 위로, 그다음 로마자순. */
 	@Transactional(readOnly = true)
 	public List<HeyaAdminRowDTO> list() {
 		Map<Integer, Long> memberCounts = heyaService.currentMemberCounts();
-		return heyaRepository.findAllByOrderByNameEnAsc().stream()
-				.map(h -> toRowDto(h, memberCounts.getOrDefault(h.getId(), 0L)))
+		List<HeyaEntity> heyas = heyaRepository.findAllByOrderByNameEnAsc();
+		Map<Integer, String> nameEnById = new HashMap<>();
+		heyas.forEach(h -> nameEnById.put(h.getId(), h.getNameEn()));
+		return heyas.stream()
+				.map(h -> toRowDto(h, memberCounts.getOrDefault(h.getId(), 0L), nameEnById.get(h.getMergedIntoHeyaId())))
 				.sorted(Comparator.comparing((HeyaAdminRowDTO r) -> !r.needsAttention()))
 				.toList();
 	}
@@ -113,11 +119,51 @@ public class HeyaAdminService {
 		h.updateNames(kr, jp);
 	}
 
+	/**
+	 * 헤야 합치기(개명·흡수): source 소속 선수를 전부 target으로 옮기고 source를 target에 합쳐진 것으로 표시한다.
+	 * 이후 로스터 임포트가 source의 영문명을 받아도 target으로 넣는다(RosterImportService#resolveMerged) -
+	 * sumo-api가 개명을 늦게·일부만 반영하는 경우(예: Tokiwayama → Minatogawa) 대비. source에 합쳐져 있던 헤야도 target으로 다시 잇는다.
+	 *
+	 * @return 옮긴 리키시 수
+	 */
+	@Transactional
+	@CacheEvict(value = {"banzuke", "ichimonStructure"}, allEntries = true)
+	public int merge(Integer sourceId, Integer targetId) {
+		if (sourceId.equals(targetId)) {
+			throw new IllegalArgumentException("같은 헤야로는 합칠 수 없습니다.");
+		}
+		HeyaEntity source = findHeya(sourceId);
+		HeyaEntity target = findHeya(targetId);
+		if (target.getMergedIntoHeyaId() != null) {
+			throw new IllegalArgumentException("이미 다른 헤야에 합쳐진 헤야로는 합칠 수 없습니다: " + target.getNameEn());
+		}
+		for (HeyaEntity h : heyaRepository.findAll()) {
+			if (sourceId.equals(h.getMergedIntoHeyaId())) {
+				h.mergeInto(targetId);
+			}
+		}
+		source.mergeInto(targetId);
+		heyaRepository.flush(); // 아래 벌크 UPDATE가 영속성 컨텍스트를 비우므로 헤야 변경을 먼저 반영
+		return rikishiRepository.moveHeya(source, target);
+	}
+
+	/** 합치기 해제 - 옮긴 선수는 그대로 두고, 다음 로스터 임포트부터 이 헤야 영문명을 다시 이 헤야로 넣는다. */
+	@Transactional
+	@CacheEvict(value = {"banzuke", "ichimonStructure"}, allEntries = true)
+	public void unmerge(Integer heyaId) {
+		findHeya(heyaId).mergeInto(null);
+	}
+
+	private HeyaEntity findHeya(Integer heyaId) {
+		return heyaRepository.findById(heyaId)
+				.orElseThrow(() -> new EntityNotFoundException("헤야를 찾을 수 없습니다. id=" + heyaId));
+	}
+
 	private static String blankToNull(String value) {
 		return (value == null || value.isBlank()) ? null : value.strip();
 	}
 
-	private static HeyaAdminRowDTO toRowDto(HeyaEntity h, long memberCount) {
+	private static HeyaAdminRowDTO toRowDto(HeyaEntity h, long memberCount, String mergedIntoNameEn) {
 		return new HeyaAdminRowDTO(
 				h.getId(),
 				h.getNameKr(),
@@ -125,7 +171,9 @@ public class HeyaAdminService {
 				h.getNameEn(),
 				h.isNameKrAuto(),
 				h.getIchimonKr(),
-				memberCount
+				memberCount,
+				h.getMergedIntoHeyaId(),
+				mergedIntoNameEn
 		);
 	}
 }

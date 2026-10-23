@@ -49,6 +49,10 @@ public class HeyaEntity {
 	@JoinColumn(name = "master_rikishi_id")
 	private RikishiEntity masterRikishiEntity;
 	
+	// 관리자가 이 헤야를 다른 헤야로 합쳤으면(개명·흡수) 그 헤야 id. 로스터 임포트가 이 헤야의 영문명을 받으면 그쪽으로 넣는다.
+	@Column(name = "merged_into_heya_id")
+	private Integer mergedIntoHeyaId;
+
 	@CreationTimestamp
 	@Column(name = "created_at", updatable = false)
 	private LocalDateTime createdAt;  // 초 단위까지 저장되도록 LocalDateTime 변경
@@ -111,6 +115,11 @@ public class HeyaEntity {
 		this.nameKr = cleanNameKr(nameKr);
 		this.nameJp = cleanNameJp(nameJp);
 		this.nameKrAuto = false;
+	}
+
+	/** 관리자: 헤야 합치기 지정/해제 (null이면 해제). */
+	public void mergeInto(Integer targetHeyaId) {
+		this.mergedIntoHeyaId = targetHeyaId;
 	}
 
 	/** 관리자: 소속 일문 지정. null이면 미지정(메인 일문 탭에 안 나온다). */

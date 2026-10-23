@@ -44,6 +44,31 @@ public class AdminHeyaViewController {
 		return "redirect:/admin/heya";
 	}
 
+	/** 헤야 합치기(개명·흡수) - 소속 선수를 target으로 옮기고, 이후 임포트도 target으로. */
+	@PostMapping("/admin/heya/{id}/merge")
+	public String merge(@PathVariable Integer id,
+						@RequestParam Integer targetId,
+						RedirectAttributes redirectAttributes) {
+		try {
+			int moved = heyaAdminService.merge(id, targetId);
+			redirectAttributes.addFlashAttribute("mergeMessage", "헤야를 합쳤습니다 — 리키시 " + moved + "명 이동");
+		} catch (Exception e) {
+			redirectAttributes.addFlashAttribute("error", "헤야 합치기 실패: " + e.getMessage());
+		}
+		return "redirect:/admin/heya";
+	}
+
+	@PostMapping("/admin/heya/{id}/unmerge")
+	public String unmerge(@PathVariable Integer id, RedirectAttributes redirectAttributes) {
+		try {
+			heyaAdminService.unmerge(id);
+			redirectAttributes.addFlashAttribute("mergeMessage", "합치기를 해제했습니다 (옮긴 리키시는 그대로)");
+		} catch (Exception e) {
+			redirectAttributes.addFlashAttribute("error", "합치기 해제 실패: " + e.getMessage());
+		}
+		return "redirect:/admin/heya";
+	}
+
 	@PostMapping("/admin/heya/{id}")
 	public String save(@PathVariable Integer id,
 					   @RequestParam String nameKr,

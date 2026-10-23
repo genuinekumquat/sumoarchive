@@ -53,6 +53,16 @@
         tr.inactive td { color: var(--sumi-faint); }
         tr.inactive input { color: var(--sumi-faint); }
         .member-count { font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; }
+        .merge-line { margin-top: 6px; font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 11.5px; color: var(--sumi-faint); }
+        .merge-line summary { cursor: pointer; }
+        .merge-line summary:hover { color: var(--shu); }
+        .merge-line form { display: inline-flex; gap: 6px; align-items: center; margin-top: 4px; }
+        .merge-line select { border: 1px solid var(--washi-line); padding: 4px 6px; background: #fff; font-size: 12px; }
+        .merge-line button {
+            border: 1px solid var(--sumi-soft); background: transparent; color: var(--sumi-soft);
+            font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 11.5px; padding: 3px 10px; cursor: pointer;
+        }
+        .merge-line button:hover { border-color: var(--shu); color: var(--shu); }
         a.romaji { text-decoration: none; }
         a.romaji:hover { color: var(--shu); }
         .row-form button {
@@ -99,6 +109,7 @@
     </header>
 
     <div class="saved-msg" th:if="${saved}">헤야명·일문을 저장했습니다.</div>
+    <div class="saved-msg" th:if="${mergeMessage}" th:text="${mergeMessage}">헤야를 합쳤습니다</div>
     <div class="saved-msg" th:if="${autofillResult}">
         <span th:text="'한국어 헤야명 자동 채우기 — ' + ${autofillResult.filled} + '개 채움'
             + (${autofillResult.failed.isEmpty()} ? '' : (' · 실패 ' + ${autofillResult.failed.size()}))">완료</span>
@@ -141,7 +152,7 @@
         </tr>
         </thead>
         <tbody>
-        <tr th:each="h : ${rows}" th:classappend="${h.needsAttention()} ? 'attention' : (${h.memberCount == 0} ? 'inactive' : '')">
+        <tr th:each="h : ${rows}" th:classappend="${h.needsAttention()} ? 'attention' : (${h.memberCount == 0 or h.merged()} ? 'inactive' : '')">
             <td th:text="${h.id}">1</td>
             <td>
                 <a class="romaji" th:href="@{/heya/{id}(id=${h.id})}" target="_blank" th:text="${h.nameEn}">Takasago</a>
@@ -162,6 +173,27 @@
                     </select>
                     <button type="submit">저장</button>
                 </form>
+                <!-- 개명·흡수인데 sumo-api가 아직 옛 헤야로 주는 경우: 합쳐 두면 선수를 옮기고 이후 임포트도 새 헤야로 넣는다 -->
+                <div class="merge-line" th:if="${h.merged()}">
+                    → <a th:href="@{/heya/{id}(id=${h.mergedIntoId})}" target="_blank" th:text="${h.mergedIntoNameEn}">Minatogawa</a>에 합쳐짐
+                    (임포트가 이 영문명을 받으면 그쪽으로 넣음)
+                    <form th:action="@{'/admin/heya/' + ${h.id} + '/unmerge'}" method="post"
+                          onsubmit="return confirm('합치기를 해제할까요? 옮긴 리키시는 그대로 두고, 다음 로스터 임포트부터 이 영문명을 다시 이 헤야로 넣습니다.');">
+                        <button type="submit">해제</button>
+                    </form>
+                </div>
+                <details class="merge-line" th:unless="${h.merged()}">
+                    <summary>다른 헤야로 합치기 (개명·흡수)</summary>
+                    <form th:action="@{'/admin/heya/' + ${h.id} + '/merge'}" method="post"
+                          onsubmit="return confirm('이 헤야 소속 리키시를 전부 고른 헤야로 옮기고, 이후 로스터 임포트도 그쪽으로 넣습니다. 계속할까요?');">
+                        <select name="targetId" required>
+                            <option value="">합칠 대상 헤야</option>
+                            <option th:each="t : ${rows}" th:if="${!t.merged() and t.id != h.id}" th:value="${t.id}"
+                                    th:text="${t.nameEn} + ' (' + ${t.nameKr} + ')'">Minatogawa</option>
+                        </select>
+                        <button type="submit">합치기</button>
+                    </form>
+                </details>
             </td>
         </tr>
         </tbody>
