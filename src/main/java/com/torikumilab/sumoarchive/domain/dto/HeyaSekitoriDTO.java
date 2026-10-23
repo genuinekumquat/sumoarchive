@@ -10,6 +10,7 @@ public record HeyaSekitoriDTO(
 		Integer heyaId,
 		String heyaNameKr,
 		String heyaNameJp,
-		List<SekitoriDTO> sekitori // 마쿠우치 먼저, 그다음 주료 (각각 순위순)
+		List<SekitoriDTO> sekitori, // 마쿠우치 먼저, 그다음 주료 (각각 순위순)
+		boolean soke // 종가(宗家) - 일문 이름과 같은 헤야(二所ノ関一門의 二所ノ関). 일문 안에서 맨 앞에 둔다
 ) {
 }

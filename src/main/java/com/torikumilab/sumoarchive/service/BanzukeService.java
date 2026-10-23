@@ -21,6 +21,7 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -131,14 +132,22 @@ public class BanzukeService {
 			heyaByIchimonKr.computeIfAbsent(h.getIchimonKr(), k -> new ArrayList<>())
 					.add(new HeyaSekitoriDTO(
 							h.getId(), h.getNameKr(), h.getNameJp(),
-							sekitoriByHeyaId.getOrDefault(h.getId(), List.of())
+							sekitoriByHeyaId.getOrDefault(h.getId(), List.of()),
+							isSoke(h)
 					));
 			ichimonJpByKr.putIfAbsent(h.getIchimonKr(), h.getIchimonJp());
 		}
 
 		return heyaByIchimonKr.entrySet().stream()
 				.sorted((a, b) -> b.getValue().size() - a.getValue().size()) // 소속 헤야 많은 일문부터
-				.map(e -> new IchimonGroupDTO(e.getKey(), ichimonJpByKr.get(e.getKey()), e.getValue()))
+				.map(e -> new IchimonGroupDTO(e.getKey(), ichimonJpByKr.get(e.getKey()),
+						// 종가를 맨 앞으로, 나머지는 가나다순 그대로 (stable sort)
+						e.getValue().stream().sorted(Comparator.comparing((HeyaSekitoriDTO h) -> !h.soke())).toList()))
 				.toList();
+	}
+
+	/** 종가(宗家) = 일문 이름이 "헤야 일본어명 + 一門"인 헤야 (高砂一門 → 高砂). */
+	private static boolean isSoke(HeyaEntity h) {
+		return h.getIchimonJp() != null && h.getNameJp() != null && h.getIchimonJp().equals(h.getNameJp() + "一門");
 	}
 }
