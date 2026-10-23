@@ -108,6 +108,16 @@
                 <span th:if="${run.failureCount() > 0}" style="color: var(--shu);" th:text="' · 실패 ' + ${run.failureCount()} + '건 (경고 목록의 「임포트 실패」)'">실패</span>
                 <span th:if="${run.error != null}" style="color: var(--shu);" th:text="' · 오류: ' + ${run.error}">오류</span>
             </th:block>
+            <!-- 명단 동기화 (바쇼마다 첫 자동 회차에 한 번). 새 헤야 = 신설 또는 개명 → 헤야 관리에서 일본어명·일문 지정 -->
+            <th:block th:with="rs=${autoImport.lastRosterSync}" th:if="${autoImport.lastRosterSync != null}">
+                <br>
+                <span th:if="${rs.error == null}"
+                      th:text="'명단 동기화 ' + ${#temporals.format(rs.finishedAt, 'MM.dd HH:mm')} + ' — 리키시 신규 ' + ${rs.result.rikishiCreated} + ' · 갱신 ' + ${rs.result.rikishiUpdated}">명단 동기화</span>
+                <a th:if="${rs.error == null and rs.result.heyaCreated > 0}" th:href="@{/admin/heya}" style="color: var(--shu);"
+                   th:text="' · 새 헤야 ' + ${rs.result.heyaCreated} + '곳 → 헤야 관리에서 일본어명·일문 지정'">새 헤야</a>
+                <span th:if="${rs.error != null}" style="color: var(--shu);"
+                      th:text="'명단 동기화 ' + ${#temporals.format(rs.finishedAt, 'MM.dd HH:mm')} + ' 실패 (다음 회차에 재시도): ' + ${rs.error}">실패</span>
+            </th:block>
         </span>
     </div>
     <details th:if="${autoImport.lastRun != null and autoImport.lastRun.warningCount() > 0}" style="margin: -10px 0 16px; font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px;">

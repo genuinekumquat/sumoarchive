@@ -1,5 +1,6 @@
 package com.torikumilab.sumoarchive.controller;
 
+import com.torikumilab.sumoarchive.domain.dto.HeyaAdminRowDTO;
 import com.torikumilab.sumoarchive.service.HeyaAdminService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
@@ -9,6 +10,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import java.util.List;
 
 /**
  * 관리자 "데이터 수동 갱신" 중 헤야 한국어명 보강. /admin/** 경로라 AdminAuthInterceptor가
@@ -22,7 +25,10 @@ public class AdminHeyaViewController {
 
 	@GetMapping("/admin/heya")
 	public String list(Model model) {
-		model.addAttribute("rows", heyaAdminService.list());
+		List<HeyaAdminRowDTO> rows = heyaAdminService.list();
+		model.addAttribute("rows", rows);
+		model.addAttribute("attentionRows", rows.stream().filter(HeyaAdminRowDTO::needsAttention).toList());
+		model.addAttribute("ichimonOptions", heyaAdminService.ichimonOptions());
 		model.addAttribute("missingKrCount", heyaAdminService.countMissingKoreanName());
 		return "admin/heya/list";
 	}
@@ -42,9 +48,10 @@ public class AdminHeyaViewController {
 	public String save(@PathVariable Integer id,
 					   @RequestParam String nameKr,
 					   @RequestParam String nameJp,
+					   @RequestParam(required = false) String ichimonKr,
 					   RedirectAttributes redirectAttributes) {
 		try {
-			heyaAdminService.saveNames(id, nameKr, nameJp);
+			heyaAdminService.saveNames(id, nameKr, nameJp, ichimonKr);
 			redirectAttributes.addFlashAttribute("saved", true);
 		} catch (Exception e) {
 			redirectAttributes.addFlashAttribute("error", "헤야명 저장 실패: " + e.getMessage());

@@ -92,8 +92,9 @@ public class BanzukeService {
 
 	/**
 	 * 메인 페이지 "일문" 탭 - 반즈케가 있는 최신 바쇼 기준 일문(一門)별 헤야, 그 안에 세키토리(마쿠우치+주료) 명단.
-	 * 현재 세키토리가 없는 헤야도 목록에는 남는다(전체 헤야 구조를 보여주는 게 목적).
-	 * 이치몬이 아직 배정 안 된 헤야는 제외 - 지금은 전부 배정돼 있지만 이후 새 헤야가 생기면 비어있을 수 있음.
+	 * 현재 세키토리가 없는 헤야도 목록에는 남는다(전체 헤야 구조를 보여주는 게 목적). 단 그 바쇼 반즈케에
+	 * 소속 선수가 아예 없는 헤야(폐업, 개명 전 옛 이름)는 뺀다.
+	 * 이치몬이 아직 배정 안 된 헤야도 제외 - 새로 생기거나 이름이 바뀐 헤야는 관리자 헤야 관리에서 일문을 지정해야 나온다.
 	 */
 	@Cacheable(value = "ichimonStructure")
 	public List<IchimonGroupDTO> getIchimonStructure() {
@@ -118,10 +119,13 @@ public class BanzukeService {
 			sekitoriByHeyaId.computeIfAbsent(r.getHeyaEntity().getId(), k -> new ArrayList<>()).add(dto);
 		}
 
+		// 이 바쇼 반즈케에 소속 선수가 한 명도 없는 헤야(폐업, 개명 전 옛 이름)는 뺀다
+		Map<Integer, Long> memberCounts = HeyaService.toCountMap(banzukeRepository.countMembersByHeya(basho.getId()));
+
 		Map<String, List<HeyaSekitoriDTO>> heyaByIchimonKr = new LinkedHashMap<>();
 		Map<String, String> ichimonJpByKr = new LinkedHashMap<>();
 		for (HeyaEntity h : heyaRepository.findAllByOrderByNameKrAsc()) {
-			if (h.getIchimonKr() == null) {
+			if (h.getIchimonKr() == null || !memberCounts.containsKey(h.getId())) {
 				continue;
 			}
 			heyaByIchimonKr.computeIfAbsent(h.getIchimonKr(), k -> new ArrayList<>())

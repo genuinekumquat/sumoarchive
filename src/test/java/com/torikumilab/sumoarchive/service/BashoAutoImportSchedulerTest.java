@@ -1,8 +1,10 @@
 package com.torikumilab.sumoarchive.service;
 
+import com.torikumilab.sumoarchive.domain.dto.RosterImportResultDTO;
 import com.torikumilab.sumoarchive.domain.entity.BashoEntity;
 import com.torikumilab.sumoarchive.domain.entity.constant.BashoMonth;
 import com.torikumilab.sumoarchive.repository.BashoRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -17,7 +19,9 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
@@ -27,6 +31,14 @@ class BashoAutoImportSchedulerTest {
 	private BashoRepository bashoRepository;
 	@Mock
 	private BashoBatchImportService bashoBatchImportService;
+	@Mock
+	private RosterImportService rosterImportService;
+
+	@BeforeEach
+	void rosterSyncSucceedsByDefault() {
+		// 명단 동기화는 회차마다 같이 불리므로 기본은 성공으로 둔다 (명단 동기화 테스트에서만 덮어씀)
+		lenient().when(rosterImportService.importRoster()).thenReturn(new RosterImportResultDTO(0, 0, 600, 600, List.of()));
+	}
 
 	// 2026년 11월 큐슈바쇼: 11/8(일) ~ 11/22(일)
 	private final BashoEntity kyushu = basho(1, 2026, BashoMonth.NOV, LocalDate.of(2026, 11, 8), LocalDate.of(2026, 11, 22));
@@ -58,7 +70,7 @@ class BashoAutoImportSchedulerTest {
 		given(bashoBatchImportService.importBashoFull(1)).willReturn(new BashoBatchImportService.BashoBatchResult(
 				"2026년 11월 큐슈바쇼", 0, 700, 330, 0, 0, 0, 0, List.of("JURYO 3일차 결과 미확정 2경기 (재임포트 시 반영)"), 0));
 
-		BashoAutoImportScheduler scheduler = new BashoAutoImportScheduler(bashoRepository, bashoBatchImportService, true);
+		BashoAutoImportScheduler scheduler = new BashoAutoImportScheduler(bashoRepository, bashoBatchImportService, rosterImportService, true);
 		scheduler.runIfDue(LocalDate.of(2026, 11, 10));
 
 		verify(bashoBatchImportService).importBashoFull(1);
@@ -75,7 +87,7 @@ class BashoAutoImportSchedulerTest {
 	void runIfDueOutsideBasho() {
 		given(bashoRepository.findAllByOrderByStartDateDesc()).willReturn(List.of(kyushu));
 
-		BashoAutoImportScheduler scheduler = new BashoAutoImportScheduler(bashoRepository, bashoBatchImportService, true);
+		BashoAutoImportScheduler scheduler = new BashoAutoImportScheduler(bashoRepository, bashoBatchImportService, rosterImportService, true);
 		scheduler.runIfDue(LocalDate.of(2026, 10, 12));
 
 		verify(bashoBatchImportService, never()).importBashoFull(anyInt());
@@ -88,7 +100,7 @@ class BashoAutoImportSchedulerTest {
 		given(bashoRepository.findAllByOrderByStartDateDesc()).willReturn(List.of(kyushu));
 		given(bashoBatchImportService.importBashoFull(1)).willThrow(new IllegalStateException("sumo-api 응답 없음"));
 
-		BashoAutoImportScheduler scheduler = new BashoAutoImportScheduler(bashoRepository, bashoBatchImportService, true);
+		BashoAutoImportScheduler scheduler = new BashoAutoImportScheduler(bashoRepository, bashoBatchImportService, rosterImportService, true);
 		scheduler.runIfDue(LocalDate.of(2026, 11, 10));
 
 		assertThat(scheduler.status().lastRun().error()).isEqualTo("sumo-api 응답 없음");
@@ -98,7 +110,7 @@ class BashoAutoImportSchedulerTest {
 	@Test
 	@DisplayName("꺼져 있으면 스케줄 실행이 아무것도 하지 않음")
 	void disabled() {
-		BashoAutoImportScheduler scheduler = new BashoAutoImportScheduler(bashoRepository, bashoBatchImportService, false);
+		BashoAutoImportScheduler scheduler = new BashoAutoImportScheduler(bashoRepository, bashoBatchImportService, rosterImportService, false);
 		scheduler.runScheduled();
 
 		verify(bashoRepository, never()).findAllByOrderByStartDateDesc();
@@ -111,7 +123,7 @@ class BashoAutoImportSchedulerTest {
 		given(bashoRepository.findAllByOrderByStartDateDesc()).willReturn(List.of(kyushu));
 		given(bashoBatchImportService.importBashoFull(1)).willReturn(new BashoBatchImportService.BashoBatchResult(
 				"2026년 11월 큐슈바쇼", 0, 0, 0, 0, 0, 0, 0, List.of("Makuuchi 토리쿠미 임포트 실패: timeout"), 1));
-		BashoAutoImportScheduler scheduler = new BashoAutoImportScheduler(bashoRepository, bashoBatchImportService, true);
+		BashoAutoImportScheduler scheduler = new BashoAutoImportScheduler(bashoRepository, bashoBatchImportService, rosterImportService, true);
 
 		scheduler.runIfDue(LocalDate.of(2026, 11, 10));
 		BashoAutoImportScheduler.Alert alert = scheduler.alert(LocalDateTime.of(2026, 11, 10, 19, 0));
@@ -130,7 +142,7 @@ class BashoAutoImportSchedulerTest {
 	@DisplayName("알림 판정 - 바쇼 기간에 15시간 넘게 실행이 없으면 FAIL, 바쇼 기간 밖·재시작 직후(기록 없음)·꺼짐은 OK")
 	void alertOnStale() {
 		given(bashoRepository.findAllByOrderByStartDateDesc()).willReturn(List.of(kyushu));
-		BashoAutoImportScheduler scheduler = new BashoAutoImportScheduler(bashoRepository, bashoBatchImportService, true);
+		BashoAutoImportScheduler scheduler = new BashoAutoImportScheduler(bashoRepository, bashoBatchImportService, rosterImportService, true);
 
 		assertThat(scheduler.alert(LocalDateTime.of(2026, 11, 10, 12, 0)).ok()).isTrue(); // 재시작 직후 - 기록 없음
 
@@ -144,8 +156,49 @@ class BashoAutoImportSchedulerTest {
 		assertThat(scheduler.alert(finished.plusHours(BashoAutoImportScheduler.STALE_HOURS).plusMinutes(1))).extracting("ok").isEqualTo(false);
 		assertThat(scheduler.alert(LocalDateTime.of(2026, 12, 20, 12, 0)).ok()).isTrue();    // 바쇼 기간 밖
 
-		assertThat(new BashoAutoImportScheduler(bashoRepository, bashoBatchImportService, false)
+		assertThat(new BashoAutoImportScheduler(bashoRepository, bashoBatchImportService, rosterImportService, false)
 				.alert(LocalDateTime.of(2026, 11, 10, 12, 0)).ok()).isTrue();
+	}
+
+	@Test
+	@DisplayName("명단 동기화는 바쇼마다 첫 회차에 한 번만")
+	void rosterSyncOncePerBasho() {
+		given(bashoRepository.findAllByOrderByStartDateDesc()).willReturn(List.of(kyushu));
+		given(bashoBatchImportService.importBashoFull(1)).willReturn(new BashoBatchImportService.BashoBatchResult(
+				"2026년 11월 큐슈바쇼", 0, 700, 330, 0, 0, 0, 0, List.of(), 0));
+		given(rosterImportService.importRoster()).willReturn(new RosterImportResultDTO(1, 3, 600, 603, List.of()));
+		BashoAutoImportScheduler scheduler = new BashoAutoImportScheduler(bashoRepository, bashoBatchImportService, rosterImportService, true);
+
+		scheduler.runIfDue(LocalDate.of(2026, 11, 6));
+		scheduler.runIfDue(LocalDate.of(2026, 11, 7));
+
+		verify(rosterImportService, times(1)).importRoster();
+		verify(bashoBatchImportService, times(2)).importBashoFull(1);
+		assertThat(scheduler.status().lastRosterSync().result().heyaCreated()).isEqualTo(1);
+	}
+
+	@Test
+	@DisplayName("명단 동기화가 실패해도 경기 임포트는 하고, 알림 FAIL 후 다음 회차에 다시 시도")
+	void rosterSyncFailureRetried() {
+		given(bashoRepository.findAllByOrderByStartDateDesc()).willReturn(List.of(kyushu));
+		given(bashoBatchImportService.importBashoFull(1)).willReturn(new BashoBatchImportService.BashoBatchResult(
+				"2026년 11월 큐슈바쇼", 0, 700, 330, 0, 0, 0, 0, List.of(), 0));
+		given(rosterImportService.importRoster())
+				.willThrow(new IllegalStateException("sumo-api 응답 없음"))
+				.willReturn(new RosterImportResultDTO(0, 0, 600, 600, List.of()));
+		BashoAutoImportScheduler scheduler = new BashoAutoImportScheduler(bashoRepository, bashoBatchImportService, rosterImportService, true);
+
+		scheduler.runIfDue(LocalDate.of(2026, 11, 6));
+		verify(bashoBatchImportService).importBashoFull(1);
+		assertThat(scheduler.status().lastRosterSync().error()).isEqualTo("sumo-api 응답 없음");
+		BashoAutoImportScheduler.Alert alert = scheduler.alert(LocalDateTime.of(2026, 11, 6, 19, 0));
+		assertThat(alert.ok()).isFalse();
+		assertThat(alert.message()).contains("명단 동기화").doesNotContain("sumo-api");
+
+		scheduler.runIfDue(LocalDate.of(2026, 11, 6));
+		verify(rosterImportService, times(2)).importRoster();
+		assertThat(scheduler.status().lastRosterSync().error()).isNull();
+		assertThat(scheduler.alert(scheduler.status().lastRun().finishedAt().plusMinutes(1)).ok()).isTrue();
 	}
 
 	private static BashoEntity basho(int id, int year, BashoMonth month, LocalDate start, LocalDate end) {

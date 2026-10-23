@@ -45,6 +45,16 @@
             border: 1px solid var(--washi-line); padding: 6px 9px; background: #fff; color: var(--sumi);
             font-family: 'Noto Serif KR', serif; font-size: 13px; width: 130px;
         }
+        .row-form select {
+            border: 1px solid var(--washi-line); padding: 6px 6px; background: #fff; color: var(--sumi);
+            font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px;
+        }
+        tr.attention { background: var(--shu-faint); }
+        tr.inactive td { color: var(--sumi-faint); }
+        tr.inactive input { color: var(--sumi-faint); }
+        .member-count { font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; }
+        a.romaji { text-decoration: none; }
+        a.romaji:hover { color: var(--shu); }
         .row-form button {
             border: 1px solid var(--sumi); background: var(--sumi); color: var(--washi);
             font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; padding: 6px 12px; cursor: pointer;
@@ -88,7 +98,7 @@
         </nav>
     </header>
 
-    <div class="saved-msg" th:if="${saved}">헤야명을 저장했습니다.</div>
+    <div class="saved-msg" th:if="${saved}">헤야명·일문을 저장했습니다.</div>
     <div class="saved-msg" th:if="${autofillResult}">
         <span th:text="'한국어 헤야명 자동 채우기 — ' + ${autofillResult.filled} + '개 채움'
             + (${autofillResult.failed.isEmpty()} ? '' : (' · 실패 ' + ${autofillResult.failed.size()}))">완료</span>
@@ -110,25 +120,46 @@
         </form>
     </div>
 
+    <!-- 명단 임포트가 새 영문명을 만나면 헤야 행을 새로 만든다(신설·개명 모두). 일본어명은 로마자 그대로, 일문은 비어 있어
+         메인 일문 탭에 안 나오므로 여기서 채워야 한다. 옛 이름 행은 소속 0명이 되어 일문 탭에서 저절로 빠진다. -->
+    <div class="error-msg" th:if="${!attentionRows.isEmpty()}">
+        <strong th:text="'손볼 헤야 ' + ${attentionRows.size()} + '곳'">손볼 헤야</strong> —
+        지금 소속 선수가 있는데 일문이 비었거나 일본어명이 로마자 그대로예요(새로 생겼거나 이름이 바뀐 헤야). 일문이 비면 메인 일문 탭에 안 나옵니다.
+        <ul class="warn-list">
+            <li th:each="h : ${attentionRows}"
+                th:text="${h.nameEn} + ' — ' + ${h.memberCount} + '명' + (${h.ichimonKr == null} ? ' · 일문 미지정' : '') + (${h.nameJpPlaceholder()} ? ' · 일본어명 없음' : '')">Takasago</li>
+        </ul>
+    </div>
+
     <table th:if="${!rows.isEmpty()}">
         <thead>
         <tr>
-            <th style="width: 8%">ID</th>
-            <th style="width: 20%">로마자 (sumo-api)</th>
-            <th style="width: 72%">한국어명 · 일본어명</th>
+            <th style="width: 6%">ID</th>
+            <th style="width: 16%">로마자 (sumo-api)</th>
+            <th style="width: 12%">현재 소속</th>
+            <th style="width: 66%">한국어명 · 일본어명 · 일문</th>
         </tr>
         </thead>
         <tbody>
-        <tr th:each="h : ${rows}">
+        <tr th:each="h : ${rows}" th:classappend="${h.needsAttention()} ? 'attention' : (${h.memberCount == 0} ? 'inactive' : '')">
             <td th:text="${h.id}">1</td>
             <td>
-                <span class="romaji" th:text="${h.nameEn}">Takasago</span>
+                <a class="romaji" th:href="@{/heya/{id}(id=${h.id})}" target="_blank" th:text="${h.nameEn}">Takasago</a>
                 <span th:if="${h.nameKrAuto}" class="badge-auto">(자동)</span>
+            </td>
+            <td class="member-count">
+                <span th:if="${h.memberCount > 0}" th:text="${h.memberCount} + '명'">12명</span>
+                <span th:if="${h.memberCount == 0}" title="최신 반즈케에 소속 선수가 없어요 — 폐업했거나 개명 전 옛 이름. 메인 일문 탭에서 자동으로 빠집니다">없음</span>
             </td>
             <td>
                 <form class="row-form" th:action="@{'/admin/heya/' + ${h.id}}" method="post">
                     <input type="text" name="nameKr" th:value="${h.nameKr}" placeholder="한국어명" required>
                     <input type="text" name="nameJp" th:value="${h.nameJp}" placeholder="일본어명(한자)" required>
+                    <select name="ichimonKr">
+                        <option value="" th:selected="${h.ichimonKr == null}">일문 미지정</option>
+                        <option th:each="o : ${ichimonOptions}" th:value="${o.ichimonKr}" th:text="${o.ichimonKr}"
+                                th:selected="${o.ichimonKr == h.ichimonKr}">니쇼노세키이치몬</option>
+                    </select>
                     <button type="submit">저장</button>
                 </form>
             </td>

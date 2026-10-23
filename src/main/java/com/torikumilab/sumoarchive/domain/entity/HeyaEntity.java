@@ -113,6 +113,12 @@ public class HeyaEntity {
 		this.nameKrAuto = false;
 	}
 
+	/** 관리자: 소속 일문 지정. null이면 미지정(메인 일문 탭에 안 나온다). */
+	public void updateIchimon(String ichimonKr, String ichimonJp) {
+		this.ichimonKr = ichimonKr;
+		this.ichimonJp = ichimonJp;
+	}
+
 	public String getNameJp() {
 		return cleanNameJp(this.nameJp);
 	}

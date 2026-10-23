@@ -1,9 +1,8 @@
 package com.torikumilab.sumoarchive.controller;
 
 import com.torikumilab.sumoarchive.domain.entity.constant.Division;
-import com.torikumilab.sumoarchive.domain.entity.HeyaEntity;
 import com.torikumilab.sumoarchive.repository.BanzukeRepository;
-import com.torikumilab.sumoarchive.repository.HeyaRepository;
+import com.torikumilab.sumoarchive.service.HeyaService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,7 +20,7 @@ import java.util.List;
 public class SeoController {
 
 	private final BanzukeRepository banzukeRepository;
-	private final HeyaRepository heyaRepository;
+	private final HeyaService heyaService;
 
 	@GetMapping(value = "/robots.txt", produces = MediaType.TEXT_PLAIN_VALUE)
 	public String robots() {
@@ -57,9 +56,10 @@ public class SeoController {
 			url(xml, base + "/rikishi/" + id);
 			url(xml, base + "/rikishi/" + id + "?lang=ja");
 		}
-		for (HeyaEntity heya : heyaRepository.findAllByOrderByNameKrAsc()) {
-			url(xml, base + "/heya/" + heya.getId());
-			url(xml, base + "/heya/" + heya.getId() + "?lang=ja");
+		// 지금 소속 선수가 있는 헤야만 (폐업·개명 전 이름의 헤야 페이지는 noindex)
+		for (Integer heyaId : heyaService.currentMemberCounts().keySet().stream().sorted().toList()) {
+			url(xml, base + "/heya/" + heyaId);
+			url(xml, base + "/heya/" + heyaId + "?lang=ja");
 		}
 		return xml.append("</urlset>\n").toString();
 	}

@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,6 +36,25 @@ public class HeyaService {
 	private final HeyaRepository heyaRepository;
 	private final BashoRepository bashoRepository;
 	private final BanzukeRepository banzukeRepository;
+
+	/**
+	 * 반즈케가 있는 최신 바쇼 기준 헤야별 소속 인원. 여기 없는 헤야 = 지금 소속 선수가 없는 헤야
+	 * (폐업했거나, 이름이 바뀌어 명단 임포트가 새 헤야 행을 만든 경우의 옛 이름). 그런 헤야를 따로 표시해 두지 않고
+	 * 매번 반즈케로 판단하므로 관리자가 할 일이 없다. 반즈케가 하나도 없으면 빈 맵.
+	 */
+	public Map<Integer, Long> currentMemberCounts() {
+		return bashoRepository.findLatestWithBanzuke()
+				.map(basho -> toCountMap(banzukeRepository.countMembersByHeya(basho.getId())))
+				.orElse(Map.of());
+	}
+
+	public static Map<Integer, Long> toCountMap(List<Object[]> rows) {
+		Map<Integer, Long> counts = new HashMap<>();
+		for (Object[] row : rows) {
+			counts.put((Integer) row[0], (Long) row[1]);
+		}
+		return counts;
+	}
 
 	public HeyaPageDTO getHeyaPage(Integer heyaId) {
 		HeyaEntity heya = heyaRepository.findById(heyaId)

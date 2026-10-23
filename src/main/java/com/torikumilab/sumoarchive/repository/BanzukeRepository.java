@@ -111,6 +111,16 @@ public interface BanzukeRepository extends JpaRepository<BanzukeEntity, Integer>
 """)
 	List<BanzukeEntity> findSekitoriByBasho(@Param("bashoId") Integer bashoId);
 
+	// 헤야별 그 바쇼 반즈케 인원 [heyaId, count]. 0명인 헤야(폐업·개명 전 이름)는 행이 없다 → 활동 중인 헤야 판단에 쓴다.
+	@Query("""
+    SELECT r.heyaEntity.id, COUNT(b) FROM BanzukeEntity b
+    JOIN b.rikishiEntity r
+    WHERE b.bashoEntity.id = :bashoId
+      AND r.heyaEntity IS NOT NULL
+    GROUP BY r.heyaEntity.id
+""")
+	List<Object[]> countMembersByHeya(@Param("bashoId") Integer bashoId);
+
 	// 헤야 페이지용 - 그 바쇼 반즈케에 오른 소속 선수 전원. 계급(마쿠우치→조노구치) 순, 그 안에서 순위순.
 	@Query("""
     SELECT b FROM BanzukeEntity b

@@ -1,5 +1,6 @@
 package com.torikumilab.sumoarchive.service;
 
+import com.torikumilab.sumoarchive.domain.dto.RosterImportResultDTO;
 import com.torikumilab.sumoarchive.domain.entity.BashoEntity;
 import com.torikumilab.sumoarchive.repository.BashoRepository;
 import org.slf4j.Logger;
@@ -14,6 +15,8 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -25,7 +28,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * 종료 다음 날까지 받는 건 결정전·수상이 폐막 후에 반영되기 때문.
  * 임포트는 여러 번 돌려도 안전하다(있는 건 갱신, 결과 미확정 경기는 예정 대진으로).</p>
  *
- * <p>새 바쇼 등록(로스터·바쇼 메타 임포트)은 바쇼마다 한 번이라 자동화하지 않는다 — DEPLOYMENT 7절 1).
+ * <p>새 바쇼 등록(바쇼 메타 임포트)은 바쇼마다 한 번이라 자동화하지 않는다 — DEPLOYMENT 7절 1).
+ * 명단(로스터) 동기화는 바쇼마다 첫 자동 회차에 한 번 같이 돌린다 - 이적·헤야 개명·폐업은 반즈케 발표 즈음 반영되는데
+ * 관리자가 잊으면 헤야 소속이 계속 옛날로 남기 때문. 실패하면 다음 회차에 다시 시도한다.
  * {@code app.auto-import.enabled=true}일 때만 돌고(운영 프로필), 마지막 실행 결과는 메모리에만 두어
  * 관리자 바쇼 화면에 보여준다(재시작하면 사라짐).</p>
  */
@@ -44,18 +49,27 @@ public class BashoAutoImportScheduler {
 
 	private final BashoRepository bashoRepository;
 	private final BashoBatchImportService bashoBatchImportService;
+	private final RosterImportService rosterImportService;
 	private final boolean enabled;
 
 	private final AtomicBoolean running = new AtomicBoolean(false);
 	private volatile LastRun lastRun;
+	private volatile RosterSync lastRosterSync;
+	/** 이번 앱 실행에서 명단 동기화를 마친 바쇼 id. 재시작하면 비어서 한 번 더 도는데, 여러 번 돌려도 안전하다. */
+	private final Set<Integer> rosterSyncedBashoIds = ConcurrentHashMap.newKeySet();
 
 	public BashoAutoImportScheduler(BashoRepository bashoRepository,
 									BashoBatchImportService bashoBatchImportService,
+									RosterImportService rosterImportService,
 									@Value("${app.auto-import.enabled:false}") boolean enabled) {
 		this.bashoRepository = bashoRepository;
 		this.bashoBatchImportService = bashoBatchImportService;
+		this.rosterImportService = rosterImportService;
 		this.enabled = enabled;
 	}
+
+	/** 관리자 화면용: 마지막 명단 동기화. result는 성공했을 때만, error는 실패했을 때만 있다. */
+	public record RosterSync(LocalDateTime finishedAt, RosterImportResultDTO result, String error) {}
 
 	/** 관리자 화면용: 마지막으로 대상 바쇼가 있어 실제로 임포트한 실행. error가 있으면 results는 그 전까지의 것. */
 	public record LastRun(
@@ -82,10 +96,10 @@ public class BashoAutoImportScheduler {
 		}
 	}
 
-	public record Status(boolean enabled, boolean running, LastRun lastRun) {}
+	public record Status(boolean enabled, boolean running, LastRun lastRun, RosterSync lastRosterSync) {}
 
 	public Status status() {
-		return new Status(enabled, running.get(), lastRun);
+		return new Status(enabled, running.get(), lastRun, lastRosterSync);
 	}
 
 	/** 외부 감시(UptimeRobot)용 판정. ok=false면 /status/auto-import가 503을 돌려준다. */
@@ -99,6 +113,10 @@ public class BashoAutoImportScheduler {
 	public Alert alert(LocalDateTime now) {
 		if (!enabled) {
 			return new Alert(true, "OK - 자동 임포트 꺼짐");
+		}
+		RosterSync roster = lastRosterSync;
+		if (roster != null && roster.error() != null) {
+			return new Alert(false, "FAIL - 명단 동기화 " + roster.finishedAt().format(TIME) + " 실패 — 관리자 바쇼 화면 확인");
 		}
 		LastRun run = lastRun;
 		if (run != null && run.failed()) {
@@ -148,6 +166,7 @@ public class BashoAutoImportScheduler {
 		List<BashoBatchImportService.BashoBatchResult> results = new ArrayList<>();
 		String error = null;
 		try {
+			syncRosterOnce(targets.get(0)); // 가장 최근 대상 바쇼 기준 한 번
 			for (BashoEntity basho : targets) {
 				results.add(bashoBatchImportService.importBashoFull(basho.getId()));
 			}
@@ -160,6 +179,28 @@ public class BashoAutoImportScheduler {
 		}
 		log.info("[AutoImport] 완료 - 바쇼 {}개, 경기 신규 {}건, 경고 {}건{}",
 				results.size(), lastRun.torikumiCreated(), lastRun.warningCount(), error != null ? ", 오류: " + error : "");
+	}
+
+	/**
+	 * 그 바쇼에서 아직 명단 동기화를 안 했으면 sumo-api 현역 명단으로 소속 헤야 등을 갱신한다.
+	 * 실패해도 경기 임포트는 계속하고, 표시만 남겨 다음 회차에 다시 시도한다(알림도 FAIL).
+	 * 새 헤야(신설·개명)가 생기면 관리자 헤야 관리에서 일본어명·일문을 채워야 일문 탭에 나온다.
+	 */
+	private void syncRosterOnce(BashoEntity basho) {
+		if (rosterSyncedBashoIds.contains(basho.getId())) {
+			return;
+		}
+		try {
+			RosterImportResultDTO result = rosterImportService.importRoster();
+			rosterSyncedBashoIds.add(basho.getId());
+			lastRosterSync = new RosterSync(LocalDateTime.now(ZONE), result, null);
+			log.info("[AutoImport] 명단 동기화 - 헤야 신규 {}개, 리키시 신규 {}명 / 갱신 {}명",
+					result.heyaCreated(), result.rikishiCreated(), result.rikishiUpdated());
+		} catch (Exception e) {
+			String message = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
+			lastRosterSync = new RosterSync(LocalDateTime.now(ZONE), null, message);
+			log.error("[AutoImport] 명단 동기화 실패 (다음 회차에 재시도)", e);
+		}
 	}
 
 	/** 시작일 - 2일 ≤ 오늘 ≤ 종료일 + 1일. 일정이 비어 있는 바쇼는 대상이 아니다. */

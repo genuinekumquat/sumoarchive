@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="referrer" content="no-referrer">
     <title th:text="#{seo.heya.title(${heyaName})}">헤야 — 스모아카이브</title>
-    <th:block th:replace="~{fragments/common :: seo(#{seo.heya.title(${heyaName})}, #{seo.heya.desc(${heyaName}, ${ichimonName} ?: '-', ${heya.memberCount()})}, true)}"></th:block>
+    <th:block th:replace="~{fragments/common :: seo(#{seo.heya.title(${heyaName})}, #{seo.heya.desc(${heyaName}, ${ichimonName} ?: '-', ${heya.memberCount()})}, ${!heya.divisions.isEmpty()})}"></th:block>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Yuji+Syuku&family=Noto+Serif+KR:wght@400;600;900&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
@@ -103,7 +103,10 @@
     <p class="lead" th:if="${heya.bashoYear != null}"
        th:text="#{heya.basis(${#strings.toString(heya.bashoYear)}, ${isJa ? heya.bashoNameJp : heya.bashoNameKr}, ${heya.memberCount()})}">2026년 아키바쇼 반즈케 기준 · 12명</p>
 
-    <div class="empty" th:if="${heya.divisions.isEmpty()}" th:text="#{heya.empty}">최신 반즈케에 오른 소속 선수가 없습니다.</div>
+    <!-- 소속 선수 0명 = 폐업했거나 개명 전 옛 이름의 헤야 (HeyaService#currentMemberCounts). 페이지는 남겨 두고 색인만 뺀다 -->
+    <div class="empty" th:if="${heya.divisions.isEmpty() and heya.bashoYear != null}"
+         th:text="#{heya.empty(${isJa ? heya.bashoYear + '年' + heya.bashoNameJp : heya.bashoYear + '년 ' + heya.bashoNameKr})}">최신 반즈케에 소속 선수가 없어요.</div>
+    <div class="empty" th:if="${heya.bashoYear == null}" th:text="#{main.table.empty}">등록된 반즈케가 없습니다.</div>
 
     <section class="division" th:each="d : ${heya.divisions}">
         <h2 class="division-title">
