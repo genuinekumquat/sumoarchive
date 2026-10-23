@@ -142,6 +142,7 @@ public class RikishiDetailService {
 				.nationalityJp(OriginDisplayUtil.deriveNationalityJp(r.getBirthplace()))
 				.originKr(OriginDisplayUtil.toDetailOriginKr(r.getOriginKr(), r.getBirthplace()))
 				.originJp(OriginDisplayUtil.toDetailOriginJp(r.getBirthplace()))
+				.heyaId(r.getHeyaEntity() != null ? r.getHeyaEntity().getId() : null)
 				.heyaNameKr(r.getHeyaEntity() != null ? r.getHeyaEntity().getNameKr() : null)
 				.heyaNameJp(r.getHeyaEntity() != null ? r.getHeyaEntity().getNameJp() : null)
 				.height(r.getHeight())

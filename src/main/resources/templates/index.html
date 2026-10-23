@@ -216,28 +216,55 @@
         .torikumi-table tr.is-fav { background: rgba(163, 39, 44, 0.06); }
         .torikumi-table .tk-star { color: var(--shu); margin-right: 2px; }
 
-        /* ===== 일문(一門) 탭 ===== */
-        .ichimon-group { margin-bottom: 26px; }
-        .ichimon-group:last-child { margin-bottom: 0; }
+        /* ===== 일문(一門) 탭 - 키마리테 탭과 같은 접이식(처음엔 모두 접힘) ===== */
+        .ichimon-group + .ichimon-group { border-top: 1px solid var(--sumi); }
         .ichimon-title {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            padding: 12px 4px;
+            cursor: pointer;
+            list-style: none;
             font-family: 'Yuji Syuku', serif;
             font-size: 19px;
             letter-spacing: 2px;
             color: var(--shu);
-            padding-bottom: 8px;
-            margin-bottom: 12px;
-            border-bottom: 1px solid var(--sumi);
+        }
+        .ichimon-title::-webkit-details-marker { display: none; }
+        .ichimon-title::before {
+            content: '▸';
+            font-family: initial;
+            font-size: 12px;
+            color: var(--sumi-faint);
+            transition: transform 0.15s ease;
+        }
+        .ichimon-group[open] > .ichimon-title::before { transform: rotate(90deg); color: var(--shu); }
+        .ichimon-title-jp {
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 13px;
+            letter-spacing: 0;
+            color: var(--sumi-faint);
+        }
+        .ichimon-count {
+            margin-left: auto;
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            font-size: 11px;
+            letter-spacing: 0;
+            color: var(--sumi-faint);
         }
         .ichimon-heya-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
             gap: 10px;
+            padding: 2px 4px 18px;
         }
         .ichimon-heya {
             border: 1px solid var(--washi-line);
             padding: 10px 12px;
         }
         .ichimon-heya-name {
+            display: block;
+            text-decoration: none;
             font-family: 'Noto Serif KR', serif;
             font-weight: 700;
             font-size: 13.5px;
@@ -246,6 +273,9 @@
             padding-bottom: 6px;
             border-bottom: 1px solid var(--washi-line);
         }
+        /* 헤야 이름 → 헤야 페이지(소속 선수 전원) */
+        .ichimon-heya-name::after { content: ' ›'; font-weight: 400; color: var(--sumi-faint); }
+        .ichimon-heya-name:hover, .ichimon-heya-name:hover::after { color: var(--shu); }
         .ichimon-sekitori-list { list-style: none; margin: 0; padding: 0; }
         .ichimon-sekitori-list li + li { margin-top: 4px; }
         .ichimon-sekitori-list a {
@@ -711,11 +741,15 @@
 
             <div class="empty-row" th:if="${ichimonGroups == null or ichimonGroups.isEmpty()}" th:text="#{main.table.empty}">등록된 반즈케가 없습니다.</div>
 
-            <div class="ichimon-group" th:each="g : ${ichimonGroups}">
-                <div class="ichimon-title" th:text="${#locale.language == 'ja'} ? ${g.ichimonJp} : ${g.ichimonKr}">일문</div>
+            <details class="ichimon-group" th:each="g : ${ichimonGroups}">
+                <summary class="ichimon-title">
+                    <span th:text="${#locale.language == 'ja'} ? ${g.ichimonJp} : ${g.ichimonKr}">일문</span>
+                    <span class="ichimon-title-jp" th:if="${#locale.language != 'ja'}" th:text="${g.ichimonJp}">出羽海一門</span>
+                    <span class="ichimon-count" th:text="#{main.ichimon.count(${g.heyaList.size()}, ${g.sekitoriCount()})}">헤야 9 · 세키토리 12</span>
+                </summary>
                 <div class="ichimon-heya-grid">
                     <div class="ichimon-heya" th:each="h : ${g.heyaList}">
-                        <div class="ichimon-heya-name" th:text="${#locale.language == 'ja'} ? ${h.heyaNameJp} : ${h.heyaNameKr}">헤야</div>
+                        <a class="ichimon-heya-name" th:href="@{/heya/{id}(id=${h.heyaId})}" th:text="${#locale.language == 'ja'} ? ${h.heyaNameJp} : ${h.heyaNameKr}">헤야</a>
                         <ul class="ichimon-sekitori-list" th:if="${!h.sekitori.isEmpty()}">
                             <li th:each="s : ${h.sekitori}">
                                 <a th:href="@{/rikishi/{id}(id=${s.rikishiId})}">
@@ -727,7 +761,7 @@
                         <div class="ichimon-heya-empty" th:if="${h.sekitori.isEmpty()}" th:text="#{main.ichimon.none}">세키토리 없음</div>
                     </div>
                 </div>
-            </div>
+            </details>
         </div>
     </div>
 
@@ -1166,9 +1200,10 @@
             tabs[key].btn.addEventListener('click', function () { show(key); });
         });
 
-        // /?tab=torikumi 로 바로 들어온 경우
-        if (new URLSearchParams(location.search).get('tab') === 'torikumi') {
-            show('torikumi');
+        // /?tab=torikumi 로 바로 들어온 경우. /?tab=ichimon 은 헤야 페이지의 「일문」 링크에서 온다.
+        var startTab = new URLSearchParams(location.search).get('tab');
+        if (startTab === 'torikumi' || startTab === 'ichimon') {
+            show(startTab);
         }
     })();
 

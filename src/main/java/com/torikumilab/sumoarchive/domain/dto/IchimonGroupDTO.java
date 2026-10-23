@@ -11,4 +11,8 @@ public record IchimonGroupDTO(
 		String ichimonJp,
 		List<HeyaSekitoriDTO> heyaList
 ) {
+	// 접힌 일문 제목 옆에 "헤야 N · 세키토리 M"으로 표시
+	public int sekitoriCount() {
+		return heyaList.stream().mapToInt(h -> h.sekitori().size()).sum();
+	}
 }

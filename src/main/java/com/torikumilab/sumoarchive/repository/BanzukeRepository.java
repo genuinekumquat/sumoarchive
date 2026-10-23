@@ -111,4 +111,32 @@ public interface BanzukeRepository extends JpaRepository<BanzukeEntity, Integer>
 """)
 	List<BanzukeEntity> findSekitoriByBasho(@Param("bashoId") Integer bashoId);
 
+	// 헤야 페이지용 - 그 바쇼 반즈케에 오른 소속 선수 전원. 계급(마쿠우치→조노구치) 순, 그 안에서 순위순.
+	@Query("""
+    SELECT b FROM BanzukeEntity b
+    JOIN FETCH b.rikishiEntity r
+    WHERE b.bashoEntity.id = :bashoId
+      AND r.heyaEntity.id = :heyaId
+    ORDER BY
+        CASE b.division
+            WHEN com.torikumilab.sumoarchive.domain.entity.constant.Division.Makuuchi THEN 1
+            WHEN com.torikumilab.sumoarchive.domain.entity.constant.Division.Juryo THEN 2
+            WHEN com.torikumilab.sumoarchive.domain.entity.constant.Division.Makushita THEN 3
+            WHEN com.torikumilab.sumoarchive.domain.entity.constant.Division.Sandanme THEN 4
+            WHEN com.torikumilab.sumoarchive.domain.entity.constant.Division.Jonidan THEN 5
+            ELSE 6
+        END,
+        CASE b.rankName
+            WHEN com.torikumilab.sumoarchive.domain.entity.constant.RankName.Yokozuna THEN 1
+            WHEN com.torikumilab.sumoarchive.domain.entity.constant.RankName.Ozeki THEN 2
+            WHEN com.torikumilab.sumoarchive.domain.entity.constant.RankName.Sekiwake THEN 3
+            WHEN com.torikumilab.sumoarchive.domain.entity.constant.RankName.Komusubi THEN 4
+            WHEN com.torikumilab.sumoarchive.domain.entity.constant.RankName.Maegashira THEN 5
+            ELSE 6
+        END,
+        b.rankValue ASC,
+        b.side ASC
+""")
+	List<BanzukeEntity> findByBashoAndHeyaOrdered(@Param("bashoId") Integer bashoId, @Param("heyaId") Integer heyaId);
+
 }

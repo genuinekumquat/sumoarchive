@@ -1,7 +1,9 @@
 package com.torikumilab.sumoarchive.controller;
 
 import com.torikumilab.sumoarchive.domain.entity.constant.Division;
+import com.torikumilab.sumoarchive.domain.entity.HeyaEntity;
 import com.torikumilab.sumoarchive.repository.BanzukeRepository;
+import com.torikumilab.sumoarchive.repository.HeyaRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -19,6 +21,7 @@ import java.util.List;
 public class SeoController {
 
 	private final BanzukeRepository banzukeRepository;
+	private final HeyaRepository heyaRepository;
 
 	@GetMapping(value = "/robots.txt", produces = MediaType.TEXT_PLAIN_VALUE)
 	public String robots() {
@@ -35,7 +38,7 @@ public class SeoController {
 	}
 
 	/**
-	 * 메인(한/일)과 세키토리(마쿠우치·쥬료) 경험이 있는 리키시 프로필(한/일).
+	 * 메인(한/일)과 세키토리(마쿠우치·쥬료) 경험이 있는 리키시 프로필(한/일), 헤야 페이지(한/일).
 	 * 하위 리그만 있는 선수는 대전 기록이 없어 내용이 거의 비어 있으므로 제외.
 	 * 언어는 세션 기준이라 ?lang=ja 붙은 주소를 일본어 페이지로 따로 올린다 (쿠키 없는 크롤러는 기본 한국어).
 	 */
@@ -53,6 +56,10 @@ public class SeoController {
 		for (Integer id : banzukeRepository.findDistinctRikishiIdsByDivisionIn(List.of(Division.Makuuchi, Division.Juryo))) {
 			url(xml, base + "/rikishi/" + id);
 			url(xml, base + "/rikishi/" + id + "?lang=ja");
+		}
+		for (HeyaEntity heya : heyaRepository.findAllByOrderByNameKrAsc()) {
+			url(xml, base + "/heya/" + heya.getId());
+			url(xml, base + "/heya/" + heya.getId() + "?lang=ja");
 		}
 		return xml.append("</urlset>\n").toString();
 	}

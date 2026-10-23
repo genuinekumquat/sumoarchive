@@ -32,6 +32,7 @@ public class RikishiDetailDTO {
 	private String originKr; // OriginDisplayUtil 기반 표시용 출신지 (관리자 직접 입력 우선, 없으면 birthplace에서 자동 계산)
 	private String originJp; // 일본어 화면용 (birthplace에서 자동 계산만. 관리자 직접 입력 오버라이드는 아직 없음)
 
+	private Integer heyaId; // 헤야 페이지 링크용. 무소속이면 null
 	private String heyaNameKr; // 무소속(하쿠호 등)이면 null
 	private String heyaNameJp; // 일본어 화면용. 대부분 실제 한자, 일부는 아직 로마자 placeholder
 

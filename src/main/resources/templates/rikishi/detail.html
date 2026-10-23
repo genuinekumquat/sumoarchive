@@ -212,6 +212,8 @@
             font-size: 14.5px;
             color: var(--sumi);
         }
+        .info-table .heya-link { text-decoration: none; border-bottom: 1px dotted var(--sumi-faint); }
+        .info-table .heya-link:hover { color: var(--shu); border-bottom-color: var(--shu); }
 
         /* 핵심 요약 줄 (기록된 전적 / 최근 바쇼 / 최고위) */
         .profile-summary {
@@ -1075,8 +1077,11 @@
                 <table class="info-table">
                     <tr>
                         <th th:text="#{rikishi.label.heya}">소속 헤야</th>
-                        <td th:if="${#locale.language == 'ja'}" th:text="${rikishi.heyaNameJp} ?: #{rikishi.value.unaffiliated}">헤야</td>
-                        <td th:unless="${#locale.language == 'ja'}" th:text="${rikishi.heyaNameKr} ?: #{rikishi.value.unaffiliated}">헤야</td>
+                        <td th:if="${rikishi.heyaId == null}" th:text="#{rikishi.value.unaffiliated}">무소속</td>
+                        <td th:if="${rikishi.heyaId != null}">
+                            <a class="heya-link" th:href="@{/heya/{id}(id=${rikishi.heyaId})}"
+                               th:text="${#locale.language == 'ja'} ? ${rikishi.heyaNameJp} : ${rikishi.heyaNameKr}">헤야</a>
+                        </td>
                     </tr>
                     <!-- 본명은 관리자가 한국어로만 입력해둬서(일본어 원문 미보유) ja 화면엔 생략 -->
                     <tr th:unless="${#locale.language == 'ja'}">
