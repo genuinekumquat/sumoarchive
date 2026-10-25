@@ -87,7 +87,21 @@ public class RikishiEntity {
 	// 데이터 작업으로만 채운다 — 관리자 수정 화면에서는 다루지 않음.
 	@Column(name = "highest_rank_verified", nullable = false)
 	private boolean highestRankVerified;
-	
+
+	// sumo-api 전체 계급 이력에서 처음 반즈케 / 주료 이상 / 마쿠우치에 오른 바쇼(YYYYMM), 이력을 받은 적 있는지 (V12).
+	// 반즈케 변동(신입막·재입막 등) 계산용. 이후 바쇼는 우리 반즈케로 보충하므로 한 번만 받는다.
+	@Column(name = "first_banzuke_basho", length = 6)
+	private String firstBanzukeBasho;
+
+	@Column(name = "first_juryo_basho", length = 6)
+	private String firstJuryoBasho;
+
+	@Column(name = "first_makuuchi_basho", length = 6)
+	private String firstMakuuchiBasho;
+
+	@Column(name = "rank_history_synced", nullable = false)
+	private boolean rankHistorySynced;
+
 	@Column(name = "fighting_style", length = 255)
 	private String fightingStyle;
 	
@@ -256,6 +270,20 @@ public class RikishiEntity {
 		this.oyakataNameJp = oyakataNameJp;
 		this.photoUrl = photoUrl;
 		this.originKr = (originKr == null || originKr.isBlank()) ? null : originKr.strip();
+	}
+
+	/** sumo-api 계급 이력에서 구한 처음 오른 바쇼들을 넣는다 (반즈케 변동 계산용, V12). */
+	public void applyRankHistory(String firstBanzukeBasho, String firstJuryoBasho, String firstMakuuchiBasho) {
+		this.firstBanzukeBasho = firstBanzukeBasho;
+		this.firstJuryoBasho = firstJuryoBasho;
+		this.firstMakuuchiBasho = firstMakuuchiBasho;
+		this.rankHistorySynced = true;
+	}
+
+	/** sumo-api가 은퇴일(intai)을 알려 줬을 때. 현역 로스터 동기화는 은퇴자를 받지 않아서 따로 확인한다. */
+	public void markRetired(LocalDate retiredDate) {
+		this.isActive = false;
+		this.retiredDate = retiredDate;
 	}
 
 	/** {@code isShikonaKrAuto()} — null(수동/미입력)도 false로. */

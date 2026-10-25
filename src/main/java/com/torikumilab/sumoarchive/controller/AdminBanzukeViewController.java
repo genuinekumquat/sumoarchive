@@ -12,6 +12,7 @@ import com.torikumilab.sumoarchive.service.BanzukeImportService;
 import com.torikumilab.sumoarchive.service.BashoAutoImportScheduler;
 import com.torikumilab.sumoarchive.service.BashoBatchImportService;
 import com.torikumilab.sumoarchive.service.BashoImportService;
+import com.torikumilab.sumoarchive.service.RankHistorySyncService;
 import com.torikumilab.sumoarchive.util.RankDisplayUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.propertyeditors.CustomNumberEditor;
@@ -38,6 +39,7 @@ public class AdminBanzukeViewController {
 	private final AwardImportService awardImportService;
 	private final BashoBatchImportService bashoBatchImportService;
 	private final BashoAutoImportScheduler bashoAutoImportScheduler;
+	private final RankHistorySyncService rankHistorySyncService;
 
 	// 빈 <input type="number">("")를 null로 (요코즈나 등 번호 없는 계급). AdminRikishiViewController와 동일 기법.
 	@InitBinder
@@ -97,6 +99,17 @@ public class AdminBanzukeViewController {
 			redirectAttributes.addFlashAttribute("yearBatchResult", bashoBatchImportService.importYear(year));
 		} catch (Exception e) {
 			redirectAttributes.addFlashAttribute("error", year + "년도 일괄 임포트 실패: " + e.getMessage());
+		}
+		return "redirect:/admin/basho";
+	}
+
+	/** 반즈케 변동용 계급 이력·은퇴 여부를 아직 안 받은 선수 전원 채우기 (처음 한 번). */
+	@PostMapping("/admin/basho/rank-history/sync")
+	public String syncRankHistory(RedirectAttributes redirectAttributes) {
+		try {
+			redirectAttributes.addFlashAttribute("rankHistoryResult", rankHistorySyncService.syncAll());
+		} catch (Exception e) {
+			redirectAttributes.addFlashAttribute("error", "반즈케 변동 이력 채우기 실패: " + e.getMessage());
 		}
 		return "redirect:/admin/basho";
 	}

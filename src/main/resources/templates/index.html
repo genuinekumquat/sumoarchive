@@ -424,6 +424,55 @@
 
         .banzuke-title .meta .sep { color: var(--sumi-faint); }
 
+        /* ===== 이번 반즈케 변동 (반즈케 표 위 접이식) ===== */
+        .bz-changes {
+            margin: 0 4px 18px;
+            border-top: 1px solid var(--sumi);
+            border-bottom: 1px solid var(--washi-line);
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+        }
+        .bz-changes-summary {
+            display: flex;
+            align-items: baseline;
+            flex-wrap: wrap;
+            gap: 4px 10px;
+            padding: 10px 4px;
+            cursor: pointer;
+            list-style: none;
+        }
+        .bz-changes-summary::-webkit-details-marker { display: none; }
+        .bz-changes-summary::before {
+            content: '▸';
+            font-size: 12px;
+            color: var(--sumi-faint);
+            transition: transform 0.15s ease;
+        }
+        .bz-changes[open] > .bz-changes-summary::before { transform: rotate(90deg); color: var(--shu); }
+        .bz-changes-title { font-size: 14px; font-weight: 700; letter-spacing: 1px; color: var(--shu); }
+        .bz-changes-counts { font-size: 12px; color: var(--sumi-soft); }
+        .bz-changes-body { padding: 0 4px 12px; }
+        .bz-changes-compare { font-size: 11px; color: var(--sumi-faint); margin: 0 0 8px; }
+        .bz-row {
+            display: grid;
+            grid-template-columns: 76px 1fr;
+            gap: 8px;
+            padding: 6px 0;
+            border-top: 1px dashed var(--washi-line);
+            font-size: 13px;
+        }
+        .bz-row-label { font-weight: 700; color: var(--sumi); }
+        .bz-row-label small { display: block; font-weight: 400; font-size: 10.5px; color: var(--sumi-faint); line-height: 1.4; }
+        .bz-names { display: flex; flex-wrap: wrap; gap: 4px 14px; min-width: 0; }
+        .bz-name { white-space: nowrap; }
+        .bz-name a { color: var(--sumi); text-decoration: none; border-bottom: 1px solid var(--washi-line); }
+        .bz-name a:hover { color: var(--shu); border-bottom-color: var(--shu); }
+        .bz-name .bz-sub { margin-left: 4px; font-size: 11px; color: var(--sumi-faint); }
+        .bz-row.is-minor { font-size: 12px; }
+        @media (max-width: 520px) {
+            .bz-row { grid-template-columns: 1fr; gap: 2px; }
+            .bz-row-label small { display: inline; margin-left: 6px; }
+        }
+
         .panel-select {
             font-family: 'Zen Kaku Gothic New', sans-serif;
             font-size: 12px;
@@ -675,6 +724,16 @@
                 </span>
             </div>
 
+            <!-- 이번 반즈케 변동 - 바쇼 드롭다운을 따라 /api/banzuke/changes로 불러온다. 비교할 직전 바쇼가 없으면 숨김.
+                 접힘 상태는 브라우저에 기억 (처음엔 펼침) -->
+            <details class="bz-changes" id="bzChanges" open hidden>
+                <summary class="bz-changes-summary">
+                    <span class="bz-changes-title" th:text="#{main.changes.title}">이번 반즈케 변동</span>
+                    <span class="bz-changes-counts" id="bzChangesCounts"></span>
+                </summary>
+                <div class="bz-changes-body" id="bzChangesBody"></div>
+            </details>
+
             <table class="banzuke-table">
                 <thead>
                 <tr>
@@ -882,8 +941,12 @@
     yearSelect.addEventListener('change', () => {
         fillBashoSelect(Number(yearSelect.value));
         loadBanzuke();
+        loadChanges();
     });
-    bashoSelect.addEventListener('change', loadBanzuke);
+    bashoSelect.addEventListener('change', () => {
+        loadBanzuke();
+        loadChanges();
+    });
     divisionSelect.addEventListener('change', loadBanzuke);
 
     function loadBanzuke() {
@@ -1000,12 +1063,121 @@
         });
     }
 
+    // ===== 이번 반즈케 변동 - 바쇼가 바뀔 때만 다시 불러온다 (계급 선택과 무관) =====
+    const CHG_MSG = {
+        compare: /*[[#{main.changes.compare}]]*/ '{0} 반즈케와 비교',
+        newMakuuchi: /*[[#{main.changes.newMakuuchi}]]*/ '신입막',
+        returnMakuuchi: /*[[#{main.changes.returnMakuuchi}]]*/ '재입막',
+        newJuryo: /*[[#{main.changes.newJuryo}]]*/ '신주료',
+        returnJuryo: /*[[#{main.changes.returnJuryo}]]*/ '재주료',
+        newRecruits: /*[[#{main.changes.newRecruits}]]*/ '신제자',
+        retired: /*[[#{main.changes.retired}]]*/ '은퇴',
+        dropped: /*[[#{main.changes.dropped}]]*/ '반즈케 제외'
+    };
+    const CHG_NOTE = {
+        retired: /*[[#{main.changes.retiredNote}]]*/ '직전 바쇼 계급',
+        dropped: /*[[#{main.changes.droppedNote}]]*/ '휴장 등 · 직전 바쇼 계급'
+    };
+    const CHG_ROWS = ['newMakuuchi', 'returnMakuuchi', 'newJuryo', 'returnJuryo', 'newRecruits', 'retired', 'dropped'];
+    // 인원이 많은 줄 - 글씨를 줄이고 계급·헤야 중 하나만 붙인다
+    const CHG_MINOR = new Set(['newRecruits', 'retired', 'dropped']);
+    const chgBox = document.getElementById('bzChanges');
+    const CHG_OPEN_KEY = 'sumoarchive_bz_changes_open';
+    try {
+        if (localStorage.getItem(CHG_OPEN_KEY) === '0') chgBox.open = false;
+    } catch (e) { /* 저장소를 못 쓰면 늘 펼침 */ }
+    chgBox.addEventListener('toggle', () => {
+        try { localStorage.setItem(CHG_OPEN_KEY, chgBox.open ? '1' : '0'); } catch (e) { /* 무시 */ }
+    });
+
+    let chgSeq = 0; // 바쇼를 빨리 바꿀 때 늦게 온 이전 응답이 덮어쓰지 않게
+    function loadChanges() {
+        const bashoId = bashoSelect.value;
+        const seq = ++chgSeq;
+        fetch('/api/banzuke/changes' + (bashoId ? '?bashoId=' + bashoId : ''))
+            .then(response => {
+                if (!response.ok) throw new Error('서버 응답 오류: ' + response.status);
+                return response.status === 204 ? null : response.json();
+            })
+            .then(data => { if (seq === chgSeq) renderChanges(data); })
+            .catch(error => {
+                console.error('반즈케 변동 조회 실패:', error);
+                if (seq === chgSeq) chgBox.hidden = true;
+            });
+    }
+
+    function changeEntry(e, key) {
+        const span = document.createElement('span');
+        span.className = 'bz-name';
+        const a = document.createElement('a');
+        a.href = '/rikishi/' + e.rikishiId;
+        if (LOCALE === 'ja') a.className = 'jp-font';
+        const shikona = LOCALE === 'ja'
+            ? (e.shikonaJp || e.shikonaEn || e.shikonaKr || '?')
+            : (e.shikonaKr || e.shikonaJp || e.shikonaEn || '?');
+        a.textContent = shikona.split(' ')[0];
+        span.appendChild(a);
+
+        const rank = LOCALE === 'ja' ? e.rankJp : e.rankKr;
+        const heya = LOCALE === 'ja' ? e.heyaNameJp : e.heyaNameKr;
+        const parts = key === 'newRecruits' ? [heya] : CHG_MINOR.has(key) ? [rank] : [rank, heya];
+        const subText = parts.filter(Boolean).join(' · ');
+        if (subText) {
+            const sub = document.createElement('span');
+            sub.className = 'bz-sub';
+            sub.textContent = subText;
+            span.appendChild(sub);
+        }
+        return span;
+    }
+
+    function renderChanges(data) {
+        const keys = data ? CHG_ROWS.filter(k => data[k] && data[k].length > 0) : [];
+        if (keys.length === 0) {
+            chgBox.hidden = true;
+            return;
+        }
+        document.getElementById('bzChangesCounts').textContent =
+            keys.map(k => CHG_MSG[k] + ' ' + data[k].length).join(' · ');
+
+        const body = document.getElementById('bzChangesBody');
+        body.innerHTML = '';
+        const compare = document.createElement('p');
+        compare.className = 'bz-changes-compare';
+        const prevLabel = LOCALE === 'ja'
+            ? data.prevYear + '年' + data.prevMonthLabelJp
+            : data.prevYear + '년 ' + data.prevMonthLabelKr;
+        compare.textContent = CHG_MSG.compare.replace('{0}', prevLabel);
+        body.appendChild(compare);
+
+        keys.forEach(k => {
+            const row = document.createElement('div');
+            row.className = 'bz-row' + (CHG_MINOR.has(k) ? ' is-minor' : '');
+            const label = document.createElement('div');
+            label.className = 'bz-row-label';
+            label.textContent = CHG_MSG[k];
+            if (CHG_NOTE[k]) {
+                const note = document.createElement('small');
+                note.textContent = CHG_NOTE[k];
+                label.appendChild(note);
+            }
+            const names = document.createElement('div');
+            names.className = 'bz-names';
+            data[k].forEach(e => names.appendChild(changeEntry(e, k)));
+            row.appendChild(label);
+            row.appendChild(names);
+            body.appendChild(row);
+        });
+        chgBox.hidden = false;
+    }
+
     // 최초 진입: 최신 연도 · 그 연도의 최신 대회 · 마쿠우치
     fillYearSelect();
     if (yearSelect.options.length > 0) {
         fillBashoSelect(Number(yearSelect.value));
     }
     loadBanzuke();
+    loadChanges();
 
     // ===== 대진(取組) 탭 - /api/torikumi/day. 처음 탭을 열 때만 불러온다 =====
     // 주의: 이 블록은 th:inline="javascript" 안이라 "[" 바로 뒤에 "(" 나 "[" 를 쓰면 Thymeleaf 표현식으로 읽힌다.

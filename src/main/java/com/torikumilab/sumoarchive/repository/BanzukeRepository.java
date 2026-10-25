@@ -88,6 +88,23 @@ public interface BanzukeRepository extends JpaRepository<BanzukeEntity, Integer>
 """)
 	List<BanzukeEntity> findByBashoEntityIdFetchRikishi(@Param("bashoId") Integer bashoId);
 
+	// 반즈케 변동용 - 그 바쇼 전체 반즈케(디비전 무관), 리키시·헤야 fetch.
+	@Query("""
+    SELECT b FROM BanzukeEntity b
+    JOIN FETCH b.rikishiEntity r
+    LEFT JOIN FETCH r.heyaEntity
+    WHERE b.bashoEntity.id = :bashoId
+""")
+	List<BanzukeEntity> findByBashoFetchRikishiHeya(@Param("bashoId") Integer bashoId);
+
+	// 반즈케 변동용 - 리키시별·디비전별 우리 반즈케 첫 바쇼 시작일 [rikishiId, division, minStartDate]
+	@Query("""
+    SELECT b.rikishiEntity.id, b.division, MIN(b.bashoEntity.startDate) FROM BanzukeEntity b
+    WHERE b.rikishiEntity.id IN :rikishiIds
+    GROUP BY b.rikishiEntity.id, b.division
+""")
+	List<Object[]> findFirstStartDateByDivision(@Param("rikishiIds") Collection<Integer> rikishiIds);
+
 	// 메인 페이지 "일문" 탭용 - 세키토리(마쿠우치+주료)만, 마쿠우치 먼저 그 안에서 순위순, 그다음 주료도 순위순.
 	@Query("""
     SELECT b FROM BanzukeEntity b

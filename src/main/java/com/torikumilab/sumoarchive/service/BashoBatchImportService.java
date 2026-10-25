@@ -31,6 +31,7 @@ public class BashoBatchImportService {
 	private final BanzukeImportService banzukeImportService;
 	private final TorikumiImportService torikumiImportService;
 	private final AwardImportService awardImportService;
+	private final RankHistorySyncService rankHistorySyncService;
 
 	public record BashoBatchResult(
 			String bashoLabel,
@@ -110,6 +111,15 @@ public class BashoBatchImportService {
 			warnings.addAll(res.skipped());
 		} catch (Exception e) {
 			warnings.add("수상/킨보시 임포트 실패: " + e.getMessage());
+			failures++;
+		}
+
+		// 4. 반즈케 변동용 계급 이력·은퇴 확인 (새 선수만 조회해서 보통 수 초). 선수 몇 명의 조회 실패는 경고로만
+		try {
+			RankHistorySyncService.SyncResult res = rankHistorySyncService.syncForBasho(bashoId);
+			warnings.addAll(res.warnings());
+		} catch (Exception e) {
+			warnings.add("계급 이력·은퇴 확인 실패: " + e.getMessage());
 			failures++;
 		}
 

@@ -179,6 +179,22 @@
         </form>
     </div>
 
+    <div class="saved-msg" th:if="${rankHistoryResult}">
+        <span th:text="'반즈케 변동 이력 채우기 완료 — 계급 이력 ' + ${rankHistoryResult.historyFetched} + '명 · 은퇴 확인 '
+            + ${rankHistoryResult.retiredFound} + '명' + (${rankHistoryResult.failures} > 0 ? ' · 실패 ' + ${rankHistoryResult.failures} + '건' : '')">완료</span>
+        <ul class="skip-list" th:if="${!rankHistoryResult.warnings.isEmpty()}">
+            <li th:each="w : ${rankHistoryResult.warnings}" th:text="${w}">경고</li>
+        </ul>
+    </div>
+
+    <div class="import-bar">
+        <span class="desc"><strong>반즈케 변동 이력 채우기</strong>: 메인 「이번 반즈케 변동」(신입막·재입막 등)에 쓰는 sumo-api 계급 이력과 은퇴 여부를, 아직 안 받은 선수만 전 바쇼에 걸쳐 받습니다. 바쇼 일괄 임포트 때 새 선수는 자동으로 받으니 처음 한 번이면 됩니다 (수 분, Nginx 300초를 넘길 수 있음).</span>
+        <form th:action="@{/admin/basho/rank-history/sync}" method="post"
+              onsubmit="return confirm('아직 계급 이력이 없는 선수 전원을 sumo-api에서 조회합니다. 수 분이 걸릴 수 있습니다. 계속할까요?');">
+            <button type="submit">반즈케 변동 이력 채우기</button>
+        </form>
+    </div>
+
     <div class="toolbar">
         <a class="new-link" th:href="@{/admin/basho/new}">+ 새 바쇼</a>
     </div>

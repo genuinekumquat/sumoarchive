@@ -35,6 +35,8 @@ class BashoBatchImportServiceTest {
 	private TorikumiImportService torikumiImportService;
 	@Mock
 	private AwardImportService awardImportService;
+	@Mock
+	private RankHistorySyncService rankHistorySyncService;
 
 	@InjectMocks
 	private BashoBatchImportService bashoBatchImportService;
@@ -65,6 +67,7 @@ class BashoBatchImportServiceTest {
 
 		AwardImportResultDTO awardRes = new AwardImportResultDTO("2025년 1월", 2, 3, 1, List.of());
 		given(awardImportService.importForBasho(1)).willReturn(awardRes);
+		given(rankHistorySyncService.syncForBasho(1)).willReturn(new RankHistorySyncService.SyncResult(3, 1, 0, List.of()));
 
 		// when
 		BashoBatchImportService.BashoBatchResult result = bashoBatchImportService.importBashoFull(1);
@@ -98,11 +101,12 @@ class BashoBatchImportServiceTest {
 		given(banzukeImportService.importDivision(eq(1), any())).willThrow(down);
 		given(torikumiImportService.importDivision(eq(1), any())).willThrow(down);
 		given(awardImportService.importForBasho(1)).willThrow(down);
+		given(rankHistorySyncService.syncForBasho(1)).willThrow(down);
 
 		BashoBatchImportService.BashoBatchResult result = bashoBatchImportService.importBashoFull(1);
 
-		// 반즈케 6 + 토리쿠미 6 + 수상 1
-		assertThat(result.failureCount()).isEqualTo(13);
-		assertThat(result.warnings()).hasSize(13).allMatch(w -> w.contains("임포트 실패"));
+		// 반즈케 6 + 토리쿠미 6 + 수상 1 + 계급 이력 1
+		assertThat(result.failureCount()).isEqualTo(14);
+		assertThat(result.warnings()).hasSize(14).allMatch(w -> w.contains("실패"));
 	}
 }

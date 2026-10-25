@@ -1,9 +1,12 @@
 package com.torikumilab.sumoarchive.controller.api;
 
+import com.torikumilab.sumoarchive.domain.dto.BanzukeChangesDTO;
 import com.torikumilab.sumoarchive.domain.dto.BanzukeDTO;
 import com.torikumilab.sumoarchive.domain.entity.constant.Division;
+import com.torikumilab.sumoarchive.service.BanzukeChangeService;
 import com.torikumilab.sumoarchive.service.BanzukeService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -31,6 +34,7 @@ public class BanzukeApiController {
 	 */
 	
 	private final BanzukeService banzukeService;
+	private final BanzukeChangeService banzukeChangeService;
 	
 	@GetMapping("/api/banzuke")
 	public List<BanzukeDTO> getBanzuke(
@@ -38,5 +42,12 @@ public class BanzukeApiController {
 			@RequestParam(required = false) Integer bashoId
 			) {
 		return banzukeService.getBanzuke(bashoId, division);
+	}
+
+	/** 메인 「이번 반즈케 변동」. 비교할 직전 바쇼가 없으면(가장 오래된 바쇼) 204. */
+	@GetMapping("/api/banzuke/changes")
+	public ResponseEntity<BanzukeChangesDTO> getChanges(@RequestParam(required = false) Integer bashoId) {
+		BanzukeChangesDTO changes = banzukeChangeService.getChanges(bashoId);
+		return changes != null ? ResponseEntity.ok(changes) : ResponseEntity.noContent().build();
 	}
 }

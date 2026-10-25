@@ -2,6 +2,7 @@ package com.torikumilab.sumoarchive.client;
 
 import com.torikumilab.sumoarchive.domain.dto.sumoapi.SumoApiBanzukeDTO;
 import com.torikumilab.sumoarchive.domain.dto.sumoapi.SumoApiBashoDTO;
+import com.torikumilab.sumoarchive.domain.dto.sumoapi.SumoApiRankDTO;
 import com.torikumilab.sumoarchive.domain.dto.sumoapi.SumoApiRikishiDTO;
 import com.torikumilab.sumoarchive.domain.dto.sumoapi.SumoApiRikishiPageDTO;
 import com.torikumilab.sumoarchive.domain.dto.sumoapi.SumoApiTorikumiDayDTO;
@@ -15,6 +16,7 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -75,6 +77,40 @@ public class SumoApiClient {
 			} catch (RuntimeException e) {
 				if (attempt >= RIKISHI_MAX_ATTEMPTS) {
 					return null;
+				}
+				sleepQuietly(500L * attempt);
+			}
+		}
+	}
+
+	/**
+	 * 리키시 1명의 입문부터 전체 계급 이력 (최신순). 한 번에 100건까지만 오므로 skip으로 끝까지 받는다.
+	 * 일시적인 오류는 getRikishi처럼 다시 시도하고, 그래도 실패하면 예외 - 일부만 받은 이력으로 판단하면 틀리기 때문.
+	 */
+	public List<SumoApiRankDTO> getRankHistory(int rikishiId) {
+		List<SumoApiRankDTO> all = new ArrayList<>();
+		while (true) {
+			List<SumoApiRankDTO> page = getRankPage(rikishiId, all.size());
+			all.addAll(page);
+			if (page.size() < RANK_PAGE_SIZE) {
+				return all;
+			}
+		}
+	}
+
+	private static final int RANK_PAGE_SIZE = 100;
+
+	private List<SumoApiRankDTO> getRankPage(int rikishiId, int skip) {
+		for (int attempt = 1; ; attempt++) {
+			try {
+				SumoApiRankDTO[] page = rc.get()
+						.uri("/api/ranks?rikishiId={id}&skip={skip}", rikishiId, skip)
+						.retrieve()
+						.body(SumoApiRankDTO[].class);
+				return page == null ? List.of() : List.of(page);
+			} catch (RuntimeException e) {
+				if (attempt >= RIKISHI_MAX_ATTEMPTS) {
+					throw e;
 				}
 				sleepQuietly(500L * attempt);
 			}
