@@ -725,8 +725,8 @@
             </div>
 
             <!-- 이번 반즈케 변동 - 바쇼 드롭다운을 따라 /api/banzuke/changes로 불러온다. 비교할 직전 바쇼가 없으면 숨김.
-                 접힘 상태는 브라우저에 기억 (처음엔 펼침) -->
-            <details class="bz-changes" id="bzChanges" open hidden>
+                 접힘 상태는 브라우저에 기억 (처음엔 접힘 - 제목줄에 인원수만) -->
+            <details class="bz-changes" id="bzChanges" hidden>
                 <summary class="bz-changes-summary">
                     <span class="bz-changes-title" th:text="#{main.changes.title}">이번 반즈케 변동</span>
                     <span class="bz-changes-counts" id="bzChangesCounts"></span>
@@ -1084,8 +1084,8 @@
     const chgBox = document.getElementById('bzChanges');
     const CHG_OPEN_KEY = 'sumoarchive_bz_changes_open';
     try {
-        if (localStorage.getItem(CHG_OPEN_KEY) === '0') chgBox.open = false;
-    } catch (e) { /* 저장소를 못 쓰면 늘 펼침 */ }
+        if (localStorage.getItem(CHG_OPEN_KEY) === '1') chgBox.open = true;
+    } catch (e) { /* 저장소를 못 쓰면 늘 접힘 */ }
     chgBox.addEventListener('toggle', () => {
         try { localStorage.setItem(CHG_OPEN_KEY, chgBox.open ? '1' : '0'); } catch (e) { /* 무시 */ }
     });
