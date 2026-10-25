@@ -458,7 +458,7 @@
             gap: 8px;
             padding: 6px 0;
             border-top: 1px dashed var(--washi-line);
-            font-size: 13px;
+            font-size: 12px;
         }
         .bz-row-label { font-weight: 700; color: var(--sumi); }
         .bz-row-label small { display: block; font-weight: 400; font-size: 10.5px; color: var(--sumi-faint); line-height: 1.4; }
@@ -467,7 +467,6 @@
         .bz-name a { color: var(--sumi); text-decoration: none; border-bottom: 1px solid var(--washi-line); }
         .bz-name a:hover { color: var(--shu); border-bottom-color: var(--shu); }
         .bz-name .bz-sub { margin-left: 4px; font-size: 11px; color: var(--sumi-faint); }
-        .bz-row.is-minor { font-size: 12px; }
         @media (max-width: 520px) {
             .bz-row { grid-template-columns: 1fr; gap: 2px; }
             .bz-row-label small { display: inline; margin-left: 6px; }
@@ -1079,7 +1078,7 @@
         dropped: /*[[#{main.changes.droppedNote}]]*/ '휴장 등 · 직전 바쇼 계급'
     };
     const CHG_ROWS = ['newMakuuchi', 'returnMakuuchi', 'newJuryo', 'returnJuryo', 'newRecruits', 'retired', 'dropped'];
-    // 인원이 많은 줄 - 글씨를 줄이고 계급·헤야 중 하나만 붙인다
+    // 인원이 많은 줄 - 계급·헤야 중 하나만 붙인다
     const CHG_MINOR = new Set(['newRecruits', 'retired', 'dropped']);
     const chgBox = document.getElementById('bzChanges');
     const CHG_OPEN_KEY = 'sumoarchive_bz_changes_open';
@@ -1152,7 +1151,7 @@
 
         keys.forEach(k => {
             const row = document.createElement('div');
-            row.className = 'bz-row' + (CHG_MINOR.has(k) ? ' is-minor' : '');
+            row.className = 'bz-row';
             const label = document.createElement('div');
             label.className = 'bz-row-label';
             label.textContent = CHG_MSG[k];
