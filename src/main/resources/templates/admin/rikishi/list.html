@@ -72,6 +72,9 @@
         .error-msg { border: 1px solid var(--shu); color: var(--shu); font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 13px; padding: 10px 14px; margin-bottom: 14px; }
         .warn-list { margin: 8px 0 0; padding-left: 18px; font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 11.5px; color: var(--sumi-soft); }
         .warn-list li { margin: 2px 0; }
+        .warn-list a { color: var(--shu); }
+        .rank-auto { color: var(--sumi-faint); font-size: 11px; }
+        .rank-outdated { color: var(--shu); font-size: 11px; }
 
         .pager { display: flex; justify-content: center; gap: 10px; margin-top: 24px; }
         .pager a, .pager span {
@@ -136,6 +139,17 @@
         </form>
     </div>
 
+    <div class="error-msg" th:if="${!outdatedHighest.isEmpty()}">
+        직접 입력한 최고위가 반즈케 기록보다 낮은 리키시 <strong th:text="${outdatedHighest.size()}">0</strong>명 —
+        입력한 뒤 승진했거나 번호 없이 들어간 값입니다. 수정 화면에서 (미지정)으로 비우면 반즈케 기록으로 번호·바쇼까지 계산됩니다.
+        <ul class="warn-list">
+            <li th:each="o : ${outdatedHighest}">
+                <a th:href="@{'/admin/rikishi/' + ${o.id} + '/edit'}" th:text="${o.shikonaKr} ?: ${o.shikonaJp}">시코나</a>
+                <span th:text="': 직접 입력 ' + ${o.highestRank} + ' → 반즈케 기록 ' + ${o.computedHighestRank}">: 직접 입력 마에가시라 → 반즈케 기록 코무스비</span>
+            </li>
+        </ul>
+    </div>
+
     <form class="search-row" th:action="@{/admin/rikishi}" method="get">
         <input type="text" name="keyword" th:value="${keyword}" placeholder="시코나(한/일/로마자)로 검색">
         <button type="submit">검색</button>
@@ -161,7 +175,11 @@
                 <span th:if="${r.shikonaKrAuto}" style="color: var(--shu); font-size: 11px;">(자동)</span>
             </td>
             <td th:text="${r.heyaName} ?: '무소속'">헤야</td>
-            <td th:text="${r.highestRank} ?: '-'">최고위</td>
+            <td>
+                <span th:text="${r.highestRank} ?: '-'">최고위</span>
+                <span th:if="${r.highestRank != null and !r.highestRankManual}" class="rank-auto">(자동)</span>
+                <span th:if="${r.highestRankOutdated}" class="rank-outdated" th:title="'반즈케 기록: ' + ${r.computedHighestRank}">(낡음)</span>
+            </td>
             <td><span class="badge" th:text="${r.statusLabel}">현역</span></td>
             <td><a class="edit-link" th:href="@{'/admin/rikishi/' + ${r.id} + '/edit'}">수정 →</a></td>
         </tr>

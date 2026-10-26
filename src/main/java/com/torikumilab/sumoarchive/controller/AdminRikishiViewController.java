@@ -44,6 +44,7 @@ public class AdminRikishiViewController {
 		model.addAttribute("result", result);
 		model.addAttribute("keyword", keyword);
 		model.addAttribute("missingKrCount", rikishiAdminService.countMissingKoreanShikona());
+		model.addAttribute("outdatedHighest", rikishiAdminService.findOutdatedHighestRanks());
 		return "admin/rikishi/list";
 	}
 
@@ -63,7 +64,8 @@ public class AdminRikishiViewController {
 	public String editForm(@PathVariable Integer id, Model model) {
 		model.addAttribute("form", rikishiAdminService.getEditForm(id));
 		model.addAttribute("heyaOptions", rikishiAdminService.getHeyaOptions());
-		model.addAttribute("rankOptions", RankDisplayUtil.koreanLabelOptions());
+		model.addAttribute("rankOptions", RankDisplayUtil.manualHighestRankOptions());
+		model.addAttribute("highestCheck", rikishiAdminService.getHighestRankCheck(id));
 		return "admin/rikishi/edit";
 	}
 

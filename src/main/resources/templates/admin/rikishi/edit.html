@@ -142,7 +142,7 @@
             </p>
             <div class="field-row">
                 <div class="field">
-                    <label>최고 계급 <span style="color:var(--sumi-faint);font-size:11px;">미지정이면 반즈케 기록(2019년~)에서 자동 계산 — 그 전에 더 높았던 베테랑만 입력</span></label>
+                    <label>최고 계급 <span style="color:var(--sumi-faint);font-size:11px;">미지정이면 반즈케 기록(2019년~)에서 번호까지 자동 계산 — 그 전에 산야쿠 이상이었던 베테랑만 입력</span></label>
                     <select th:field="*{highestRank}">
                         <option value="">(미지정)</option>
                         <!-- 번호가 붙은 저장값("Maegashira 4", sumo-api 전체 이력으로 채운 값)은 선택지에 없으므로
@@ -151,6 +151,15 @@
                                 th:value="${form.highestRank}" th:text="${form.highestRank} + ' (현재 값)'">Maegashira 4 (현재 값)</option>
                         <option th:each="rn : ${rankOptions}" th:value="${rn.key}" th:text="${rn.value}">오제키</option>
                     </select>
+                    <p th:with="c=${highestCheck != null ? highestCheck.computed() : null}"
+                       style="font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 11.5px; color: var(--sumi-faint); margin: 6px 0 0;">
+                        <span th:if="${c != null}" th:text="'반즈케 기록 계산값: ' + ${c.rank()} + ' · ' + ${c.since()} + (${c.partial()} ? ' (2019년~ 기록 기준)' : '')">반즈케 기록 계산값: 마에가시라1 · 2026년 1월 하츠바쇼</span>
+                        <span th:if="${c == null}">반즈케 기록 없음</span>
+                    </p>
+                    <p th:if="${highestCheck != null and highestCheck.outdated()}"
+                       style="font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 11.5px; color: var(--shu); margin: 4px 0 0;">
+                        직접 입력값이 반즈케 기록보다 낮습니다 — (미지정)으로 바꾸면 계산값이 쓰입니다.
+                    </p>
                 </div>
             </div>
             <div class="field-row">

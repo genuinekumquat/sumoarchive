@@ -92,6 +92,22 @@ class HighestRankServiceTest {
 		assertThat(HighestRankService.resolve(new Subject(1, null, debut2010, false), maegashira, DATA_START).partial()).isTrue();
 	}
 
+	@Test
+	@DisplayName("직접 입력값이 반즈케 최고 기록보다 낮은지 - 승진해서 낡았거나, 번호 없는 「마에가시라」")
+	void manualLowerThanBanzuke() {
+		BanzukeEntity komusubi = banzuke(2026, BashoMonth.NOV, RankName.Komusubi, 1);
+		BanzukeEntity maegashira1 = banzuke(2026, BashoMonth.JAN, RankName.Maegashira, 1);
+
+		assertThat(HighestRankService.isLowerThan("Maegashira", komusubi)).isTrue();
+		assertThat(HighestRankService.isLowerThan("Maegashira", maegashira1)).isTrue();   // 번호 없음
+		assertThat(HighestRankService.isLowerThan("Maegashira 3", maegashira1)).isTrue();
+		assertThat(HighestRankService.isLowerThan("Maegashira 1", maegashira1)).isFalse();
+		assertThat(HighestRankService.isLowerThan("Komusubi", komusubi)).isFalse();         // 산야쿠는 번호 안 봄
+		assertThat(HighestRankService.isLowerThan("Ozeki", komusubi)).isFalse();            // 2019년 전 오제키 베테랑
+		assertThat(HighestRankService.isLowerThan("오야카타", komusubi)).isFalse();
+		assertThat(HighestRankService.isLowerThan(null, komusubi)).isFalse();
+	}
+
 	private static BanzukeEntity banzuke(int year, BashoMonth month, RankName rankName, Integer rankValue) {
 		BashoEntity basho = BashoEntity.builder()
 				.bashoYear(year)

@@ -8,6 +8,7 @@ import com.torikumilab.sumoarchive.domain.entity.HeyaEntity;
 import com.torikumilab.sumoarchive.domain.entity.RikishiEntity;
 import com.torikumilab.sumoarchive.repository.HeyaRepository;
 import com.torikumilab.sumoarchive.repository.RikishiRepository;
+import com.torikumilab.sumoarchive.service.HighestRankService.ManualCheck;
 import com.torikumilab.sumoarchive.util.RankDisplayUtil;
 import com.torikumilab.sumoarchive.util.ShikonaKrTransliterator;
 import jakarta.persistence.EntityNotFoundException;
@@ -21,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 관리자 "데이터 수동 갱신" 중 리키시 프로필 수정 부분. 반즈케/시코나 이력/토리쿠미 등
@@ -33,6 +35,7 @@ public class RikishiAdminService {
 
 	private final RikishiRepository rikishiRepository;
 	private final HeyaRepository heyaRepository;
+	private final HighestRankService highestRankService;
 
 	@Transactional(readOnly = true)
 	public Page<RikishiAdminRowDTO> list(String keyword, Pageable pageable) {
@@ -43,7 +46,30 @@ public class RikishiAdminService {
 			String k = keyword.strip();
 			page = rikishiRepository.findByShikonaKrContainingOrShikonaJpContainingOrShikonaEnContaining(k, k, k, pageable);
 		}
-		return page.map(RikishiAdminService::toRowDto);
+		Map<Integer, ManualCheck> checks = highestRankService.checkAll(page.getContent());
+		return page.map(r -> toRowDto(r, checks.get(r.getId())));
+	}
+
+	/**
+	 * 직접 입력한 최고위가 반즈케 계산값보다 낮은 리키시 (목록 위 「손볼 최고위」 경고). 입력한 뒤 승진했거나
+	 * 번호 없이 「마에가시라」만 넣은 경우라, (미지정)으로 비우면 계산값이 번호·바쇼까지 보여준다.
+	 */
+	@Transactional(readOnly = true)
+	public List<RikishiAdminRowDTO> findOutdatedHighestRanks() {
+		List<RikishiEntity> manual = rikishiRepository.findByHighestRankIsNotNull();
+		Map<Integer, ManualCheck> checks = highestRankService.checkAll(manual);
+		return manual.stream()
+				.filter(r -> checks.containsKey(r.getId()) && checks.get(r.getId()).outdated())
+				.map(r -> toRowDto(r, checks.get(r.getId())))
+				.toList();
+	}
+
+	/** 수정 화면의 최고 계급 칸 안내용 - 반즈케 계산값과 직접 입력값이 낡았는지. */
+	@Transactional(readOnly = true)
+	public ManualCheck getHighestRankCheck(Integer rikishiId) {
+		return rikishiRepository.findById(rikishiId)
+				.map(r -> highestRankService.checkAll(List.of(r)).get(r.getId()))
+				.orElse(null);
 	}
 
 	@Transactional(readOnly = true)
@@ -158,14 +184,19 @@ public class RikishiAdminService {
 		return (value == null || value.isBlank()) ? null : value.strip();
 	}
 
-	private static RikishiAdminRowDTO toRowDto(RikishiEntity r) {
+	private static RikishiAdminRowDTO toRowDto(RikishiEntity r, ManualCheck check) {
+		boolean manual = r.getHighestRank() != null;
+		String computed = check != null && check.computed() != null ? check.computed().rank() : null;
 		return new RikishiAdminRowDTO(
 				r.getId(),
 				r.getShikonaKr(),
 				r.getShikonaJp(),
 				r.isShikonaKrAuto(),
 				r.getHeyaEntity() != null ? r.getHeyaEntity().getNameKr() : null,
-				RankDisplayUtil.toKorean(r.getHighestRank()),
+				manual ? RankDisplayUtil.toKorean(r.getHighestRank()) : computed,
+				manual,
+				check != null && check.outdated(),
+				computed,
 				statusLabel(r)
 		);
 	}

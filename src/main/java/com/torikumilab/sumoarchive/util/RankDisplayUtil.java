@@ -5,6 +5,7 @@ import com.torikumilab.sumoarchive.domain.entity.constant.Side;
 
 import java.util.EnumMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -134,6 +135,18 @@ public final class RankDisplayUtil {
 	/** 관리자 계급 select용: enum 이름(저장값) → 한국어 라벨. 순서 보존. */
 	public static Map<String, String> koreanLabelOptions() {
 		return new LinkedHashMap<>(KR_LABEL);
+	}
+
+	/**
+	 * 관리자 최고 계급 select용: 요코즈나~코무스비만. 직접 입력은 2019년 전에 더 높았던 베테랑용이고, 마에가시라 이하는
+	 * 번호가 있어야 하는데 select엔 번호가 없어서(「마에가시라」만 저장됨) 반즈케 계산값에 맡긴다.
+	 */
+	public static Map<String, String> manualHighestRankOptions() {
+		Map<String, String> options = new LinkedHashMap<>();
+		for (RankName rankName : List.of(RankName.Yokozuna, RankName.Ozeki, RankName.Sekiwake, RankName.Komusubi)) {
+			options.put(rankName.name(), KR_LABEL.get(rankName.name()));
+		}
+		return options;
 	}
 
 	// ===== 자유 문자열 계급값(highest_rank 등) → 일본어 한자 (리키시 상세 일본어 화면용) =====

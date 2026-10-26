@@ -86,6 +86,61 @@ public class HighestRankService {
 		return result;
 	}
 
+	/**
+	 * 관리자 화면용 점검 결과. computed는 직접 입력값을 빼고 반즈케로만 계산한 값(기록이 없으면 null),
+	 * outdated는 직접 입력값이 그보다 낮다는 뜻 - 입력한 뒤 더 올라갔으니(예: 「마에가시라」로 넣은 뒤 코무스비 승진)
+	 * 지우거나 고쳐야 한다.
+	 */
+	public record ManualCheck(HighestRank computed, boolean outdated) {
+	}
+
+	/** 관리자 목록·수정 화면용 (반즈케 1쿼리). 결과가 없는 리키시는 맵에 없다. */
+	public Map<Integer, ManualCheck> checkAll(Collection<RikishiEntity> rikishi) {
+		if (rikishi.isEmpty()) {
+			return Map.of();
+		}
+		Map<Integer, List<BanzukeEntity>> byRikishi = banzukeRepository
+				.findByRikishiIdsFetchBasho(rikishi.stream().map(RikishiEntity::getId).toList())
+				.stream()
+				.collect(Collectors.groupingBy(b -> b.getRikishiEntity().getId()));
+		LocalDate dataStart = dataStart();
+		Map<Integer, ManualCheck> result = new HashMap<>();
+		for (RikishiEntity r : rikishi) {
+			List<BanzukeEntity> history = byRikishi.getOrDefault(r.getId(), List.of());
+			Subject s = Subject.of(r);
+			HighestRank computed = resolve(new Subject(s.rikishiId(), null, s.debut(), s.verified()), history, dataStart);
+			BanzukeEntity best = history.stream().min(HIGHEST_FIRST).orElse(null);
+			result.put(r.getId(), new ManualCheck(computed, best != null && isLowerThan(r.getHighestRank(), best)));
+		}
+		return result;
+	}
+
+	/**
+	 * 직접 입력값("Komusubi", "Maegashira 4")이 반즈케 최고 기록보다 낮은지. 번호가 붙는 지위(마에가시라~)인데
+	 * 번호가 없는 옛 입력값은 같은 지위여도 낮은 것으로 본다 - 계산값이 번호까지 정확하다.
+	 * 해석할 수 없는 값(한글 등)이나 빈 값은 false.
+	 */
+	static boolean isLowerThan(String manual, BanzukeEntity best) {
+		if (manual == null || manual.isBlank()) {
+			return false;
+		}
+		String[] parts = manual.strip().split("\\s+");
+		RankName rankName;
+		try {
+			rankName = RankName.valueOf(parts[0]);
+		} catch (IllegalArgumentException e) {
+			return false;
+		}
+		int cmp = Integer.compare(rankName.ordinal(), best.getRankName().ordinal());
+		if (cmp != 0 || !isNumbered(rankName)) {
+			return cmp > 0;
+		}
+		if (parts.length < 2 || !parts[1].matches("\\d{1,3}")) {
+			return true;
+		}
+		return best.getRankValue() != null && Integer.parseInt(parts[1]) > best.getRankValue();
+	}
+
 	static HighestRank resolve(Subject s, List<BanzukeEntity> banzukeHistory, LocalDate dataStart) {
 		String manual = s.manualHighestRank();
 		if (manual != null && !manual.isBlank()) {
