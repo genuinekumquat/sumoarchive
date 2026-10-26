@@ -1,5 +1,7 @@
 package com.torikumilab.sumoarchive.service;
 
+import com.torikumilab.sumoarchive.domain.dto.AwardGroupDTO;
+import com.torikumilab.sumoarchive.domain.dto.AwardHistoryItemDTO;
 import com.torikumilab.sumoarchive.domain.dto.BashoGameLogDTO;
 import com.torikumilab.sumoarchive.domain.dto.HeadToHeadBoutDTO;
 import com.torikumilab.sumoarchive.domain.dto.HeadToHeadDTO;
@@ -10,8 +12,10 @@ import com.torikumilab.sumoarchive.domain.dto.MatchHistoryItemDTO;
 import com.torikumilab.sumoarchive.domain.dto.RikishiBookmarkCardDTO;
 import com.torikumilab.sumoarchive.domain.dto.RikishiDetailDTO;
 import com.torikumilab.sumoarchive.domain.dto.ShikonaHistoryItemDTO;
+import com.torikumilab.sumoarchive.domain.entity.AwardEntity;
 import com.torikumilab.sumoarchive.domain.entity.BanzukeEntity;
 import com.torikumilab.sumoarchive.domain.entity.BashoEntity;
+import com.torikumilab.sumoarchive.domain.entity.KinboshiEntity;
 import com.torikumilab.sumoarchive.domain.entity.RikishiEntity;
 import com.torikumilab.sumoarchive.domain.entity.ScheduledBoutEntity;
 import com.torikumilab.sumoarchive.domain.entity.TorikumiEntity;
@@ -186,6 +190,66 @@ public class RikishiDetailService {
 	private long countYusho(Integer rikishiId, Division division) {
 		return awardRepository.countByRikishiEntityIdAndDivisionAndAwardType(
 				rikishiId, division, AwardType.YUSHO);
+	}
+
+	/**
+	 * 프로필 수상 기록 칸 10개: 우승(마쿠우치→조노구치) → 수훈·감투·기능상 → 킨보시. 칸마다 펼치면 보이는
+	 * 내역이 오래된 바쇼부터 들어 있다 (위 횟수와 같은 award·kinboshi 테이블이라 개수가 맞는다).
+	 */
+	public List<AwardGroupDTO> getAwardGroups(Integer rikishiId) {
+		Map<String, List<AwardHistoryItemDTO>> byKey = new LinkedHashMap<>();
+		for (Division d : Division.values()) {
+			byKey.put(awardLabelKey(AwardType.YUSHO, d), new ArrayList<>());
+		}
+		for (AwardType t : List.of(AwardType.SANSHO_SHUKUN, AwardType.SANSHO_KANTO, AwardType.SANSHO_GINO)) {
+			byKey.put(awardLabelKey(t, null), new ArrayList<>());
+		}
+
+		awardRepository.findWithBashoByRikishiId(rikishiId).stream()
+				.sorted(Comparator.comparingInt((AwardEntity a) -> bashoOrder(a.getBashoEntity())))
+				.forEach(a -> byKey.get(awardLabelKey(a.getAwardType(), a.getDivision())).add(new AwardHistoryItemDTO(
+						bashoLabel(a.getBashoEntity()), bashoLabelKr(a.getBashoEntity()),
+						null, null, null, null, null)));
+		List<AwardHistoryItemDTO> kinboshi = kinboshiRepository.findWithBoutByWinnerRikishiId(rikishiId).stream()
+				.sorted(Comparator.comparingInt((KinboshiEntity k) -> bashoOrder(k.getTorikumiEntity().getBashoEntity()))
+						.thenComparingInt(k -> k.getTorikumiEntity().getDay()))
+				.map(k -> {
+					TorikumiEntity t = k.getTorikumiEntity();
+					RikishiEntity yokozuna = k.getLoserYokozuna();
+					return new AwardHistoryItemDTO(
+							bashoLabel(t.getBashoEntity()), bashoLabelKr(t.getBashoEntity()),
+							t.getDay(), t.getId(), yokozuna.getId(),
+							opponentDisplayNameJp(yokozuna), opponentDisplayName(yokozuna));
+				})
+				.toList();
+
+		List<AwardGroupDTO> result = new ArrayList<>();
+		byKey.forEach((key, items) -> result.add(new AwardGroupDTO(key, false, items)));
+		result.add(new AwardGroupDTO("rikishi.award.kinboshi", true, kinboshi));
+		return result;
+	}
+
+	private static String awardLabelKey(AwardType type, Division division) {
+		return switch (type) {
+			case YUSHO -> "rikishi.award." + division.name().toLowerCase();
+			case SANSHO_SHUKUN -> "rikishi.award.shukun";
+			case SANSHO_KANTO -> "rikishi.award.kanto";
+			case SANSHO_GINO -> "rikishi.award.gino";
+		};
+	}
+
+	private static int bashoOrder(BashoEntity basho) {
+		return basho.getBashoYear() * 100 + basho.getBashoMonth().getMonthValue();
+	}
+
+	private static String bashoLabel(BashoEntity basho) {
+		return basho.getBashoYear() + "年"
+				+ String.format("%02d", basho.getBashoMonth().getMonthValue()) + "月場所";
+	}
+
+	private static String bashoLabelKr(BashoEntity basho) {
+		return basho.getBashoYear() + "년 " + basho.getBashoMonth().getMonthValue() + "월 "
+				+ basho.getBashoMonth().getDisplayNameKr();
 	}
 	
 	/**
@@ -390,10 +454,8 @@ public class RikishiDetailService {
 	private HeadToHeadBoutDTO toHeadToHeadBout(TorikumiEntity t, Integer rikishiId) {
 		boolean win = isWinFor(t, rikishiId);
 		BashoEntity basho = t.getBashoEntity();
-		String bashoLabel = basho.getBashoYear() + "年"
-				+ String.format("%02d", basho.getBashoMonth().getMonthValue()) + "月場所";
-		String bashoLabelKr = basho.getBashoYear() + "년 " + basho.getBashoMonth().getMonthValue() + "월 "
-				+ basho.getBashoMonth().getDisplayNameKr();
+		String bashoLabel = bashoLabel(basho);
+		String bashoLabelKr = bashoLabelKr(basho);
 
 		String kimarite;
 		String kimariteKr;
@@ -480,10 +542,8 @@ public class RikishiDetailService {
 				? "-"
 				: wins + "승 " + losses + "패" + (absences > 0 ? " " + absences + "휴" : "");
 
-		String bashoLabel = basho.getBashoYear() + "年"
-				+ String.format("%02d", basho.getBashoMonth().getMonthValue()) + "月場所";
-		String bashoLabelKr = basho.getBashoYear() + "년 " + basho.getBashoMonth().getMonthValue() + "월 "
-				+ basho.getBashoMonth().getDisplayNameKr();
+		String bashoLabel = bashoLabel(basho);
+		String bashoLabelKr = bashoLabelKr(basho);
 
 		return new BashoGameLogDTO(
 				basho.getId(),

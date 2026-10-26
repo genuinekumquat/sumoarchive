@@ -46,6 +46,7 @@ public class RikishiDetailController {
 				: rikishiDetailService.groupHeadToHead(headToHead);
 
 		model.addAttribute("rikishi", rikishi);
+		model.addAttribute("awardGroups", rikishiDetailService.getAwardGroups(id));
 		model.addAttribute("kimariteStats", kimariteStats);
 		model.addAttribute("kimariteLossStats", kimariteLossStats);
 		// 패배 유형은 키마리테 차트(패배 모드) 아래에 붙으므로 같은 기간 필터를 따른다. 상대 조건별 성적은 통산.

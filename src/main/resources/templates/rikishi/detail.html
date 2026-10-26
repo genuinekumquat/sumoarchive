@@ -359,6 +359,27 @@
         .award-item .label { color: var(--sumi-soft); font-family: 'Zen Kaku Gothic New', sans-serif; }
         .award-item .count { color: var(--shu); font-weight: 700; }
 
+        /* 기록이 있는 수상 칸: 이름 옆 ▸를 누르면 그 상의 내역만 펼침 (<details>) */
+        .award-toggle { display: block; }
+        .award-toggle > summary {
+            display: flex;
+            justify-content: space-between;
+            list-style: none;
+            cursor: pointer;
+        }
+        .award-toggle > summary::-webkit-details-marker { display: none; }
+        .award-toggle > summary .label::after { content: ' ▸'; color: var(--sumi-faint); font-size: 11px; }
+        .award-toggle[open] > summary .label::after { content: ' ▾'; }
+        .award-toggle > summary:hover .label { color: var(--shu); }
+        .award-toggle ul { list-style: none; margin: 6px 0 0; padding: 0 0 0 8px; }
+        .award-toggle li {
+            padding: 3px 0;
+            font-size: 12px;
+            color: var(--sumi-soft);
+        }
+        .award-toggle .ah-bout { display: block; padding-left: 8px; }
+        .award-toggle a { color: inherit; }
+
         /* ===== 결정기술 기간 필터 ===== */
         .kimarite-filter {
             display: flex;
@@ -1147,29 +1168,26 @@
                 <span class="basho-count" th:text="'기록된 ' + ${rikishi.totalBasho} + '바쇼' + (${recordSinceYear} != null ? ' (' + ${recordSinceYear} + '년~)' : '')">기록된 45바쇼 (2019년~)</span>
             </div>
 
-            <div class="award-grid" th:if="${#locale.language == 'ja'}">
-                <div class="award-item"><span class="label" th:text="#{rikishi.award.makuuchi}">마쿠우치 우승</span><span class="count" th:text="${rikishi.yushoMakuuchi} + '回'">1回</span></div>
-                <div class="award-item"><span class="label" th:text="#{rikishi.award.juryo}">주료 우승</span><span class="count" th:text="${rikishi.yushoJuryo} + '回'">1回</span></div>
-                <div class="award-item"><span class="label" th:text="#{rikishi.award.makushita}">마쿠시타 우승</span><span class="count" th:text="${rikishi.yushoMakushita} + '回'">1回</span></div>
-                <div class="award-item"><span class="label" th:text="#{rikishi.award.sandanme}">산단메 우승</span><span class="count" th:text="${rikishi.yushoSandanme} + '回'">1回</span></div>
-                <div class="award-item"><span class="label" th:text="#{rikishi.award.jonidan}">조니단 우승</span><span class="count" th:text="${rikishi.yushoJonidan} + '回'">1回</span></div>
-                <div class="award-item"><span class="label" th:text="#{rikishi.award.jonokuchi}">조노구치 우승</span><span class="count" th:text="${rikishi.yushoJonokuchi} + '回'">1回</span></div>
-                <div class="award-item"><span class="label" th:text="#{rikishi.award.shukun}">수훈상</span><span class="count" th:text="${rikishi.sanshoShukun} + '回'">2回</span></div>
-                <div class="award-item"><span class="label" th:text="#{rikishi.award.kanto}">감투상</span><span class="count" th:text="${rikishi.sanshoKanto} + '回'">3回</span></div>
-                <div class="award-item"><span class="label" th:text="#{rikishi.award.gino}">기능상</span><span class="count" th:text="${rikishi.sanshoGino} + '回'">1回</span></div>
-                <div class="award-item"><span class="label" th:text="#{rikishi.award.kinboshi}">킨보시</span><span class="count" th:text="${rikishi.kinboshiCount} + '個'">1個</span></div>
-            </div>
-            <div class="award-grid" th:unless="${#locale.language == 'ja'}">
-                <div class="award-item"><span class="label">마쿠우치 우승</span><span class="count" th:text="${rikishi.yushoMakuuchi} + '회'">1회</span></div>
-                <div class="award-item"><span class="label">주료 우승</span><span class="count" th:text="${rikishi.yushoJuryo} + '회'">1회</span></div>
-                <div class="award-item"><span class="label">마쿠시타 우승</span><span class="count" th:text="${rikishi.yushoMakushita} + '회'">1회</span></div>
-                <div class="award-item"><span class="label">산단메 우승</span><span class="count" th:text="${rikishi.yushoSandanme} + '회'">1회</span></div>
-                <div class="award-item"><span class="label">조니단 우승</span><span class="count" th:text="${rikishi.yushoJonidan} + '회'">1회</span></div>
-                <div class="award-item"><span class="label">조노구치 우승</span><span class="count" th:text="${rikishi.yushoJonokuchi} + '회'">1회</span></div>
-                <div class="award-item"><span class="label">수훈상</span><span class="count" th:text="${rikishi.sanshoShukun} + '회'">2회</span></div>
-                <div class="award-item"><span class="label">감투상</span><span class="count" th:text="${rikishi.sanshoKanto} + '회'">3회</span></div>
-                <div class="award-item"><span class="label">기능상</span><span class="count" th:text="${rikishi.sanshoGino} + '회'">1회</span></div>
-                <div class="award-item"><span class="label">킨보시</span><span class="count" th:text="${rikishi.kinboshiCount} + '개'">1개</span></div>
+            <!-- 수상 기록: 기록이 있는 칸은 ▸를 눌러 그 상의 내역(오래된 바쇼부터)만 펼친다. 킨보시는 일차·상대 요코즈나까지 -->
+            <div class="award-grid" th:with="ja=${#locale.language == 'ja'}">
+                <th:block th:each="g : ${awardGroups}"
+                          th:with="countText=${g.count()} + (${g.kinboshi} ? (${ja} ? '個' : '개') : (${ja} ? '回' : '회'))">
+                    <div class="award-item" th:if="${g.items.isEmpty()}">
+                        <span class="label" th:text="#{${g.labelKey}}">조니단 우승</span><span class="count" th:text="${countText}">0회</span>
+                    </div>
+                    <details class="award-item award-toggle" th:unless="${g.items.isEmpty()}">
+                        <summary><span class="label" th:text="#{${g.labelKey}}">마쿠우치 우승</span><span class="count" th:text="${countText}">2회</span></summary>
+                        <ul>
+                            <li th:each="a : ${g.items}">
+                                <span th:text="${ja} ? ${a.bashoLabel} : ${a.bashoLabelKr}">2024년 1월 하츠바쇼</span>
+                                <span th:if="${a.kinboshi}" class="ah-bout">
+                                    <a th:href="@{/torikumi/{id}(id=${a.torikumiId})}" th:text="${a.day} + (${ja} ? '日目' : '일째')">5일째</a>
+                                    · <a th:href="@{/rikishi/{id}(id=${a.opponentId})}" th:text="${ja} ? ${a.opponentShikonaJp} : ${a.opponentShikonaKr}">테루노후지</a><span th:text="${ja} ? '戦' : ' 상대'"> 상대</span>
+                                </span>
+                            </li>
+                        </ul>
+                    </details>
+                </th:block>
             </div>
         </div>
 
