@@ -431,7 +431,11 @@ public class RikishiDetailService {
 		boolean useRecord = banzuke.hasRecord() && banzuke.getWins() + banzuke.getLosses() >= decidedBouts;
 		List<MatchHistoryItemDTO> matches;
 		if (sekitori) {
-			matches = buildMatchHistory(rikishiId, bashoMatches, opponentBanzukeById, lastDay);
+			// 중도 출전(예: 1~7일째 휴장 후 8일째 복귀)은 첫 출전일 이전 공백도 휴장이다. 데이터 미적재와 구분하려고
+			// 공식 휴장 수가 빈 날 수와 정확히 맞을 때만 첫날부터 채운다.
+			long emptyDays = lastDay - bashoMatches.stream().filter(t -> t.getDay() <= lastDay).count();
+			boolean lateEntry = useRecord && banzuke.getAbsences() > 0 && banzuke.getAbsences() == emptyDays;
+			matches = buildMatchHistory(rikishiId, bashoMatches, opponentBanzukeById, lastDay, lateEntry);
 			// 첫날부터 휴장하면 대진 자체가 안 짜여 부전 기록도 안 남음. 공식 성적이 全休이거나, 같은 바쇼·지위
 			// 토리쿠미가 적재돼 있으면 "全休"로 보고 적재된 일차 전부를 휴장 칸으로 채운다 (0勝0敗15休).
 			boolean zenkyu = useRecord
@@ -527,18 +531,18 @@ public class RikishiDetailService {
 	 * 채우는 범위는 그 바쇼에 적재된 마지막 일차까지 (진행 중 바쇼의 미개최일은 제외).
 	 * ⚠ 스키마에 별도 휴장 테이블/컬럼이 없어서 "그 바쇼의 첫 출전일 이후 토리쿠미 공백 = 휴장"으로
 	 *   추론하는 방식입니다. 첫 출전일 이전 공백(예: 데이터가 아직 다 안 채워진 경우)은 휴장으로
-	 *   보지 않고 그냥 표에서 생략합니다.
+	 *   보지 않고 그냥 표에서 생략합니다. 단 fillFromDay1이면(공식 휴장 수로 중도 출전이 확인된 경우) 첫날부터 채웁니다.
 	 */
 	private List<MatchHistoryItemDTO> buildMatchHistory(Integer rikishiId, List<TorikumiEntity> matches,
 													  Map<Integer, BanzukeEntity> opponentBanzukeByRikishiId,
-													  int lastDay) {
+													  int lastDay, boolean fillFromDay1) {
 		if (matches.isEmpty()) {
 			return List.of();
 		}
 
 		Map<Integer, TorikumiEntity> matchByDay = matches.stream()
 				.collect(Collectors.toMap(TorikumiEntity::getDay, t -> t));
-		int firstDay = matches.get(0).getDay(); // day 오름차순으로 넘어오므로 첫 번째가 첫 출전일
+		int firstDay = fillFromDay1 ? 1 : matches.get(0).getDay(); // day 오름차순으로 넘어오므로 첫 번째가 첫 출전일
 
 		List<MatchHistoryItemDTO> result = new ArrayList<>();
 		for (int day = 1; day <= lastDay; day++) {
