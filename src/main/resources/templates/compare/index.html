@@ -177,6 +177,15 @@
         .bout-winner.a { color: var(--shu); }
         .bout-winner.b { color: var(--ai); }
         .bout-kimarite { text-align: right; color: var(--sumi-soft); }
+        /* 7경기째부터는 접어 둔다. 펼치면 목록이 버튼 아래로 이어지고 버튼 문구는 "접기" */
+        .bout-more > summary {
+            list-style: none; cursor: pointer; padding: 10px 4px;
+            font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; color: var(--sumi-soft); text-decoration: underline;
+        }
+        .bout-more > summary::-webkit-details-marker { display: none; }
+        .bout-more > summary:hover { color: var(--shu); }
+        .bout-more .when-open, .bout-more[open] .when-closed { display: none; }
+        .bout-more[open] .when-open { display: inline; }
 
         @media (max-width: 560px) {
             .page { padding: 24px 16px 60px; }
@@ -285,6 +294,49 @@
             <p class="note" th:if="${c.recordSinceYear != null}" th:text="#{compare.since(${#strings.toString(c.recordSinceYear)})}">2019년 이후 기록 기준</p>
         </section>
 
+        <!-- ===== 맞대결 기록 (최신부터, 누르면 그 경기 페이지). 최근 6경기만 펼쳐 두고 나머지는 접는다 ===== -->
+        <section class="section" th:if="${c.hasBouts()}" th:with="shown=${c.bouts.size() > 6 ? c.bouts.subList(0, 6) : c.bouts}">
+            <h2 class="section-title" th:text="#{compare.bouts}">맞대결 기록</h2>
+            <ul class="bout-list">
+                <li th:each="bt : ${shown}" th:insert="~{this :: boutItem(${bt})}"></li>
+            </ul>
+            <details class="bout-more" th:if="${c.bouts.size() > 6}">
+                <summary>
+                    <span class="when-closed" th:text="#{compare.bouts.more(${c.bouts.size()})}">전체 11경기 보기</span>
+                    <span class="when-open" th:text="#{compare.bouts.less}">접기</span>
+                </summary>
+                <ul class="bout-list">
+                    <li th:each="bt : ${c.bouts.subList(6, c.bouts.size())}" th:insert="~{this :: boutItem(${bt})}"></li>
+                </ul>
+            </details>
+        </section>
+
+        <!-- ===== 결정기술: 맞대결에서 각자 이긴 기술 (= 상대가 진 기술) ===== -->
+        <section class="section" th:if="${c.hasBouts()}">
+            <h2 class="section-title" th:text="#{compare.kimarite}">결정기술</h2>
+            <div class="kimarite-grid">
+                <div th:each="col : ${ {'a', 'b'} }" th:class="'kim-col-' + ${col}"
+                     th:with="name=${col == 'a' ? an : bn}, cats=${col == 'a' ? c.aCategories : c.bCategories}, kims=${col == 'a' ? c.aKimarite : c.bKimarite}">
+                    <h3 class="kim-title" th:text="#{compare.kimarite.won(${name})}">호쇼류의 승리 기술</h3>
+                    <div class="empty" th:if="${kims.isEmpty()}" th:text="#{compare.kimarite.none}">기술로 이긴 경기가 없습니다.</div>
+                    <th:block th:unless="${kims.isEmpty()}" th:with="max=${kims[0].count}">
+                        <div class="bar-row" th:each="k : ${kims}">
+                            <span class="bar-label" th:text="${isJa ? k.jp : k.kr}" th:title="${isJa ? k.kr : k.jp}">요리키리</span>
+                            <span class="bar-track"><span class="bar-fill" style="display:block" th:style="'display:block;width:' + ${k.count * 100.0 / max} + '%'"></span></span>
+                            <span class="bar-num" th:text="${k.count}">3</span>
+                        </div>
+                        <div class="kim-sub" th:text="#{compare.kimarite.category}">기술 분류</div>
+                        <div class="bar-row" th:each="cat : ${cats}">
+                            <span class="bar-label" th:text="${isJa ? cat.jp : cat.kr}">기본기</span>
+                            <span class="bar-track"><span class="bar-fill" style="display:block" th:style="'display:block;width:' + ${cat.percent} + '%'"></span></span>
+                            <span class="bar-num" th:text="${#numbers.formatDecimal(cat.percent, 1, 0)} + '%'">60%</span>
+                        </div>
+                    </th:block>
+                </div>
+            </div>
+            <p class="note" th:if="${c.fusenBouts > 0}" th:text="#{compare.kimarite.note}">부전승은 빼고 셉니다.</p>
+        </section>
+
         <!-- ===== 최근 6바쇼 (진행 중 바쇼가 있으면 맨 위에 한 줄 더) ===== -->
         <section class="section" th:unless="${c.bashoRows.isEmpty()}">
             <h2 class="section-title" th:text="#{compare.recent}">최근 6바쇼</h2>
@@ -314,46 +366,15 @@
                 </tbody>
             </table>
         </section>
+    </th:block>
 
-        <!-- ===== 결정기술: 맞대결에서 각자 이긴 기술 (= 상대가 진 기술) ===== -->
-        <section class="section" th:if="${c.hasBouts()}">
-            <h2 class="section-title" th:text="#{compare.kimarite}">결정기술</h2>
-            <div class="kimarite-grid">
-                <div th:each="col : ${ {'a', 'b'} }" th:class="'kim-col-' + ${col}"
-                     th:with="name=${col == 'a' ? an : bn}, cats=${col == 'a' ? c.aCategories : c.bCategories}, kims=${col == 'a' ? c.aKimarite : c.bKimarite}">
-                    <h3 class="kim-title" th:text="#{compare.kimarite.won(${name})}">호쇼류의 승리 기술</h3>
-                    <div class="empty" th:if="${kims.isEmpty()}" th:text="#{compare.kimarite.none}">기술로 이긴 경기가 없습니다.</div>
-                    <th:block th:unless="${kims.isEmpty()}" th:with="max=${kims[0].count}">
-                        <div class="bar-row" th:each="k : ${kims}">
-                            <span class="bar-label" th:text="${isJa ? k.jp : k.kr}" th:title="${isJa ? k.kr : k.jp}">요리키리</span>
-                            <span class="bar-track"><span class="bar-fill" style="display:block" th:style="'display:block;width:' + ${k.count * 100.0 / max} + '%'"></span></span>
-                            <span class="bar-num" th:text="${k.count}">3</span>
-                        </div>
-                        <div class="kim-sub" th:text="#{compare.kimarite.category}">기술 분류</div>
-                        <div class="bar-row" th:each="cat : ${cats}">
-                            <span class="bar-label" th:text="${isJa ? cat.jp : cat.kr}">기본기</span>
-                            <span class="bar-track"><span class="bar-fill" style="display:block" th:style="'display:block;width:' + ${cat.percent} + '%'"></span></span>
-                            <span class="bar-num" th:text="${#numbers.formatDecimal(cat.percent, 1, 0)} + '%'">60%</span>
-                        </div>
-                    </th:block>
-                </div>
-            </div>
-            <p class="note" th:if="${c.fusenBouts > 0}" th:text="#{compare.kimarite.note}">부전승은 빼고 셉니다.</p>
-        </section>
-
-        <!-- ===== 맞대결 기록 (최신부터, 누르면 그 경기 페이지) ===== -->
-        <section class="section" th:if="${c.hasBouts()}">
-            <h2 class="section-title" th:text="#{compare.bouts}">맞대결 기록</h2>
-            <ul class="bout-list">
-                <li th:each="bt : ${c.bouts}">
-                    <a th:href="@{/torikumi/{id}(id=${bt.torikumiId})}">
-                        <span class="bout-basho" th:text="${isJa} ? (${bt.bashoLabelJp} + ' ' + ${bt.day} + '日目') : (${bt.bashoLabelKr} + ' ' + ${bt.day} + '일째')">2026 아키바쇼 8일째</span>
-                        <span class="bout-winner" th:classappend="${bt.aWon} ? 'a' : 'b'" th:text="'○ ' + (${bt.aWon} ? ${an} : ${bn})">○ 호쇼류</span>
-                        <span class="bout-kimarite" th:text="${isJa ? bt.kimariteJp : bt.kimariteKr}">요리키리</span>
-                    </a>
-                </li>
-            </ul>
-        </section>
+    <!-- 맞대결 기록 한 줄 (위 목록과 접힌 목록 공용). an·bn·isJa는 부르는 쪽 것을 쓴다 -->
+    <th:block th:if="${false}">
+        <a th:fragment="boutItem(bt)" th:href="@{/torikumi/{id}(id=${bt.torikumiId})}">
+            <span class="bout-basho" th:text="${isJa} ? (${bt.bashoLabelJp} + ' ' + ${bt.day} + '日目') : (${bt.bashoLabelKr} + ' ' + ${bt.day} + '일째')">2026 아키바쇼 8일째</span>
+            <span class="bout-winner" th:classappend="${bt.aWon} ? 'a' : 'b'" th:text="'○ ' + (${bt.aWon} ? ${an} : ${bn})">○ 호쇼류</span>
+            <span class="bout-kimarite" th:text="${isJa ? bt.kimariteJp : bt.kimariteKr}">요리키리</span>
+        </a>
     </th:block>
 
     <footer><span th:text="#{main.footer}">SUMOARCHIVE — 韓国語で見る大相撲情報アーカイブ</span><th:block th:replace="~{fragments/common :: footerNote}"></th:block></footer>
