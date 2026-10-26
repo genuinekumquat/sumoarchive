@@ -127,6 +127,8 @@
         }
         .bookmark-btn:hover { border-color: var(--shu); color: var(--shu); }
         .bookmark-btn.is-active { border-color: var(--shu); color: var(--shu); background: var(--shu-faint); }
+        /* 즐겨찾기 버튼 왼쪽에 같은 모양으로 (둘 다 float: right) */
+        .compare-btn { margin-right: 6px; text-decoration: none; }
 
         .shikona-row {
             display: flex;
@@ -928,6 +930,9 @@
         .h2h-bout-item .h2h-bout-mark.win { color: var(--shu); }
         .h2h-bout-item .h2h-bout-mark.loss { color: var(--sumi-faint); }
         .h2h-bout-item .h2h-bout-kimarite { margin-left: auto; color: var(--sumi-faint); }
+        .h2h-compare { padding: 6px 0 4px 14px; font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; }
+        .h2h-compare a { color: var(--sumi-soft); }
+        .h2h-compare a:hover { color: var(--shu); }
 
         /* 상대전적 맨 위 "유독 약한/강한 상대" 요약 - 두 칸(좁으면 한 칸) */
         .h2h-highlights {
@@ -994,6 +999,7 @@
                 <button type="button" id="bookmarkBtn" class="bookmark-btn" th:attr="data-rikishi-id=${rikishi.id}">
                     <span id="bookmarkIcon">☆</span> <span th:text="#{rikishi.bookmark}">즐겨찾기</span>
                 </button>
+                <a class="bookmark-btn compare-btn" th:href="@{/compare(a=${rikishi.id})}" th:text="'⇄ ' + #{compare.link.rikishi}">⇄ 다른 선수와 비교</a>
                 <span class="status-badge"
                       th:classappend="${rikishi.isActive} ? '' : 'retired'"
                       th:text="${rikishi.isActive} ? #{rikishi.active} : (${rikishi.oyakataNameKr} != null ? #{rikishi.oyakata.label} : #{rikishi.retired})">현역</span>
@@ -1456,6 +1462,9 @@
                         <span class="h2h-bout-mark" th:classappend="${b.win} ? 'win' : 'loss'" th:text="${b.win} ? '○' : '●'">○</span>
                         <span class="h2h-bout-kimarite" th:text="${b.kimarite}">寄り切り</span>
                     </li>
+                    <li class="h2h-compare" th:if="${h.opponentId != null}">
+                        <a th:href="@{/compare(a=${rikishi.id},b=${h.opponentId})}" th:text="'⇄ ' + #{compare.link.h2h}">⇄ 비교 보기</a>
+                    </li>
                 </ul>
             </details>
         </div>
@@ -1485,6 +1494,9 @@
                         <span class="h2h-bout-basho" th:text="${b.bashoLabelKr} + ' ' + ${b.day} + '일째'">2026년 7월 나고야바쇼 8일째</span>
                         <span class="h2h-bout-mark" th:classappend="${b.win} ? 'win' : 'loss'" th:text="${b.win} ? '○' : '●'">○</span>
                         <span class="h2h-bout-kimarite" th:text="${b.kimariteKr}">요리키리</span>
+                    </li>
+                    <li class="h2h-compare" th:if="${h.opponentId != null}">
+                        <a th:href="@{/compare(a=${rikishi.id},b=${h.opponentId})}" th:text="'⇄ ' + #{compare.link.h2h}">⇄ 비교 보기</a>
                     </li>
                 </ul>
             </details>

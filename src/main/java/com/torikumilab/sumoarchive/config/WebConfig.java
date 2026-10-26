@@ -33,7 +33,7 @@ public class WebConfig implements WebMvcConfigurer {
 		registry.addInterceptor(localeChangeInterceptor());
 		// 방문 통계: 공개 HTML 페이지만 (/torikumi/*는 경기 패널 조각 /torikumi/{id}/fragment를 포함하지 않음)
 		registry.addInterceptor(new PageViewInterceptor(visitStatsCollector))
-				.addPathPatterns("/", "/rikishi/*", "/torikumi/*", "/search", "/bookmark", "/updates", "/privacy");
+				.addPathPatterns("/", "/rikishi/*", "/torikumi/*", "/search", "/bookmark", "/compare", "/updates", "/privacy");
 	}
 
 	/** th:action 폼에 관리자 CSRF 토큰 숨김 필드를 자동으로 붙인다. 빈 이름은 Spring MVC 규약상 고정. */

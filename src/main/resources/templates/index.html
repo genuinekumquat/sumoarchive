@@ -690,6 +690,7 @@
                 <button type="submit" th:text="#{main.search.button}">검색</button>
             </form>
             <a th:href="@{/bookmark}" th:text="#{main.bookmark.link}" style="white-space: nowrap; align-self: center; font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; color: var(--sumi-soft); text-decoration: none;">★ 즐겨찾기</a>
+            <a th:href="@{/compare}" th:text="#{main.compare.link}" style="white-space: nowrap; align-self: center; font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; color: var(--sumi-soft); text-decoration: none;">⇄ 선수 비교</a>
         </div>
 
         <th:block th:replace="~{fragments/common :: langSwitch}"></th:block>

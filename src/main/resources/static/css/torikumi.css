@@ -111,6 +111,14 @@
 	color: var(--sumi-faint, #86857f);
 }
 .tk-result-value { font-weight: 700; }
+/* 두 선수 비교(/compare) 링크 - 결정기술 줄 오른쪽 끝 */
+.tk-compare {
+	margin-left: auto;
+	font-size: 12px;
+	color: var(--sumi-soft, #56554e);
+	white-space: nowrap;
+}
+.tk-compare:hover { color: var(--shu, #a3272c); }
 .tk-muted { color: var(--sumi-faint, #86857f); font-weight: 400; }
 
 .tk-desc {

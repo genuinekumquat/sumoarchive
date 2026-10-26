@@ -156,6 +156,8 @@
                     <span class="tk-result-value" th:if="${!torikumi.fusen and torikumi.kimariteKr != null}"
                           th:text="${ja and torikumi.kimariteJp != null} ? ${torikumi.kimariteJp} : (${torikumi.kimariteKr} + ' (' + ${torikumi.kimariteJp} + ')')">요리키리 (寄り切り)</span>
                     <span class="tk-result-value tk-muted" th:if="${!torikumi.fusen and torikumi.kimariteKr == null}" th:text="#{torikumi.kimarite.none}">기록 없음</span>
+                    <a class="tk-compare" th:href="@{/compare(a=${torikumi.eastRikishiId},b=${torikumi.westRikishiId})}"
+                       th:text="'⇄ ' + #{compare.link.torikumi}">⇄ 두 선수 비교</a>
                 </div>
 
                 <!-- 경기 해설: 화면 언어의 해설만 보여준다 (그 언어 해설이 없으면 생략) -->
