@@ -133,7 +133,8 @@ public final class OriginDisplayUtil {
 		city("Bayankhongor", "바양홍고르", "バヤンホンゴル");
 		city("Inner Mongolia", "내몽골", "内モンゴル");
 		city("Province of Laguna", "라구나", "ラグナ");
-		city("T?v", "투브", "トゥブ");
+		city("Töv", "투브", "トゥブ");
+		city("Tuva Republic, Kyzyl", "투바 공화국 크즐", "トゥヴァ共和国クズル");
 	}
 
 	public static String toKorean(String birthplace) {
