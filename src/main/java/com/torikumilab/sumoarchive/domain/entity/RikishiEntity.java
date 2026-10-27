@@ -83,6 +83,11 @@ public class RikishiEntity {
 	@Column(name = "highest_rank", length = 50)
 	private String highestRank;
 
+	// 직접 입력한 최고위에 처음 오른 바쇼(YYYYMM, sumo-api 전체 계급 이력 기준, V19). 데이터 작업으로만 채우고,
+	// 관리자가 최고위를 바꾸면 비운다 - 그때는 반즈케로 찾을 수 있는 경우에만 바쇼를 보여 준다.
+	@Column(name = "highest_rank_since", length = 6)
+	private String highestRankSince;
+
 	// 2019년 전 데뷔지만 반즈케 계산 최고위가 실제와 같다고 확인됨 (sumo-api 전체 계급 이력과 대조, V10).
 	// 데이터 작업으로만 채운다 — 관리자 수정 화면에서는 다루지 않음.
 	@Column(name = "highest_rank_verified", nullable = false)
@@ -261,6 +266,9 @@ public class RikishiEntity {
 		this.height = height;
 		this.weight = weight;
 		this.heyaEntity = heyaEntity;
+		if (!Objects.equals(this.highestRank, highestRank)) {
+			this.highestRankSince = null; // 옛 값의 바쇼라 더는 맞지 않음
+		}
 		this.highestRank = highestRank;
 		this.fightingStyle = fightingStyle;
 		this.debutDate = debutDate;

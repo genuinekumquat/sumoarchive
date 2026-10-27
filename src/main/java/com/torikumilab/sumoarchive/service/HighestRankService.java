@@ -3,6 +3,7 @@ package com.torikumilab.sumoarchive.service;
 import com.torikumilab.sumoarchive.domain.entity.BanzukeEntity;
 import com.torikumilab.sumoarchive.domain.entity.BashoEntity;
 import com.torikumilab.sumoarchive.domain.entity.RikishiEntity;
+import com.torikumilab.sumoarchive.domain.entity.constant.BashoMonth;
 import com.torikumilab.sumoarchive.domain.entity.constant.RankName;
 import com.torikumilab.sumoarchive.repository.BanzukeRepository;
 import com.torikumilab.sumoarchive.repository.BashoRepository;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -44,7 +46,7 @@ public class HighestRankService {
 
 	/**
 	 * @param rank      화면 표기 ("마에가시라3" / "前頭3枚目", 직접 입력값은 "오제키" / "大関")
-	 * @param since     처음 오른 바쇼 ("2024년 5월 나츠바쇼" / "2024年05月場所"). 직접 입력값이면 null
+	 * @param since     처음 오른 바쇼 ("2024년 5월 나츠바쇼" / "2024年05月場所"). 직접 입력값은 모를 때 null ({@link #manualSince})
 	 * @param partial   2019년 전 데뷔(또는 데뷔일 모름)라 적재된 기록만으로 계산했고, 실제와 같은지 확인되지 않은 값
 	 */
 	public record HighestRank(String rank, String rankJp, String since, String sinceJp, boolean partial) {
@@ -54,9 +56,13 @@ public class HighestRankService {
 	 * 계산에 필요한 리키시 정보. 검색 결과처럼 데뷔 연도만 있으면 그해 1월로 둔다
 	 * (기록 시작이 1월 바쇼라 연도만으로도 판단이 같다). 검색·즐겨찾기 카드는 partial을 쓰지 않아 verified를 몰라도 된다.
 	 */
-	public record Subject(Integer rikishiId, String manualHighestRank, YearMonth debut, boolean verified) {
+	public record Subject(Integer rikishiId, String manualHighestRank, String manualSince, YearMonth debut, boolean verified) {
+		public Subject(Integer rikishiId, String manualHighestRank, YearMonth debut, boolean verified) {
+			this(rikishiId, manualHighestRank, null, debut, verified);
+		}
+
 		public static Subject of(RikishiEntity r) {
-			return new Subject(r.getId(), r.getHighestRank(),
+			return new Subject(r.getId(), r.getHighestRank(), r.getHighestRankSince(),
 					r.getDebutDate() != null ? YearMonth.from(r.getDebutDate()) : null, r.isHighestRankVerified());
 		}
 	}
@@ -144,21 +150,62 @@ public class HighestRankService {
 	static HighestRank resolve(Subject s, List<BanzukeEntity> banzukeHistory, LocalDate dataStart) {
 		String manual = s.manualHighestRank();
 		if (manual != null && !manual.isBlank()) {
-			return new HighestRank(RankDisplayUtil.toKorean(manual), RankDisplayUtil.toJapanese(manual), null, null, false);
+			YearMonth since = manualSince(s, manual, banzukeHistory, dataStart);
+			return new HighestRank(RankDisplayUtil.toKorean(manual), RankDisplayUtil.toJapanese(manual),
+					since != null ? sinceKr(since) : null, since != null ? sinceJp(since) : null, false);
 		}
 		BanzukeEntity best = banzukeHistory.stream().min(HIGHEST_FIRST).orElse(null);
 		if (best == null) {
 			return null;
 		}
-		BashoEntity basho = best.getBashoEntity();
 		boolean partial = !s.verified() && best.getRankName() != RankName.Yokozuna
 				&& (dataStart == null || s.debut() == null || s.debut().isBefore(YearMonth.from(dataStart)));
+		YearMonth since = bashoMonth(best.getBashoEntity());
 		return new HighestRank(
 				RankDisplayUtil.rankDisplayKorean(best.getRankName(), best.getRankValue()),
 				RankDisplayUtil.rankDisplay(best.getRankName(), best.getRankValue()),
-				basho.getBashoYear() + "년 " + basho.getBashoMonth().getMonthValue() + "월 " + basho.getBashoMonth().getDisplayNameKr(),
-				basho.getBashoYear() + "年" + String.format("%02d", basho.getBashoMonth().getMonthValue()) + "月場所",
-				partial);
+				sinceKr(since), sinceJp(since), partial);
+	}
+
+	/**
+	 * 직접 입력한 최고위에 처음 오른 바쇼. 저장된 값(sumo-api 전체 이력, V19)이 우선이고, 없으면 반즈케에서 그 지위
+	 * (번호가 있으면 번호까지)에 처음 오른 바쇼 - 단 기록 시작(2019년) 뒤에 데뷔한 리키시만. 그 전 데뷔면 2019년 전에
+	 * 이미 올랐을 수 있어(예: 타카야스 오제키 2017년) 반즈케의 첫 기록이 틀린 바쇼일 수 있다 → null.
+	 */
+	private static YearMonth manualSince(Subject s, String manual, List<BanzukeEntity> banzukeHistory, LocalDate dataStart) {
+		String stored = s.manualSince();
+		if (stored != null && stored.matches("\\d{6}")) {
+			return YearMonth.of(Integer.parseInt(stored.substring(0, 4)), Integer.parseInt(stored.substring(4)));
+		}
+		if (dataStart == null || s.debut() == null || s.debut().isBefore(YearMonth.from(dataStart))) {
+			return null;
+		}
+		String[] parts = manual.strip().split("\\s+");
+		return banzukeHistory.stream()
+				.filter(b -> b.getRankName().name().equals(parts[0]))
+				.filter(b -> parts.length < 2 || String.valueOf(b.getRankValue()).equals(parts[1]))
+				.map(b -> bashoMonth(b.getBashoEntity()))
+				.min(Comparator.naturalOrder())
+				.orElse(null);
+	}
+
+	private static YearMonth bashoMonth(BashoEntity basho) {
+		return YearMonth.of(basho.getBashoYear(), basho.getBashoMonth().getMonthValue());
+	}
+
+	private static String sinceKr(YearMonth ym) {
+		return ym.getYear() + "년 " + ym.getMonthValue() + "월 " + toBashoMonth(ym).getDisplayNameKr();
+	}
+
+	private static String sinceJp(YearMonth ym) {
+		return ym.getYear() + "年" + String.format("%02d", ym.getMonthValue()) + "月場所";
+	}
+
+	private static BashoMonth toBashoMonth(YearMonth ym) {
+		return Arrays.stream(BashoMonth.values())
+				.filter(m -> m.getMonthValue() == ym.getMonthValue())
+				.findFirst()
+				.orElseThrow(() -> new IllegalArgumentException("바쇼 달이 아님: " + ym));
 	}
 
 	/** 반즈케가 적재된 가장 이른 바쇼의 시작일 (2019년 1월). 반즈케가 하나도 없으면 null. */

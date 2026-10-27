@@ -56,7 +56,36 @@ class HighestRankServiceTest {
 	}
 
 	@Test
-	@DisplayName("관리자 직접 입력값이 있으면 그 값 (바쇼 없음)")
+	@DisplayName("직접 입력값에 저장된 바쇼(sumo-api 전체 이력)가 있으면 그 바쇼 - 기록 시작 전이어도")
+	void manualWithStoredSince() {
+		Subject manual = new Subject(1, "Ozeki", "201707", YearMonth.of(2004, 1), false);
+
+		HighestRank h = HighestRankService.resolve(manual,
+				List.of(banzuke(2019, BashoMonth.JAN, RankName.Ozeki, 1)), DATA_START);
+
+		assertThat(h.rank()).isEqualTo("오제키");
+		assertThat(h.since()).isEqualTo("2017년 7월 나고야바쇼");
+		assertThat(h.sinceJp()).isEqualTo("2017年07月場所");
+	}
+
+	@Test
+	@DisplayName("저장된 바쇼가 없으면 기록 시작 뒤 데뷔만 반즈케에서 그 지위(번호까지) 첫 바쇼")
+	void manualSinceFromBanzuke() {
+		List<BanzukeEntity> history = List.of(
+				banzuke(2024, BashoMonth.NOV, RankName.Ozeki, 2),
+				banzuke(2025, BashoMonth.JAN, RankName.Ozeki, 1),
+				banzuke(2024, BashoMonth.SEP, RankName.Maegashira, 4));
+
+		assertThat(HighestRankService.resolve(new Subject(1, "Ozeki", YearMonth.of(2023, 5), false), history, DATA_START).since())
+				.isEqualTo("2024년 11월 큐슈바쇼");
+		assertThat(HighestRankService.resolve(new Subject(1, "Maegashira 4", YearMonth.of(2023, 5), false), history, DATA_START).since())
+				.isEqualTo("2024년 9월 아키바쇼");
+		assertThat(HighestRankService.resolve(new Subject(1, "Maegashira 3", YearMonth.of(2023, 5), false), history, DATA_START).since())
+				.isNull();
+	}
+
+	@Test
+	@DisplayName("관리자 직접 입력값이 있으면 그 값 (기록 시작 전 데뷔·저장된 바쇼 없음이면 바쇼 없음)")
 	void manualWins() {
 		Subject manual = new Subject(1, "Ozeki", YearMonth.of(2005, 1), false);
 
