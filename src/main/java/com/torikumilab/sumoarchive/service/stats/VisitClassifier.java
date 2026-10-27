@@ -33,9 +33,10 @@ public final class VisitClassifier {
 	public record Page(PageType type, int targetId) {}
 
 	// 2026.10.12 Nginx 로그 집계와 같은 기준 + 링크 미리보기·모니터링 도구
+	// + 2026.10.27 로그에서 사람으로 세던 것: meta-externalagent(Meta AI 수집기), DCInsideGallery-ChkUrl, Yeti(네이버)
 	private static final Pattern BOT_UA = Pattern.compile(
 			"bot|crawl|spider|slurp|curl|wget|python|go-http|headless|playwright|preview|scan|monitor|"
-					+ "facebookexternalhit|java/|okhttp|axios|node-fetch|httpclient|libwww|lighthouse");
+					+ "facebookexternalhit|externalagent|chkurl|yeti|java/|okhttp|axios|node-fetch|httpclient|libwww|lighthouse");
 
 	private static final Pattern RIKISHI = Pattern.compile("^/rikishi/(\\d+)$");
 	private static final Pattern TORIKUMI = Pattern.compile("^/torikumi/(\\d+)$");

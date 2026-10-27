@@ -30,6 +30,7 @@ public class SeoController {
 				Disallow: /api/
 				Disallow: /search
 				Disallow: /bookmark
+				Disallow: /feedback
 				Disallow: /torikumi/*/fragment
 
 				Sitemap: %s/sitemap.xml

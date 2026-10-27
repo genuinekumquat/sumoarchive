@@ -56,7 +56,8 @@
         <span th:text="#{footer.disclaimer}">개인이 운영하는 팬 사이트이며 일본스모협회(日本相撲協会)와 관련이 없습니다.</span>
         · <a th:href="@{/updates}" th:text="#{footer.updates}" style="color: inherit;">업데이트 소식</a>
         · <a th:href="@{/privacy}" th:text="#{footer.privacy}" style="color: inherit;">개인정보 처리 안내</a>
-        · <a th:href="@{/feedback(from=${currentPath})}" th:text="#{footer.feedback}" style="color: inherit;">의견·오류 보내기</a>
+        <!--/* 의견 페이지 안에서는 from을 또 붙이지 않는다 - from이 끝없이 중첩되는 주소를 크롤러가 따라가던 문제(2026.10.27) */-->
+        · <a th:href="${#strings.startsWith(currentPath, '/feedback')} ? @{/feedback} : @{/feedback(from=${currentPath})}" rel="nofollow" th:text="#{footer.feedback}" style="color: inherit;">의견·오류 보내기</a>
     </p>
 </th:block>
 

@@ -19,6 +19,9 @@ class VisitClassifierTest {
 		assertThat(VisitClassifier.isBot(CHROME_PC, "ja")).isFalse();
 		assertThat(VisitClassifier.isBot("Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)", "en")).isTrue();
 		assertThat(VisitClassifier.isBot("Mozilla/5.0 (compatible; Yeti/1.1; +https://naver.me/spd)", null)).isTrue(); // 네이버 수집기: 언어 헤더 없음
+		assertThat(VisitClassifier.isBot("Mozilla/5.0 (compatible; Yeti/1.1; +https://naver.me/spd)", "ko")).isTrue();
+		assertThat(VisitClassifier.isBot("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36 (compatible; meta-externalagent/1.1 (+https://developers.facebook.com/docs/sharing/webmasters/crawler))", "en")).isTrue();
+		assertThat(VisitClassifier.isBot("Mozilla/5.0 (compatible; DCInsideGallery-ChkUrl/1.0)", "ko")).isTrue();
 		assertThat(VisitClassifier.isBot("curl/8.4.0", "ko")).isTrue();
 		assertThat(VisitClassifier.isBot("python-requests/2.31", "ko")).isTrue();
 		assertThat(VisitClassifier.isBot(CHROME_PC, null)).isTrue();
