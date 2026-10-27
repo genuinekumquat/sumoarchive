@@ -34,6 +34,9 @@ public class VisitStatsService {
 
 	public record Ranked(String label, Integer rikishiId, long count, int percent) {}
 
+	/** 즐겨찾기 많은 리키시: net = 집계 시작 후 누적(추가 − 해제), periodAdds = 고른 기간에 새로 추가된 횟수 */
+	public record Bookmarked(String label, Integer rikishiId, long net, long periodAdds, int percent) {}
+
 	public record Summary(
 			int days,
 			LocalDate from,
@@ -47,7 +50,9 @@ public class VisitStatsService {
 			List<Day> daily,
 			List<Ranked> topRikishi,
 			List<Ranked> pageTypes,
-			List<Ranked> referrers
+			List<Ranked> referrers,
+			List<Bookmarked> topBookmarked,
+			LocalDate bookmarkSince // 즐겨찾기 집계를 시작한 날 (기록 없으면 null)
 	) {}
 
 	public Summary summary(int days) {
@@ -79,7 +84,8 @@ public class VisitStatsService {
 				daily.get(daily.size() - 1),
 				daily.size() > 1 ? daily.get(daily.size() - 2) : new Day(today.minusDays(1), 0, 0, 0),
 				visitors, pageViews, percent(mobile, visitors), maxPv, daily,
-				topRikishi(fromSql), pageTypes(fromSql, pageViews), referrers(fromSql));
+				topRikishi(fromSql), pageTypes(fromSql, pageViews), referrers(fromSql),
+				topBookmarked(fromSql), bookmarkSince());
 	}
 
 	private List<Ranked> topRikishi(Date from) {
@@ -88,15 +94,45 @@ public class VisitStatsService {
 						WHERE page_type = 'RIKISHI' AND stat_date >= ? GROUP BY target_id ORDER BY v DESC LIMIT 10""",
 				(rs, i) -> new long[]{rs.getLong(1), rs.getLong(2)}, from);
 		long total = rows.stream().mapToLong(r -> r[1]).sum();
-		Map<Integer, RikishiEntity> names = new HashMap<>();
-		rikishiRepository.findAllById(rows.stream().map(r -> (int) r[0]).toList()).forEach(r -> names.put(r.getId(), r));
+		Map<Integer, String> names = shikonaById(rows.stream().map(r -> (int) r[0]).toList());
 		return rows.stream().map(r -> {
 			int id = (int) r[0];
-			RikishiEntity e = names.get(id);
-			String label = e == null ? "#" + id
-					: (e.getShikonaKr() != null ? e.getShikonaKr() : e.getShikonaJp() != null ? e.getShikonaJp() : "#" + id);
-			return new Ranked(label, id, r[1], percent(r[1], total));
+			return new Ranked(names.get(id), id, r[1], percent(r[1], total));
 		}).toList();
+	}
+
+	/**
+	 * 즐겨찾기 많은 리키시 Top 10 - 기간과 상관없이 집계 시작 후 누적(추가 − 해제) 순. 막대는 1위 대비.
+	 * 브라우저 데이터를 지우면 해제가 오지 않아 실제보다 조금 많게 잡힐 수 있다.
+	 */
+	private List<Bookmarked> topBookmarked(Date from) {
+		List<long[]> rows = jdbcTemplate.query("""
+						SELECT rikishi_id, SUM(adds) - SUM(removes) net,
+						  SUM(CASE WHEN stat_date >= ? THEN adds ELSE 0 END) recent
+						FROM bookmark_daily_stat GROUP BY rikishi_id HAVING net > 0 ORDER BY net DESC, recent DESC LIMIT 10""",
+				(rs, i) -> new long[]{rs.getLong(1), rs.getLong(2), rs.getLong(3)}, from);
+		long max = rows.isEmpty() ? 0 : rows.get(0)[1];
+		Map<Integer, String> names = shikonaById(rows.stream().map(r -> (int) r[0]).toList());
+		return rows.stream().map(r -> {
+			int id = (int) r[0];
+			return new Bookmarked(names.get(id), id, r[1], r[2], percent(r[1], max));
+		}).toList();
+	}
+
+	private LocalDate bookmarkSince() {
+		Date d = jdbcTemplate.queryForObject("SELECT MIN(stat_date) FROM bookmark_daily_stat", Date.class);
+		return d == null ? null : d.toLocalDate();
+	}
+
+	/** 통계 표에 쓰는 시코나 (한국어 → 한자 → #id) */
+	private Map<Integer, String> shikonaById(List<Integer> ids) {
+		Map<Integer, String> names = new HashMap<>();
+		for (RikishiEntity e : rikishiRepository.findAllById(ids)) {
+			names.put(e.getId(), e.getShikonaKr() != null ? e.getShikonaKr()
+					: e.getShikonaJp() != null ? e.getShikonaJp() : "#" + e.getId());
+		}
+		ids.forEach(id -> names.putIfAbsent(id, "#" + id));
+		return names;
 	}
 
 	private List<Ranked> pageTypes(Date from, long totalViews) {

@@ -102,4 +102,28 @@ class VisitStatsCollectorTest {
 		assertThat(site.getAllValues().get(1)).singleElement()
 				.satisfies(row -> assertThat(row).containsExactly(Date.valueOf(DAY), 2L, 2L, 0L));
 	}
+
+	@Test
+	@DisplayName("즐겨찾기 추가/해제는 리키시별 합계, 같은 날 같은 방문자의 같은 동작은 한 번만 - 방문자 수와는 따로")
+	@SuppressWarnings("unchecked")
+	void bookmarksDedupedPerVisitor() {
+		VisitStatsCollector collector = new VisitStatsCollector(jdbcTemplate);
+		collector.recordBookmark(1, true, "1.1.1.1", PC, DAY);
+		collector.recordBookmark(1, true, "1.1.1.1", PC, DAY);   // 같은 사람이 다시 추가 → 안 셈
+		collector.recordBookmark(1, false, "1.1.1.1", PC, DAY);  // 해제는 따로 1번
+		collector.recordBookmark(1, true, "2.2.2.2", PC, DAY);
+		collector.recordBookmark(2, true, "1.1.1.1", PC, DAY);
+		collector.record(new Page(PageType.MAIN, 0), "1.1.1.1", PC, null, DAY); // 즐겨찾기 해시와 섞여도 방문자 1명
+		collector.flush();
+
+		ArgumentCaptor<List<Object[]>> bookmarks = ArgumentCaptor.forClass(List.class);
+		verify(jdbcTemplate).batchUpdate(contains("bookmark_daily_stat"), bookmarks.capture());
+		assertThat(bookmarks.getValue()).extracting(r -> r[1] + ":+" + r[2] + "-" + r[3])
+				.containsExactlyInAnyOrder("1:+2-1", "2:+1-0");
+
+		ArgumentCaptor<List<Object[]>> site = ArgumentCaptor.forClass(List.class);
+		verify(jdbcTemplate).batchUpdate(contains("site_daily_stat"), site.capture());
+		assertThat(site.getValue()).singleElement()
+				.satisfies(row -> assertThat(row).containsExactly(Date.valueOf(DAY), 1L, 1L, 0L));
+	}
 }

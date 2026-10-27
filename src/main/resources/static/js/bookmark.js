@@ -41,7 +41,22 @@
 			ids.push(id);
 		}
 		setIds(ids);
+		report(id, idx < 0);
 		return idx < 0;
+	}
+
+	// 관리자 통계 「즐겨찾기 많은 리키시」용으로 리키시 id와 추가/해제만 보낸다(목록 전체·누가 했는지는 안 보냄).
+	// 실패해도 즐겨찾기 동작과 무관하므로 무시.
+	function report(id, added) {
+		try {
+			fetch('/api/bookmark-stat', {
+				method: 'POST',
+				body: new URLSearchParams({ rikishiId: String(id), added: String(added) }),
+				keepalive: true
+			}).catch(function () {});
+		} catch (e) {
+			/* fetch 없는 브라우저 - 무시 */
+		}
 	}
 
 	window.SumoBookmark = { getIds: getIds, setIds: setIds, isBookmarked: isBookmarked, toggle: toggle };

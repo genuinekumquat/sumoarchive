@@ -57,6 +57,8 @@ public class VisitStatsCollector {
 
 	record RefKey(LocalDate date, String source) {}
 
+	record BookmarkKey(LocalDate date, int rikishiId) {}
+
 	/** 다음 flush 때 DB에 더할 숫자들 */
 	static final class Buckets {
 		final Map<LocalDate, LongAdder> views = new ConcurrentHashMap<>();
@@ -64,9 +66,12 @@ public class VisitStatsCollector {
 		final Map<LocalDate, LongAdder> mobileVisitors = new ConcurrentHashMap<>();
 		final Map<PageKey, LongAdder> pages = new ConcurrentHashMap<>();
 		final Map<RefKey, LongAdder> refs = new ConcurrentHashMap<>();
+		final Map<BookmarkKey, LongAdder> bookmarkAdds = new ConcurrentHashMap<>();
+		final Map<BookmarkKey, LongAdder> bookmarkRemoves = new ConcurrentHashMap<>();
 
 		boolean isEmpty() {
-			return views.isEmpty() && visitors.isEmpty() && pages.isEmpty() && refs.isEmpty();
+			return views.isEmpty() && visitors.isEmpty() && pages.isEmpty() && refs.isEmpty()
+					&& bookmarkAdds.isEmpty() && bookmarkRemoves.isEmpty();
 		}
 
 		void addAll(Buckets other) {
@@ -75,6 +80,8 @@ public class VisitStatsCollector {
 			other.mobileVisitors.forEach((k, v) -> add(mobileVisitors, k, v.sum()));
 			other.pages.forEach((k, v) -> add(pages, k, v.sum()));
 			other.refs.forEach((k, v) -> add(refs, k, v.sum()));
+			other.bookmarkAdds.forEach((k, v) -> add(bookmarkAdds, k, v.sum()));
+			other.bookmarkRemoves.forEach((k, v) -> add(bookmarkRemoves, k, v.sum()));
 		}
 
 		static <K> void add(Map<K, LongAdder> map, K key, long n) {
@@ -115,7 +122,33 @@ public class VisitStatsCollector {
 		}
 	}
 
+	/**
+	 * 즐겨찾기 추가/해제 1건. 같은 날 같은 방문자(IP+브라우저)의 같은 리키시·같은 동작은 한 번만 센다
+	 * (☆를 여러 번 눌러 숫자를 부풀리지 못하게). 리키시 존재·봇 판별은 호출하는 쪽(BookmarkStatApiController)이 한다.
+	 */
+	public void recordBookmark(int rikishiId, boolean added, String clientIp, String userAgent) {
+		recordBookmark(rikishiId, added, clientIp, userAgent, LocalDate.now(ZONE));
+	}
+
+	void recordBookmark(int rikishiId, boolean added, String clientIp, String userAgent, LocalDate today) {
+		if (!markSeen(today, clientIp + "|" + userAgent + "|bookmark|" + rikishiId + "|" + added)) {
+			return;
+		}
+		lock.readLock().lock();
+		try {
+			Buckets b = buckets;
+			Buckets.add(added ? b.bookmarkAdds : b.bookmarkRemoves, new BookmarkKey(today, rikishiId), 1);
+		} finally {
+			lock.readLock().unlock();
+		}
+	}
+
 	private boolean markVisitor(LocalDate today, String clientIp, String userAgent) {
+		return markSeen(today, clientIp + "|" + userAgent);
+	}
+
+	/** 그날 처음 보는 값이면 true. 값은 그날의 랜덤 값으로 해시해서만 메모리에 둔다. */
+	private boolean markSeen(LocalDate today, String value) {
 		DayVisitors day = dayVisitors;
 		if (day == null || !day.date().equals(today)) {
 			synchronized (this) {
@@ -131,7 +164,7 @@ public class VisitStatsCollector {
 		if (day.seen().size() >= MAX_VISITORS_PER_DAY) {
 			return false;
 		}
-		return day.seen().add(hash(day.salt(), clientIp + "|" + userAgent));
+		return day.seen().add(hash(day.salt(), value));
 	}
 
 	private static String hash(byte[] salt, String value) {
@@ -198,6 +231,17 @@ public class VisitStatsCollector {
 		if (!refs.isEmpty()) jdbcTemplate.batchUpdate("""
 				INSERT INTO referrer_daily_stat (stat_date, source, visits) VALUES (?, ?, ?) AS n
 				ON DUPLICATE KEY UPDATE visits = referrer_daily_stat.visits + n.visits""", refs);
+
+		List<Object[]> bookmarks = new ArrayList<>();
+		Set<BookmarkKey> bookmarkKeys = new java.util.HashSet<>(b.bookmarkAdds.keySet());
+		bookmarkKeys.addAll(b.bookmarkRemoves.keySet());
+		for (BookmarkKey k : bookmarkKeys) {
+			bookmarks.add(new Object[]{Date.valueOf(k.date()), k.rikishiId(), sum(b.bookmarkAdds, k), sum(b.bookmarkRemoves, k)});
+		}
+		if (!bookmarks.isEmpty()) jdbcTemplate.batchUpdate("""
+				INSERT INTO bookmark_daily_stat (stat_date, rikishi_id, adds, removes) VALUES (?, ?, ?, ?) AS n
+				ON DUPLICATE KEY UPDATE adds = bookmark_daily_stat.adds + n.adds,
+				  removes = bookmark_daily_stat.removes + n.removes""", bookmarks);
 	}
 
 	private static Set<LocalDate> union(Set<LocalDate> a, Set<LocalDate> b) {
@@ -206,8 +250,8 @@ public class VisitStatsCollector {
 		return all;
 	}
 
-	private static long sum(Map<LocalDate, LongAdder> map, LocalDate d) {
-		LongAdder v = map.get(d);
+	private static <K> long sum(Map<K, LongAdder> map, K key) {
+		LongAdder v = map.get(key);
 		return v == null ? 0 : v.sum();
 	}
 }
