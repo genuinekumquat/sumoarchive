@@ -1060,7 +1060,8 @@
                 <div class="shikona-history" th:if="${rikishi.shikonaHistory != null and !rikishi.shikonaHistory.isEmpty() and #locale.language != 'ja'}">
                     <th:block th:each="h, iter : ${rikishi.shikonaHistory}">
                         <span th:text="${h.shikonaKr}">이전시코나</span>
-                        <span class="period" th:text="'(' + ${#temporals.format(h.validFrom, 'yyyy.MM')} + '~' + (${h.validTo} != null ? ${#temporals.format(h.validTo, 'yyyy.MM')} : '') + ')'">(2015.11~2016.11)</span>
+                        <span class="period" th:if="${h.validFrom != null or h.validTo != null}"
+                              th:text="'(' + (${h.validFrom} != null ? ${#temporals.format(h.validFrom, 'yyyy.MM')} : '') + '~' + (${h.validTo} != null ? ${#temporals.format(h.validTo, 'yyyy.MM')} : '') + ')'">(2015.11~2016.11)</span>
                         <span class="arrow">→</span>
                     </th:block>
                     <span th:text="${rikishi.shikonaKr}">현재시코나</span>

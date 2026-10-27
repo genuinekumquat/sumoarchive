@@ -4,19 +4,24 @@ import com.torikumilab.sumoarchive.client.SumoApiClient;
 import com.torikumilab.sumoarchive.domain.dto.RosterImportResultDTO;
 import com.torikumilab.sumoarchive.domain.dto.sumoapi.SumoApiRikishiDTO;
 import com.torikumilab.sumoarchive.domain.dto.sumoapi.SumoApiRikishiPageDTO;
+import com.torikumilab.sumoarchive.domain.dto.sumoapi.SumoApiShikonaDTO;
 import com.torikumilab.sumoarchive.domain.entity.HeyaEntity;
 import com.torikumilab.sumoarchive.domain.entity.RikishiEntity;
+import com.torikumilab.sumoarchive.domain.entity.RikishiShikonaHistoryEntity;
 import com.torikumilab.sumoarchive.repository.HeyaRepository;
 import com.torikumilab.sumoarchive.repository.RikishiRepository;
+import com.torikumilab.sumoarchive.repository.RikishiShikonaHistoryRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -37,8 +42,72 @@ class RosterImportServiceTest {
 	@Mock
 	private HeyaRepository heyaRepository;
 
+	@Mock
+	private RikishiShikonaHistoryRepository rikishiShikonaHistoryRepository;
+
 	@InjectMocks
 	private RosterImportService rosterImportService;
+
+	@Test
+	@DisplayName("개명(일본어·영문 둘 다 바뀜)이면 옛 시코나를 이력에 남기고 한글 시코나를 새로 음차한다")
+	void importRoster_whenShikonaChanged_recordsHistoryAndRetransliterates() {
+		RikishiEntity rikishi = RikishiEntity.builder()
+				.externalApiId(118)
+				.shikonaKr("칸푸잔")
+				.shikonaKrAuto(false)
+				.shikonaJp("寒風山")
+				.shikonaEn("Kanpuzan")
+				.build();
+		given(heyaRepository.findAll()).willReturn(List.of());
+		given(rikishiRepository.findAll()).willReturn(List.of(rikishi));
+		SumoApiRikishiDTO api = new SumoApiRikishiDTO(118L, "Ikawasakura", "井川桜良(いかわさくら)", null,
+				"Makushita 41 East", "1993-11-16", "Akita-ken", 184, 142, "201201", null);
+		given(sumoApiClient.getActiveRikishis(500, 0))
+				.willReturn(new SumoApiRikishiPageDTO(500, 0, 1, List.of(api)));
+		// 뒷이름만 바뀐 줄(Kanpuzan Ryota → Kanpuzan)은 같은 시코나 구간, 순서는 최신순으로 와도 된다
+		given(sumoApiClient.getShikonaHistory(118)).willReturn(List.of(
+				new SumoApiShikonaDTO("202611", "Ikawasakura", "井川桜良(いかわさくら)"),
+				new SumoApiShikonaDTO("202503", "Kanpuzan", "寒風山(かんぷうざん)"),
+				new SumoApiShikonaDTO("202407", "Kanpuzan Ryota", ""),
+				new SumoApiShikonaDTO("202205", "Ryuo Ryota", "")));
+
+		RosterImportResultDTO result = rosterImportService.importRoster();
+
+		ArgumentCaptor<RikishiShikonaHistoryEntity> saved = ArgumentCaptor.forClass(RikishiShikonaHistoryEntity.class);
+		verify(rikishiShikonaHistoryRepository).save(saved.capture());
+		assertThat(saved.getValue().getShikonaKr()).isEqualTo("칸푸잔");
+		assertThat(saved.getValue().getShikonaJp()).isEqualTo("寒風山");
+		assertThat(saved.getValue().getValidFrom()).isEqualTo(LocalDate.of(2024, 7, 1));
+		assertThat(saved.getValue().getValidTo()).isEqualTo(LocalDate.of(2026, 10, 31));
+
+		assertThat(rikishi.getShikonaJp()).isEqualTo("井川桜良");
+		assertThat(rikishi.getShikonaKr()).isNotEqualTo("칸푸잔");
+		assertThat(rikishi.isShikonaKrAuto()).isTrue();
+		assertThat(result.warnings()).anyMatch(w -> w.startsWith("개명 감지"));
+	}
+
+	@Test
+	@DisplayName("시코나 이력 조회가 실패해도 개명은 기간 없이 기록되고 동기화는 계속된다")
+	void importRoster_whenShikonaHistoryFails_recordsWithoutPeriod() {
+		RikishiEntity rikishi = RikishiEntity.builder()
+				.externalApiId(8882).shikonaKr("이마무라").shikonaJp("今村").shikonaEn("Imamura").build();
+		given(heyaRepository.findAll()).willReturn(List.of());
+		given(rikishiRepository.findAll()).willReturn(List.of(rikishi));
+		SumoApiRikishiDTO api = new SumoApiRikishiDTO(8882L, "Inanoyama", "猪名の山(いなのやま)", null,
+				"Makushita 47 West", "2005-09-12", "Hyogo-ken", 181, 131, "202403", null);
+		given(sumoApiClient.getActiveRikishis(500, 0))
+				.willReturn(new SumoApiRikishiPageDTO(500, 0, 1, List.of(api)));
+		given(sumoApiClient.getShikonaHistory(8882)).willThrow(new RuntimeException("timeout"));
+
+		RosterImportResultDTO result = rosterImportService.importRoster();
+
+		ArgumentCaptor<RikishiShikonaHistoryEntity> saved = ArgumentCaptor.forClass(RikishiShikonaHistoryEntity.class);
+		verify(rikishiShikonaHistoryRepository).save(saved.capture());
+		assertThat(saved.getValue().getValidFrom()).isNull();
+		assertThat(saved.getValue().getValidTo()).isNull();
+		assertThat(result.rikishiUpdated()).isEqualTo(1);
+		assertThat(rikishi.getShikonaJp()).isEqualTo("猪名の山");
+	}
 
 	@Test
 	@DisplayName("기존 리키시는 한글 시코나/뒷이름을 보존한 채 스펙만 갱신(Update)되어야 한다")

@@ -5,6 +5,7 @@ import com.torikumilab.sumoarchive.domain.dto.sumoapi.SumoApiBashoDTO;
 import com.torikumilab.sumoarchive.domain.dto.sumoapi.SumoApiRankDTO;
 import com.torikumilab.sumoarchive.domain.dto.sumoapi.SumoApiRikishiDTO;
 import com.torikumilab.sumoarchive.domain.dto.sumoapi.SumoApiRikishiPageDTO;
+import com.torikumilab.sumoarchive.domain.dto.sumoapi.SumoApiShikonaDTO;
 import com.torikumilab.sumoarchive.domain.dto.sumoapi.SumoApiTorikumiDayDTO;
 import com.torikumilab.sumoarchive.domain.entity.constant.Division;
 import org.springframework.beans.factory.annotation.Value;
@@ -108,6 +109,26 @@ public class SumoApiClient {
 						.retrieve()
 						.body(SumoApiRankDTO[].class);
 				return page == null ? List.of() : List.of(page);
+			} catch (RuntimeException e) {
+				if (attempt >= RIKISHI_MAX_ATTEMPTS) {
+					throw e;
+				}
+				sleepQuietly(500L * attempt);
+			}
+		}
+	}
+
+	/**
+	 * 리키시 1명의 시코나 변경 이력 (바뀐 바쇼마다 1건, 정렬은 호출부에서). 개명이 감지됐을 때만 부른다.
+	 */
+	public List<SumoApiShikonaDTO> getShikonaHistory(int rikishiId) {
+		for (int attempt = 1; ; attempt++) {
+			try {
+				SumoApiShikonaDTO[] list = rc.get()
+						.uri("/api/shikonas?rikishiId={id}", rikishiId)
+						.retrieve()
+						.body(SumoApiShikonaDTO[].class);
+				return list == null ? List.of() : List.of(list);
 			} catch (RuntimeException e) {
 				if (attempt >= RIKISHI_MAX_ATTEMPTS) {
 					throw e;
