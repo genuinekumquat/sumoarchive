@@ -22,9 +22,29 @@ public class SeoController {
 	private final BanzukeRepository banzukeRepository;
 	private final HeyaService heyaService;
 
+	/**
+	 * AI 학습·수집용 크롤러는 전부 막는다(2026.10.27 - meta-externalagent가 하루 3만 건).
+	 * 검색엔진(Googlebot·Yeti·Bingbot·Applebot)과 AI 검색 답변에서 링크로 인용하는 봇(OAI-SearchBot 등)은 그대로 둔다.
+	 */
 	@GetMapping(value = "/robots.txt", produces = MediaType.TEXT_PLAIN_VALUE)
 	public String robots() {
 		return """
+				User-agent: GPTBot
+				User-agent: ClaudeBot
+				User-agent: anthropic-ai
+				User-agent: Google-Extended
+				User-agent: Applebot-Extended
+				User-agent: meta-externalagent
+				User-agent: FacebookBot
+				User-agent: Amazonbot
+				User-agent: Bytespider
+				User-agent: CCBot
+				User-agent: cohere-ai
+				User-agent: Diffbot
+				User-agent: Omgilibot
+				User-agent: Reflectionbot
+				Disallow: /
+
 				User-agent: *
 				Disallow: /admin
 				Disallow: /api/
