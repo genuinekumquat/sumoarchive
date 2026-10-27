@@ -57,6 +57,7 @@ public class RosterImportService {
 		List<String> warnings = new ArrayList<>();
 		int createdCount = 0;
 		int updatedCount = 0;
+		List<RosterImportResultDTO.ShikonaChange> shikonaChanges = new ArrayList<>();
 
 		// 성능 최적화: 기존 리키시들을 externalApiId 키로 맵핑하여 1건당 N+1 쿼리 방지
 		Map<Integer, RikishiEntity> existingByExternalId = rikishiRepository.findAll().stream()
@@ -73,7 +74,10 @@ public class RosterImportService {
 				RikishiEntity existing = existingByExternalId.get(apiId);
 				if (existing != null) {
 					// 개명이면 updateFromApi가 일본어·영문을 덮어쓰기 전에 옛 시코나를 이력으로 남긴다
-					recordShikonaChange(existing, api, warnings);
+					RosterImportResultDTO.ShikonaChange change = recordShikonaChange(existing, api, warnings);
+					if (change != null) {
+						shikonaChanges.add(change);
+					}
 					// 갱신 (Update): 수동 입력된 한글 시코나/뒷이름/출신지/사진 등은 건드리지 않고 기본 스펙만 갱신
 					existing.updateFromApi(
 							firstToken(api.shikonaJp()),
@@ -106,7 +110,7 @@ public class RosterImportService {
 		log.info("[RosterImport] 동기화 완료 - 헤야 신규 {}개 · 리키시 신규 {}명 / 갱신 {}명 (총 {}명), 경고 {}건",
 				heyaResult.createdCount(), createdCount, updatedCount, totalImported, warnings.size());
 
-		return new RosterImportResultDTO(heyaResult.createdCount(), createdCount, updatedCount, totalImported, warnings);
+		return new RosterImportResultDTO(heyaResult.createdCount(), createdCount, updatedCount, totalImported, warnings, shikonaChanges);
 	}
 
 	/**
@@ -115,14 +119,14 @@ public class RosterImportService {
 	 * 옛 한글·일본어 시코나를 이력에 남기고, 한글 시코나는 새 영문에서 다시 음차해 "자동"(검수 필요)으로 둔다.
 	 * 이렇게 안 하면 한글만 옛 이름으로 남아 일본어 시코나와 어긋난다.
 	 */
-	private void recordShikonaChange(RikishiEntity existing, SumoApiRikishiDTO api, List<String> warnings) {
+	private RosterImportResultDTO.ShikonaChange recordShikonaChange(RikishiEntity existing, SumoApiRikishiDTO api, List<String> warnings) {
 		String oldJp = existing.getShikonaJp();
 		String oldEn = firstToken(existing.getShikonaEn());
 		String newJp = firstToken(api.shikonaJp());
 		String newEn = firstToken(api.shikonaEn());
 		if (oldJp == null || oldEn == null || newJp == null || newEn == null
 				|| oldJp.equals(newJp) || oldEn.equalsIgnoreCase(newEn)) {
-			return;
+			return null;
 		}
 
 		String oldKr = existing.getShikonaKr();
@@ -142,6 +146,7 @@ public class RosterImportService {
 		warnings.add("개명 감지: " + oldJp + "(" + oldKr + ") → " + newJp + "(" + newKr
 				+ ") - 한글 시코나는 자동 음차값이니 검수 필요 (apiId=" + api.id() + ")");
 		log.info("[RosterImport] 개명 감지 apiId={} {} → {}", api.id(), oldJp, newJp);
+		return new RosterImportResultDTO.ShikonaChange(existing.getId(), oldKr, newJp, existing.getShikonaKr());
 	}
 
 	/**

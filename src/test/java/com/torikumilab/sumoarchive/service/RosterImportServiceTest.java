@@ -84,6 +84,11 @@ class RosterImportServiceTest {
 		assertThat(rikishi.getShikonaKr()).isNotEqualTo("칸푸잔");
 		assertThat(rikishi.isShikonaKrAuto()).isTrue();
 		assertThat(result.warnings()).anyMatch(w -> w.startsWith("개명 감지"));
+		assertThat(result.shikonaChanges()).singleElement().satisfies(c -> {
+			assertThat(c.oldShikonaKr()).isEqualTo("칸푸잔");
+			assertThat(c.newShikonaJp()).isEqualTo("井川桜良");
+			assertThat(c.newShikonaKr()).isEqualTo(rikishi.getShikonaKr());
+		});
 	}
 
 	@Test

@@ -115,6 +115,12 @@
                       th:text="'명단 동기화 ' + ${#temporals.format(rs.finishedAt, 'MM.dd HH:mm')} + ' — 리키시 신규 ' + ${rs.result.rikishiCreated} + ' · 갱신 ' + ${rs.result.rikishiUpdated}">명단 동기화</span>
                 <a th:if="${rs.error == null and rs.result.heyaCreated > 0}" th:href="@{/admin/heya}" style="color: var(--shu);"
                    th:text="' · 새 헤야 ' + ${rs.result.heyaCreated} + '곳 → 헤야 관리에서 일본어명·일문 지정'">새 헤야</a>
+                <!-- 개명 = 새 한글 시코나가 자동 음차값 → 수정 화면에서 검수(저장하면 「자동」 표시가 꺼짐) -->
+                <th:block th:if="${rs.error == null and rs.result.shikonaChanges != null and !rs.result.shikonaChanges.isEmpty()}">
+                    <span style="color: var(--shu);" th:text="' · 개명 ' + ${rs.result.shikonaChanges.size()} + '명 → 한글 시코나 검수:'">개명</span>
+                    <a th:each="c : ${rs.result.shikonaChanges}" th:href="@{'/admin/rikishi/' + ${c.rikishiId} + '/edit'}" style="color: var(--shu);"
+                       th:text="' ' + ${c.oldShikonaKr} + ' → ' + ${c.newShikonaJp} + '(' + ${c.newShikonaKr} + ')'">칸푸잔 → 井川桜良(이카와사쿠라)</a>
+                </th:block>
                 <span th:if="${rs.error != null}" style="color: var(--shu);"
                       th:text="'명단 동기화 ' + ${#temporals.format(rs.finishedAt, 'MM.dd HH:mm')} + ' 실패 (다음 회차에 재시도): ' + ${rs.error}">실패</span>
             </th:block>

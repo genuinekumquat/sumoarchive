@@ -110,6 +110,11 @@
         <ul class="warn-list" th:if="${!importResult.warnings.isEmpty()}">
             <li th:each="w : ${importResult.warnings}" th:text="${w}">경고</li>
         </ul>
+        <ul class="warn-list" th:if="${!importResult.shikonaChanges.isEmpty()}">
+            <li th:each="c : ${importResult.shikonaChanges}">개명 검수:
+                <a th:href="@{'/admin/rikishi/' + ${c.rikishiId} + '/edit'}"
+                   th:text="${c.oldShikonaKr} + ' → ' + ${c.newShikonaJp} + '(' + ${c.newShikonaKr} + ')'">칸푸잔 → 井川桜良(이카와사쿠라)</a></li>
+        </ul>
     </div>
     <div class="saved-msg" th:if="${autofillResult}">
         <span th:text="'한국어 시코나 자동 채우기 — ' + ${autofillResult.filled} + '명 채움'
