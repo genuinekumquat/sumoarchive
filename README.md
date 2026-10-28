@@ -25,7 +25,7 @@
 | 항목 | 내용 |
 |---|---|
 | 데이터 | 경기 **106,534건** · 리키시 **1,157명** · **46바쇼**(2019년~) · 마쿠우치~조노구치 **6개 디비전 전부** |
-| 테스트 | JUnit 5 + Mockito **125개**, GitHub Actions에서 매번 실행 (빈 DB에서 Flyway + 전체 테스트) |
+| 테스트 | JUnit 5 + Mockito **151개**, GitHub Actions에서 매번 실행 (빈 DB에서 Flyway + 전체 테스트) |
 | 운영 | AWS EC2 + Docker Compose, 매일 S3 백업, 대회 기간에는 경기 결과를 **하루 4번 자동 반영** |
 | 사용 | 한국 스모 커뮤니티 소개를 계기로 10월 12~14일 3일간 누적 **176명** 방문 (관리자 통계, [4-3](#4-3-개인정보를-저장하지-않는-방문-통계)) |
 | 개발 | 2026년 7월 설계 시작 → 9월 구현 → 10월 10일 공개 (노션 작업일지 42편) |
@@ -76,7 +76,7 @@ flowchart LR
     U["브라우저<br/>(PC·모바일)"] -- "HTTPS" --> N
     subgraph EC2["AWS EC2 t4g.small(ARM·서울) / Docker Compose"]
         N["Nginx<br/>Let's Encrypt"] --> A["Spring Boot 3.5<br/>Java 21"]
-        A --> D[("MySQL 8.0<br/>Flyway V1~V10")]
+        A --> D[("MySQL 8.0<br/>Flyway V1~V19")]
         B["cron 매일 4시<br/>backup-db.sh"] --> D
     end
     A -- "임포트(대회 중 하루 4번)" --> S["sumo-api.com"]

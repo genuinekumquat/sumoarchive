@@ -25,7 +25,7 @@
 | 項目 | 内容 |
 |---|---|
 | データ | 取組 **106,534件**・力士 **1,157人**・**46場所**(2019年〜)・幕内〜序ノ口の **全6階級** |
-| テスト | JUnit 5 + Mockito **125件**、GitHub Actions で毎回実行(空のDBから Flyway + 全テスト) |
+| テスト | JUnit 5 + Mockito **151件**、GitHub Actions で毎回実行(空のDBから Flyway + 全テスト) |
 | 運用 | AWS EC2 + Docker Compose、毎日 S3 バックアップ、場所中は取組結果を **1日4回自動取込** |
 | 利用 | 韓国の相撲コミュニティでの紹介をきっかけに、10月12〜14日の3日間で延べ **176人** が訪問(管理画面の統計、[4-3](#4-3-個人情報を保存しないアクセス統計)) |
 | 開発 | 2026年7月 設計開始 → 9月 実装 → 10月10日 公開(作業記録は Notion に42回分) |
@@ -76,7 +76,7 @@ flowchart LR
     U["ブラウザ<br/>(PC・スマホ)"] -- "HTTPS" --> N
     subgraph EC2["AWS EC2 t4g.small(ARM・ソウル)/ Docker Compose"]
         N["Nginx<br/>Let's Encrypt"] --> A["Spring Boot 3.5<br/>Java 21"]
-        A --> D[("MySQL 8.0<br/>Flyway V1〜V10")]
+        A --> D[("MySQL 8.0<br/>Flyway V1〜V19")]
         B["cron 毎日4時<br/>backup-db.sh"] --> D
     end
     A -- "取込(場所中は1日4回)" --> S["sumo-api.com"]
