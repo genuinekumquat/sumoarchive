@@ -1,7 +1,5 @@
 package com.torikumilab.sumoarchive.config;
 
-import com.torikumilab.sumoarchive.service.stats.VisitStatsCollector;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.LocaleResolver;
@@ -15,12 +13,6 @@ import java.util.Locale;
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
 
-	private final ObjectProvider<VisitStatsCollector> visitStatsCollector;
-
-	public WebConfig(ObjectProvider<VisitStatsCollector> visitStatsCollector) {
-		this.visitStatsCollector = visitStatsCollector;
-	}
-
 	@Override
 	public void addInterceptors(InterceptorRegistry registry) {
 		registry.addInterceptor(new AdminAuthInterceptor())
@@ -31,9 +23,7 @@ public class WebConfig implements WebMvcConfigurer {
 				.addPathPatterns("/admin/**", "/api/torikumi/*/comments/*/blind")
 				.excludePathPatterns("/admin/login", "/admin/logout");
 		registry.addInterceptor(localeChangeInterceptor());
-		// 방문 통계: 공개 HTML 페이지만 (/torikumi/*는 경기 패널 조각 /torikumi/{id}/fragment를 포함하지 않음)
-		registry.addInterceptor(new PageViewInterceptor(visitStatsCollector))
-				.addPathPatterns("/", "/rikishi/*", "/torikumi/*", "/search", "/bookmark", "/compare", "/updates", "/privacy");
+		// 방문 통계는 2026.10.28부터 페이지의 beacon 스크립트가 보낸다 (PageViewApiController)
 	}
 
 	/** th:action 폼에 관리자 CSRF 토큰 숨김 필드를 자동으로 붙인다. 빈 이름은 Spring MVC 규약상 고정. */

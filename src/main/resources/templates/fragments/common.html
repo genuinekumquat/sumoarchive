@@ -35,6 +35,29 @@
     <meta name="twitter:card" content="summary_large_image">
 </th:block>
 
+<!-- ===== 방문 통계 beacon: 통계 대상 공개 페이지의 <head> 끝에 넣는다 (PageViewApiController, 2026.10.28).
+     HTML만 받아가는 수집기는 스크립트를 실행하지 않으니 세지 않는다. 미리 렌더링(prerender)된 페이지는 실제로 열릴 때 보낸다.
+     목록·IP는 보내지 않고 경로와 이전 페이지 주소만 보낸다. 실패해도 화면과 무관하므로 무시. -->
+<script th:fragment="pageView">
+(function () {
+    function send() {
+        try {
+            var body = new URLSearchParams({ path: location.pathname, ref: document.referrer });
+            if (!(navigator.sendBeacon && navigator.sendBeacon('/api/pv', body))) {
+                fetch('/api/pv', { method: 'POST', body: body, keepalive: true }).catch(function () {});
+            }
+        } catch (e) {
+            /* URLSearchParams·fetch 없는 브라우저 - 무시 */
+        }
+    }
+    if (document.prerendering) {
+        document.addEventListener('prerenderingchange', send, { once: true });
+    } else {
+        send();
+    }
+})();
+</script>
+
 <!-- ===== 언어 스위처: 헤더 안에 넣는다. 고른 언어는 세션에 저장된다(WebConfig의 LocaleChangeInterceptor).
      링크는 현재 주소 + ?lang=. 검색 결과 페이지는 검색어(keyword)가 사라지지 않게 같이 넘긴다.
      스타일(.lang-switch)은 각 페이지 CSS에 있다. -->

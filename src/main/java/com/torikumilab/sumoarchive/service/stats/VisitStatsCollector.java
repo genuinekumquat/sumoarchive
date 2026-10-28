@@ -93,7 +93,7 @@ public class VisitStatsCollector {
 	private record DayVisitors(LocalDate date, byte[] salt, Set<String> seen) {}
 
 	/**
-	 * 페이지뷰 1건. 봇·대상 아닌 페이지 판별은 호출하는 쪽(PageViewInterceptor)이 한다.
+	 * 페이지뷰 1건. 봇·대상 아닌 페이지 판별은 호출하는 쪽(PageViewApiController)이 한다.
 	 *
 	 * @param referrerSource 외부 유입처(VisitClassifier.referrerSource), 없으면 null
 	 */
