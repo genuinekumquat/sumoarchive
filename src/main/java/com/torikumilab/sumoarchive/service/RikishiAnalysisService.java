@@ -404,7 +404,9 @@ public class RikishiAnalysisService {
 	/** 상대의 그 바쇼 계급 구간. 마에가시라는 상위(1~8)/하위(9~)로 나눈다. */
 	enum RankBucket {
 		YOKOZUNA_OZEKI("요코즈나·오제키", "横綱・大関"),
-		SEKIWAKE_KOMUSUBI("세키와케·코무스비", "関脇・小結"),
+		// ​(폭 없는 공백): 한국어 화면은 단어 중간에서 줄바꿈하지 않아서(keep-all) 좁은 폰에서
+		// 「세키와케·코무스/비」로 억지로 끊겼다. 「·」 뒤에서 줄이 바뀔 수 있게 한다 (보이는 글자는 그대로)
+		SEKIWAKE_KOMUSUBI("세키와케·​코무스비", "関脇・小結"),
 		MAEGASHIRA_UPPER("마에가시라 1~8", "前頭1〜8枚目"),
 		MAEGASHIRA_LOWER("마에가시라 9 이하", "前頭9枚目以下"),
 		JURYO("주료", "十両"),
