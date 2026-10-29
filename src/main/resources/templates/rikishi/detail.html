@@ -114,8 +114,14 @@
         }
         .status-badge.retired { border-color: var(--sumi-faint); color: var(--sumi-faint); }
 
+        /* 비교·즐겨찾기 버튼: 넓은 화면은 오른쪽 위, 모바일은 두 버튼을 반씩 나눈 한 줄
+           (예전엔 각각 float: right라 모바일에서 배지 위에 어중간하게 떠 있었음) */
+        .profile-actions { float: right; display: flex; gap: 6px; margin-left: 12px; }
+        @media (max-width: 620px) {
+            .profile-actions { float: none; margin: 0 0 16px; }
+            .profile-actions .bookmark-btn { flex: 1; text-align: center; padding: 8px 6px; }
+        }
         .bookmark-btn {
-            float: right;
             font-family: 'Zen Kaku Gothic New', sans-serif;
             font-size: 12px;
             letter-spacing: 1px;
@@ -127,8 +133,7 @@
         }
         .bookmark-btn:hover { border-color: var(--shu); color: var(--shu); }
         .bookmark-btn.is-active { border-color: var(--shu); color: var(--shu); background: var(--shu-faint); }
-        /* 즐겨찾기 버튼 왼쪽에 같은 모양으로 (둘 다 float: right) */
-        .compare-btn { margin-right: 6px; text-decoration: none; }
+        .compare-btn { text-decoration: none; }
 
         .shikona-row {
             display: flex;
@@ -1018,10 +1023,12 @@
         <div class="profile-inner">
 
             <div class="profile-info">
-                <button type="button" id="bookmarkBtn" class="bookmark-btn" th:attr="data-rikishi-id=${rikishi.id}">
-                    <span id="bookmarkIcon">☆</span> <span th:text="#{rikishi.bookmark}">즐겨찾기</span>
-                </button>
-                <a class="bookmark-btn compare-btn" th:href="@{/compare(a=${rikishi.id})}" th:text="'⇄ ' + #{compare.link.rikishi}">⇄ 다른 선수와 비교</a>
+                <div class="profile-actions">
+                    <a class="bookmark-btn compare-btn" th:href="@{/compare(a=${rikishi.id})}" th:text="'⇄ ' + #{compare.link.rikishi}">⇄ 다른 선수와 비교</a>
+                    <button type="button" id="bookmarkBtn" class="bookmark-btn" th:attr="data-rikishi-id=${rikishi.id}">
+                        <span id="bookmarkIcon">☆</span> <span th:text="#{rikishi.bookmark}">즐겨찾기</span>
+                    </button>
+                </div>
                 <span class="status-badge"
                       th:classappend="${rikishi.isActive} ? '' : 'retired'"
                       th:text="${rikishi.isActive} ? #{rikishi.active} : (${rikishi.oyakataNameKr} != null ? #{rikishi.oyakata.label} : #{rikishi.retired})">현역</span>
