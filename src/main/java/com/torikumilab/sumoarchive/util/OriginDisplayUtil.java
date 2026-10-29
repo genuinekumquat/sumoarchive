@@ -135,6 +135,10 @@ public final class OriginDisplayUtil {
 		city("Province of Laguna", "라구나", "ラグナ");
 		city("Töv", "투브", "トゥブ");
 		city("Gobi-Altai", "고비알타이", "ゴビ・アルタイ");
+		city("Arkhangai", "아르항가이", "アルハンガイ");
+		city("Sükhbaatar", "수흐바타르", "スフバートル");
+		city("Khovd", "호브드", "ホブド");
+		city("Övörkhangai", "우브르항가이", "ウブルハンガイ");
 		city("Tuva Republic, Kyzyl", "투바 공화국 크즐", "トゥヴァ共和国クズル");
 	}
 

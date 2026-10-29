@@ -39,6 +39,9 @@ class OriginDisplayUtilTest {
 		assertThat(OriginDisplayUtil.toDetailOriginKr(null, "Osaka-fu, Neyagawa-shi")).isEqualTo("오사카부");
 		assertThat(OriginDisplayUtil.toDetailOriginKr(null, "Mongolia, Töv")).isEqualTo("투브");
 		assertThat(OriginDisplayUtil.toDetailOriginKr(null, "Mongolia, Gobi-Altai")).isEqualTo("고비알타이");
+		// 출신지가 바뀐 경우 협회 표기(마지막 것)의 지역
+		assertThat(OriginDisplayUtil.toDetailOriginKr(null, "Mongolia, Ulaanbaatar - Mongolia, Övörkhangai")).isEqualTo("우브르항가이");
+		assertThat(OriginDisplayUtil.toDetailOriginKr(null, "Mongolia, Arkhangai")).isEqualTo("아르항가이");
 		assertThat(OriginDisplayUtil.toDetailOriginKr(null, "Russia, Tuva Republic, Kyzyl")).isEqualTo("투바 공화국 크즐");
 
 		// 일본어
@@ -48,6 +51,8 @@ class OriginDisplayUtilTest {
 		assertThat(OriginDisplayUtil.toDetailOriginJp("Osaka-fu, Neyagawa-shi")).isEqualTo("大阪府");
 		assertThat(OriginDisplayUtil.toDetailOriginJp("Mongolia, Töv")).isEqualTo("トゥブ");
 		assertThat(OriginDisplayUtil.toDetailOriginJp("Mongolia, Gobi-Altai")).isEqualTo("ゴビ・アルタイ");
+		assertThat(OriginDisplayUtil.toDetailOriginJp("Mongolia, Ulaanbaatar - Mongolia, Sükhbaatar")).isEqualTo("スフバートル");
+		assertThat(OriginDisplayUtil.toDetailOriginJp("Mongolia, Ulaanbaatar - Mongolia, Khovd")).isEqualTo("ホブド");
 		assertThat(OriginDisplayUtil.toDetailOriginJp("Russia, Tuva Republic, Kyzyl")).isEqualTo("トゥヴァ共和国クズル");
 	}
 
