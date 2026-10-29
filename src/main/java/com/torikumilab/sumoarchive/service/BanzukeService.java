@@ -13,6 +13,7 @@ import com.torikumilab.sumoarchive.domain.entity.constant.Division;
 import com.torikumilab.sumoarchive.repository.BanzukeRepository;
 import com.torikumilab.sumoarchive.repository.BashoRepository;
 import com.torikumilab.sumoarchive.repository.HeyaRepository;
+import com.torikumilab.sumoarchive.repository.RikishiShikonaHistoryRepository;
 import com.torikumilab.sumoarchive.util.OriginDisplayUtil;
 import com.torikumilab.sumoarchive.util.RankDisplayUtil;
 import jakarta.persistence.EntityNotFoundException;
@@ -20,6 +21,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -33,6 +35,7 @@ public class BanzukeService {
 	private final BashoRepository bashoRepository;
 	private final BanzukeRepository banzukeRepository;
 	private final HeyaRepository heyaRepository;
+	private final RikishiShikonaHistoryRepository rikishiShikonaHistoryRepository;
 
 	/** 메인 화면 기본 노출: 반즈케가 있는 가장 최근 바쇼(시작일 기준)의 해당 디비전 반즈케. */
 	public List<BanzukeDTO> getLatestBanzuke(Division division) {
@@ -57,22 +60,28 @@ public class BanzukeService {
 			}
 		}
 
-		return banzukeRepository.findByBashoAndDivisionOrdered(basho.getId(), division)
-				.stream()
-				.map(b -> new BanzukeDTO(
-						b.getRikishiEntity().getId(),
-						b.getRikishiEntity().getShikonaKr(),
-						b.getRikishiEntity().getShikonaJp(),
-						b.getRikishiEntity().getShikonaEn(),
-						b.getRankName().name(),
-						b.getSide().name(),
-						b.getRankValue(),
-						b.getRikishiEntity().isActive(),
-						b.getRikishiEntity().getHeyaEntity() != null ? b.getRikishiEntity().getHeyaEntity().getNameKr() : null,
-						b.getRikishiEntity().getHeyaEntity() != null ? b.getRikishiEntity().getHeyaEntity().getNameJp() : null,
-						OriginDisplayUtil.toKorean(b.getRikishiEntity().getOriginKr(), b.getRikishiEntity().getBirthplace()),
-						OriginDisplayUtil.toJapanese(b.getRikishiEntity().getBirthplace())
-				))
+		List<BanzukeEntity> rows = banzukeRepository.findByBashoAndDivisionOrdered(basho.getId(), division);
+		// 지난 바쇼 반즈케는 그 바쇼 당시 시코나로 (예: 2025년 하쿠노후지 → 하쿠오호). 그 디비전 전원 이력을 한 번에
+		ShikonaAtBasho oldNames = ShikonaAtBasho.load(rikishiShikonaHistoryRepository,
+				rows.stream().map(b -> b.getRikishiEntity().getId()).toList());
+		LocalDate bashoStart = basho.getStartDate();
+		return rows.stream()
+				.map(b -> {
+					ShikonaAtBasho.Name oldName = oldNames.at(b.getRikishiEntity().getId(), bashoStart);
+					return new BanzukeDTO(
+							b.getRikishiEntity().getId(),
+							oldName != null ? oldName.kr() : b.getRikishiEntity().getShikonaKr(),
+							oldName != null ? oldName.jp() : b.getRikishiEntity().getShikonaJp(),
+							b.getRikishiEntity().getShikonaEn(),
+							b.getRankName().name(),
+							b.getSide().name(),
+							b.getRankValue(),
+							b.getRikishiEntity().isActive(),
+							b.getRikishiEntity().getHeyaEntity() != null ? b.getRikishiEntity().getHeyaEntity().getNameKr() : null,
+							b.getRikishiEntity().getHeyaEntity() != null ? b.getRikishiEntity().getHeyaEntity().getNameJp() : null,
+							OriginDisplayUtil.toKorean(b.getRikishiEntity().getOriginKr(), b.getRikishiEntity().getBirthplace()),
+							OriginDisplayUtil.toJapanese(b.getRikishiEntity().getBirthplace()));
+				})
 				.toList();
 	}
 

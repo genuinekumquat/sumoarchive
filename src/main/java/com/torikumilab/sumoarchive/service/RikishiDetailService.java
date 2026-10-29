@@ -210,16 +210,22 @@ public class RikishiDetailService {
 				.forEach(a -> byKey.get(awardLabelKey(a.getAwardType(), a.getDivision())).add(new AwardHistoryItemDTO(
 						bashoLabel(a.getBashoEntity()), bashoLabelKr(a.getBashoEntity()),
 						null, null, null, null, null)));
-		List<AwardHistoryItemDTO> kinboshi = kinboshiRepository.findWithBoutByWinnerRikishiId(rikishiId).stream()
+		List<KinboshiEntity> kinboshiRows = kinboshiRepository.findWithBoutByWinnerRikishiId(rikishiId);
+		// 이긴 요코즈나도 그 바쇼 당시 시코나로
+		ShikonaAtBasho oldNames = ShikonaAtBasho.load(rikishiShikonaHistoryRepository,
+				kinboshiRows.stream().map(k -> k.getLoserYokozuna().getId()).distinct().toList());
+		List<AwardHistoryItemDTO> kinboshi = kinboshiRows.stream()
 				.sorted(Comparator.comparingInt((KinboshiEntity k) -> bashoOrder(k.getTorikumiEntity().getBashoEntity()))
 						.thenComparingInt(k -> k.getTorikumiEntity().getDay()))
 				.map(k -> {
 					TorikumiEntity t = k.getTorikumiEntity();
 					RikishiEntity yokozuna = k.getLoserYokozuna();
+					ShikonaAtBasho.Name oldName = oldNames.at(yokozuna.getId(), t.getBashoEntity().getStartDate());
 					return new AwardHistoryItemDTO(
 							bashoLabel(t.getBashoEntity()), bashoLabelKr(t.getBashoEntity()),
 							t.getDay(), t.getId(), yokozuna.getId(),
-							opponentDisplayNameJp(yokozuna), opponentDisplayName(yokozuna));
+							oldName != null ? oldName.jp() : opponentDisplayNameJp(yokozuna),
+							oldName != null ? oldName.kr() : opponentDisplayName(yokozuna));
 				})
 				.toList();
 
@@ -349,6 +355,8 @@ public class RikishiDetailService {
 
 		// 바쇼·지위별 적재 일차는 리키시와 무관해서 캐시된 전 바쇼 값을 쓴다 (LeagueStatsService)
 		Map<Integer, Map<Division, Integer>> loadedDaysByBasho = leagueStatsService.loadedDaysByBasho();
+		// 상대 이름은 그 바쇼 당시 시코나로 (예: 2025년 하쿠노후지 → 하쿠오호). 상대 전원 이력을 한 번에
+		ShikonaAtBasho oldNames = ShikonaAtBasho.load(rikishiShikonaHistoryRepository, opponentIds);
 
 		return banzukeHistory.stream()
 				.map(b -> {
@@ -356,7 +364,8 @@ public class RikishiDetailService {
 					return toBashoGameLog(rikishiId, b,
 							matchesByBasho.getOrDefault(bashoId, List.of()),
 							opponentBanzukeByBasho.getOrDefault(bashoId, Map.of()),
-							loadedDaysByBasho.getOrDefault(bashoId, Map.of()));
+							loadedDaysByBasho.getOrDefault(bashoId, Map.of()),
+							oldNames);
 				})
 				.toList();
 	}
@@ -479,11 +488,13 @@ public class RikishiDetailService {
 	 * @param bashoMatches          이 바쇼에서 본인의 정규 대전 (day 오름차순)
 	 * @param opponentBanzukeById   이 바쇼 기준 상대 리키시 id → 반즈케
 	 * @param loadedDays            이 바쇼의 지위별 적재된 마지막 일차 (적재 전이면 비어 있음)
+	 * @param oldNames              상대의 당시 시코나 조회표
 	 */
 	private BashoGameLogDTO toBashoGameLog(Integer rikishiId, BanzukeEntity banzuke,
 										   List<TorikumiEntity> bashoMatches,
 										   Map<Integer, BanzukeEntity> opponentBanzukeById,
-										   Map<Division, Integer> loadedDays) {
+										   Map<Division, Integer> loadedDays,
+										   ShikonaAtBasho oldNames) {
 		BashoEntity basho = banzuke.getBashoEntity();
 		int lastDay = lastLoadedDay(loadedDays);
 		boolean sekitori = isSekitori(banzuke.getDivision());
@@ -497,7 +508,7 @@ public class RikishiDetailService {
 			// 공식 휴장 수가 빈 날 수와 정확히 맞을 때만 첫날부터 채운다.
 			long emptyDays = lastDay - bashoMatches.stream().filter(t -> t.getDay() <= lastDay).count();
 			boolean lateEntry = useRecord && banzuke.getAbsences() > 0 && banzuke.getAbsences() == emptyDays;
-			matches = buildMatchHistory(rikishiId, bashoMatches, opponentBanzukeById, lastDay, lateEntry);
+			matches = buildMatchHistory(rikishiId, bashoMatches, opponentBanzukeById, lastDay, lateEntry, oldNames);
 			// 첫날부터 휴장하면 대진 자체가 안 짜여 부전 기록도 안 남음. 공식 성적이 全休이거나, 같은 바쇼·지위
 			// 토리쿠미가 적재돼 있으면 "全休"로 보고 적재된 일차 전부를 휴장 칸으로 채운다 (0勝0敗15休).
 			boolean zenkyu = useRecord
@@ -513,7 +524,7 @@ public class RikishiDetailService {
 			// 마쿠시타 이하는 15일 중 7번만 싸워서 경기 없는 날이 휴장이 아니다 → 실제 경기만 칸으로 보이고,
 			// 휴장은 공식 성적의 휴 수만큼 날짜 없는 칸으로 뒤에 붙인다 (예: 3경기 뒤 휴장 → 3칸 + 휴 4칸).
 			matches = new ArrayList<>(bashoMatches.stream()
-					.map(t -> toMatchHistoryItem(t, rikishiId, opponentBanzukeById))
+					.map(t -> toMatchHistoryItem(t, rikishiId, opponentBanzukeById, oldNames))
 					.toList());
 			int absent = useRecord ? banzuke.getAbsences() : 0;
 			for (int i = 0; i < absent; i++) {
@@ -595,7 +606,7 @@ public class RikishiDetailService {
 	 */
 	private List<MatchHistoryItemDTO> buildMatchHistory(Integer rikishiId, List<TorikumiEntity> matches,
 													  Map<Integer, BanzukeEntity> opponentBanzukeByRikishiId,
-													  int lastDay, boolean fillFromDay1) {
+													  int lastDay, boolean fillFromDay1, ShikonaAtBasho oldNames) {
 		if (matches.isEmpty()) {
 			return List.of();
 		}
@@ -608,7 +619,7 @@ public class RikishiDetailService {
 		for (int day = 1; day <= lastDay; day++) {
 			TorikumiEntity t = matchByDay.get(day);
 			if (t != null) {
-				result.add(toMatchHistoryItem(t, rikishiId, opponentBanzukeByRikishiId));
+				result.add(toMatchHistoryItem(t, rikishiId, opponentBanzukeByRikishiId, oldNames));
 			} else if (day >= firstDay) {
 				result.add(absentItem(day));
 			}
@@ -639,8 +650,10 @@ public class RikishiDetailService {
 	}
 	
 	private MatchHistoryItemDTO toMatchHistoryItem(TorikumiEntity t, Integer rikishiId,
-												   Map<Integer, BanzukeEntity> opponentBanzukeByRikishiId) {
+												   Map<Integer, BanzukeEntity> opponentBanzukeByRikishiId,
+												   ShikonaAtBasho oldNames) {
 		RikishiEntity opponent = resolveOpponent(t, rikishiId);
+		ShikonaAtBasho.Name oldName = oldNames.at(opponent.getId(), t.getBashoEntity().getStartDate());
 		BanzukeEntity opponentBanzuke = opponentBanzukeByRikishiId.get(opponent.getId());
 		
 		boolean win = t.getWinnerRikishiEntity() != null
@@ -659,8 +672,8 @@ public class RikishiDetailService {
 				t.getDay(),
 				t.getId(),
 				opponent.getId(),
-				opponentDisplayName(opponent),
-				opponentDisplayNameJp(opponent),
+				oldName != null ? oldName.kr() : opponentDisplayName(opponent),
+				oldName != null ? oldName.jp() : opponentDisplayNameJp(opponent),
 				opponentBanzuke != null
 						? RankDisplayUtil.rankDisplay(opponentBanzuke.getRankName(), opponentBanzuke.getRankValue())
 						: null,

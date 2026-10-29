@@ -10,6 +10,7 @@ import com.torikumilab.sumoarchive.domain.entity.constant.Division;
 import com.torikumilab.sumoarchive.domain.entity.constant.ResultType;
 import com.torikumilab.sumoarchive.repository.BanzukeRepository;
 import com.torikumilab.sumoarchive.repository.BashoRepository;
+import com.torikumilab.sumoarchive.repository.RikishiShikonaHistoryRepository;
 import com.torikumilab.sumoarchive.repository.ScheduledBoutRepository;
 import com.torikumilab.sumoarchive.repository.TorikumiRepository;
 import com.torikumilab.sumoarchive.util.KimariteDisplayUtil;
@@ -19,6 +20,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -46,6 +48,7 @@ public class TorikumiDayService {
 	private final TorikumiRepository torikumiRepository;
 	private final ScheduledBoutRepository scheduledBoutRepository;
 	private final BanzukeRepository banzukeRepository;
+	private final RikishiShikonaHistoryRepository rikishiShikonaHistoryRepository;
 
 	/**
 	 * @param bashoId 없으면 반즈케가 있는 가장 최근 바쇼
@@ -93,7 +96,11 @@ public class TorikumiDayService {
 		Map<Integer, BanzukeEntity> banzuke = ids.isEmpty() ? Map.of()
 				: NextBouts.byRikishiId(banzukeRepository.findByBashoEntityIdAndRikishiEntityIdIn(basho.getId(), List.copyOf(ids)));
 
-		List<TorikumiDayDTO.Bout> bouts = rows.stream().map(r -> toBout(r, records, banzuke)).toList();
+		// 지난 바쇼를 고르면 이름도 그 바쇼 당시 시코나로 (예: 2025년 하쿠노후지 → 하쿠오호)
+		ShikonaAtBasho oldNames = ShikonaAtBasho.load(rikishiShikonaHistoryRepository, ids);
+		List<TorikumiDayDTO.Bout> bouts = rows.stream()
+				.map(r -> toBout(r, records, banzuke, oldNames, basho.getStartDate()))
+				.toList();
 		return new TorikumiDayDTO(basho.getId(), labelKr, labelJp, shown, days, bouts);
 	}
 
@@ -148,9 +155,10 @@ public class TorikumiDayService {
 		return map;
 	}
 
-	private static TorikumiDayDTO.Bout toBout(Row r, Map<Integer, int[]> records, Map<Integer, BanzukeEntity> banzuke) {
-		TorikumiDayDTO.Side east = side(r.east(), records, banzuke);
-		TorikumiDayDTO.Side west = side(r.west(), records, banzuke);
+	private static TorikumiDayDTO.Bout toBout(Row r, Map<Integer, int[]> records, Map<Integer, BanzukeEntity> banzuke,
+											  ShikonaAtBasho oldNames, LocalDate bashoStart) {
+		TorikumiDayDTO.Side east = side(r.east(), records, banzuke, oldNames.at(r.east().getId(), bashoStart));
+		TorikumiDayDTO.Side west = side(r.west(), records, banzuke, oldNames.at(r.west().getId(), bashoStart));
 		if (r.done() == null) {
 			return new TorikumiDayDTO.Bout(east, west, true, null, false, null, null, null);
 		}
@@ -163,13 +171,17 @@ public class TorikumiDayService {
 				k == null ? null : KimariteDisplayUtil.toKr(k), k == null ? null : KimariteDisplayUtil.toJp(k), t.getId());
 	}
 
-	private static TorikumiDayDTO.Side side(RikishiEntity r, Map<Integer, int[]> records, Map<Integer, BanzukeEntity> banzuke) {
+	/** @param oldName 그 바쇼 당시 옛 시코나 (지금 이름이면 null) */
+	private static TorikumiDayDTO.Side side(RikishiEntity r, Map<Integer, int[]> records, Map<Integer, BanzukeEntity> banzuke,
+											ShikonaAtBasho.Name oldName) {
 		int[] wl = records.getOrDefault(r.getId(), new int[2]);
 		BanzukeEntity b = banzuke.get(r.getId());
 		return new TorikumiDayDTO.Side(
 				r.getId(),
-				NextBouts.firstToken(r.getShikonaKr() != null ? r.getShikonaKr() : r.getShikonaJp() != null ? r.getShikonaJp() : r.getShikonaEn()),
-				NextBouts.firstToken(r.getShikonaJp() != null ? r.getShikonaJp() : r.getShikonaEn()),
+				oldName != null ? oldName.kr()
+						: NextBouts.firstToken(r.getShikonaKr() != null ? r.getShikonaKr() : r.getShikonaJp() != null ? r.getShikonaJp() : r.getShikonaEn()),
+				oldName != null ? oldName.jp()
+						: NextBouts.firstToken(r.getShikonaJp() != null ? r.getShikonaJp() : r.getShikonaEn()),
 				b == null ? null : NextBouts.withSide(RankDisplayUtil.sideDisplayKorean(b.getSide()), RankDisplayUtil.rankDisplayKorean(b.getRankName(), b.getRankValue())),
 				b == null ? null : NextBouts.withSide(RankDisplayUtil.sideDisplay(b.getSide()), RankDisplayUtil.rankDisplay(b.getRankName(), b.getRankValue())),
 				wl[0], wl[1]);

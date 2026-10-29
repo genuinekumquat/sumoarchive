@@ -8,6 +8,7 @@ import com.torikumilab.sumoarchive.domain.entity.TorikumiEntity;
 import com.torikumilab.sumoarchive.domain.entity.constant.Division;
 import com.torikumilab.sumoarchive.domain.entity.constant.ResultType;
 import com.torikumilab.sumoarchive.repository.BanzukeRepository;
+import com.torikumilab.sumoarchive.repository.RikishiShikonaHistoryRepository;
 import com.torikumilab.sumoarchive.repository.TorikumiRepository;
 import com.torikumilab.sumoarchive.util.KimariteDisplayUtil;
 import com.torikumilab.sumoarchive.util.RankDisplayUtil;
@@ -31,6 +32,7 @@ public class TorikumiDetailService {
 
 	private final TorikumiRepository torikumiRepository;
 	private final BanzukeRepository banzukeRepository;
+	private final RikishiShikonaHistoryRepository rikishiShikonaHistoryRepository;
 
 	@Transactional(readOnly = true)
 	public TorikumiDetailDTO getTorikumiDetail(Integer torikumiId) {
@@ -46,6 +48,11 @@ public class TorikumiDetailService {
 				.findByBashoEntityIdAndRikishiEntityIdIn(basho.getId(), List.of(east.getId(), west.getId()))
 				.stream()
 				.collect(Collectors.toMap(b -> b.getRikishiEntity().getId(), b -> b, (a, b) -> a));
+
+		// 두 선수 이름은 그 바쇼 당시 시코나로 (예: 2025년 하쿠노후지 → 하쿠오호)
+		ShikonaAtBasho oldNames = ShikonaAtBasho.load(rikishiShikonaHistoryRepository, List.of(east.getId(), west.getId()));
+		ShikonaAtBasho.Name eastOld = oldNames.at(east.getId(), basho.getStartDate());
+		ShikonaAtBasho.Name westOld = oldNames.at(west.getId(), basho.getStartDate());
 
 		Integer winnerId = t.getWinnerRikishiEntity() != null ? t.getWinnerRikishiEntity().getId() : null;
 		boolean decided = winnerId != null;
@@ -66,14 +73,14 @@ public class TorikumiDetailService {
 				divisionLabelJp(t.getDivision()),
 
 				east.getId(),
-				displayName(east),
-				east.getShikonaJp(),
+				eastOld != null ? eastOld.kr() : displayName(east),
+				eastOld != null ? eastOld.jp() : east.getShikonaJp(),
 				rankDisplayOf(banzukeByRikishiId.get(east.getId())),
 				decided && winnerId.equals(east.getId()),
 
 				west.getId(),
-				displayName(west),
-				west.getShikonaJp(),
+				westOld != null ? westOld.kr() : displayName(west),
+				westOld != null ? westOld.jp() : west.getShikonaJp(),
 				rankDisplayOf(banzukeByRikishiId.get(west.getId())),
 				decided && winnerId.equals(west.getId()),
 

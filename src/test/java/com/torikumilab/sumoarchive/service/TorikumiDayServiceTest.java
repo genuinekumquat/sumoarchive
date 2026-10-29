@@ -6,6 +6,7 @@ import com.torikumilab.sumoarchive.domain.dto.TorikumiDayDTO.Status;
 import com.torikumilab.sumoarchive.domain.entity.BanzukeEntity;
 import com.torikumilab.sumoarchive.domain.entity.BashoEntity;
 import com.torikumilab.sumoarchive.domain.entity.RikishiEntity;
+import com.torikumilab.sumoarchive.domain.entity.RikishiShikonaHistoryEntity;
 import com.torikumilab.sumoarchive.domain.entity.ScheduledBoutEntity;
 import com.torikumilab.sumoarchive.domain.entity.TorikumiEntity;
 import com.torikumilab.sumoarchive.domain.entity.constant.BashoMonth;
@@ -15,6 +16,7 @@ import com.torikumilab.sumoarchive.domain.entity.constant.ResultType;
 import com.torikumilab.sumoarchive.domain.entity.constant.Side;
 import com.torikumilab.sumoarchive.repository.BanzukeRepository;
 import com.torikumilab.sumoarchive.repository.BashoRepository;
+import com.torikumilab.sumoarchive.repository.RikishiShikonaHistoryRepository;
 import com.torikumilab.sumoarchive.repository.ScheduledBoutRepository;
 import com.torikumilab.sumoarchive.repository.TorikumiRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -31,6 +33,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.BDDMockito.given;
@@ -46,6 +49,8 @@ class TorikumiDayServiceTest {
 	private ScheduledBoutRepository scheduledBoutRepository;
 	@Mock
 	private BanzukeRepository banzukeRepository;
+	@Mock
+	private RikishiShikonaHistoryRepository rikishiShikonaHistoryRepository;
 	@InjectMocks
 	private TorikumiDayService service;
 
@@ -111,6 +116,25 @@ class TorikumiDayServiceTest {
 		assertThat(second.west().rankKr()).isEqualTo("동 요코즈나");
 		assertThat(second.west().wins() + "-" + second.west().losses()).isEqualTo("1-0");
 		assertThat(second.kimariteKr()).isNotBlank();
+	}
+
+	@Test
+	@DisplayName("지난 바쇼는 이름도 그 바쇼 당시 시코나로 (개명 전 이름)")
+	void showsShikonaAtThatBasho() {
+		RikishiEntity hakunofuji = rikishi(5, "하쿠노후지", "伯乃富士");
+		given(bashoRepository.findLatestWithBanzuke()).willReturn(Optional.of(kyushu));
+		given(torikumiRepository.findByBashoAndDivisionFetch(10, Division.Makuuchi)).willReturn(List.of(
+				bout(1, 1, a, hakunofuji, a, ResultType.NORMAL, "yorikiri", false, 101)));
+		given(scheduledBoutRepository.findByBashoAndDivisionFetch(10, Division.Makuuchi)).willReturn(List.of());
+		given(rikishiShikonaHistoryRepository.findByRikishiEntityIdIn(anyCollection())).willReturn(List.of(
+				RikishiShikonaHistoryEntity.builder().rikishiEntity(hakunofuji).shikonaKr("하쿠오호").shikonaJp("伯桜鵬")
+						.validFrom(LocalDate.of(2023, 7, 1)).validTo(LocalDate.of(2026, 12, 31)).build()));
+
+		TorikumiDayDTO.Bout bout = service.getDay(null, Division.Makuuchi, 1).bouts().get(0);
+
+		assertThat(bout.west().nameKr()).isEqualTo("하쿠오호");
+		assertThat(bout.west().nameJp()).isEqualTo("伯桜鵬");
+		assertThat(bout.east().nameKr()).isEqualTo("오노사토"); // 이력 없는 선수는 지금 이름 그대로
 	}
 
 	@Test
