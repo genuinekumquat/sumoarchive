@@ -33,6 +33,13 @@
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
     <meta name="twitter:card" content="summary_large_image">
+
+    <!-- 한국어는 브라우저 기본값이면 음절마다 줄바꿈해서 좁은 화면에서 「코토자쿠/라」「하타키코/미」처럼 단어 중간이 끊긴다.
+         띄어쓰기에서만 줄바꿈하고, 한 단어가 칸보다 길 때만 단어 안에서 끊는다 (2026.10.29 모바일 점검).
+         일본어는 띄어쓰기가 없어 keep-all을 쓰면 줄바꿈할 곳이 없어지므로 한국어 화면에만 -->
+    <style>
+        html:lang(ko) body { word-break: keep-all; overflow-wrap: break-word; }
+    </style>
 </th:block>
 
 <!-- ===== 방문 통계 beacon: 통계 대상 공개 페이지의 <head> 끝에 넣는다 (PageViewApiController, 2026.10.28).
@@ -77,10 +84,11 @@
         <a href="https://sumo-api.com" target="_blank" rel="noopener" style="color: inherit;">sumo-api.com</a>
         <span th:text="#{footer.accuracy}">· 실제 기록과 다를 수 있습니다.</span><br>
         <span th:text="#{footer.disclaimer}">개인이 운영하는 팬 사이트이며 일본스모협회(日本相撲協会)와 관련이 없습니다.</span>
-        · <a th:href="@{/updates}" th:text="#{footer.updates}" style="color: inherit;">업데이트 소식</a>
-        · <a th:href="@{/privacy}" th:text="#{footer.privacy}" style="color: inherit;">개인정보 처리 안내</a>
+        <!--/* 링크 하나가 두 줄로 갈라지지 않게 nowrap (모바일 「의/견·오류 보내기」) */-->
+        · <a th:href="@{/updates}" th:text="#{footer.updates}" style="color: inherit; white-space: nowrap;">업데이트 소식</a>
+        · <a th:href="@{/privacy}" th:text="#{footer.privacy}" style="color: inherit; white-space: nowrap;">개인정보 처리 안내</a>
         <!--/* 의견 페이지 안에서는 from을 또 붙이지 않는다 - from이 끝없이 중첩되는 주소를 크롤러가 따라가던 문제(2026.10.27) */-->
-        · <a th:href="${#strings.startsWith(currentPath, '/feedback')} ? @{/feedback} : @{/feedback(from=${currentPath})}" rel="nofollow" th:text="#{footer.feedback}" style="color: inherit;">의견·오류 보내기</a>
+        · <a th:href="${#strings.startsWith(currentPath, '/feedback')} ? @{/feedback} : @{/feedback(from=${currentPath})}" rel="nofollow" th:text="#{footer.feedback}" style="color: inherit; white-space: nowrap;">의견·오류 보내기</a>
     </p>
 </th:block>
 

@@ -380,6 +380,11 @@
             color: var(--sumi-faint);
         }
         .kimarite-group-body { padding-left: 4px; padding-bottom: 8px; }
+        /* 모바일: 「비기·승부결/과」「非技・勝負結/果」처럼 끊기던 문제 - 일문 목록과 같은 방식으로 각 덩어리는 끊지 않고 줄 단위로 넘김 */
+        @media (max-width: 520px) {
+            .kimarite-group-summary { flex-wrap: wrap; row-gap: 2px; font-size: 18px; }
+            .kimarite-group-summary > span { white-space: nowrap; }
+        }
 
         .kimarite-entry {
             display: flex;
@@ -683,6 +688,14 @@
             .rank-cell { font-size: 10.5px; letter-spacing: 0; white-space: normal; line-height: 1.35; }
             .rank-no { display: block; }
             .banzuke-table thead th { font-size: 10px; letter-spacing: 2px; }
+        }
+        /* 아주 좁은 폰(360px 등): 오제키 「코토자쿠라」, 대진 결정기술 「하타키코미」가 칸보다 넓어 단어 중간이 끊기던 문제 */
+        @media (max-width: 400px) {
+            .r-Yokozuna { font-size: 20px; }
+            .r-Ozeki { font-size: 17px; }
+            .r-Sekiwake, .r-Komusubi { font-size: 14px; }
+            .torikumi-table .tk-name { font-size: 14px; white-space: nowrap; }
+            .torikumi-table td.tk-mid { font-size: 10.5px; padding: 8px 1px; }
         }
     </style>
     <th:block th:replace="~{fragments/common :: pageView}"></th:block>
