@@ -38,6 +38,7 @@ class OriginDisplayUtilTest {
 		assertThat(OriginDisplayUtil.toDetailOriginKr(null, "Tokyo-to, Edogawa-ku")).isEqualTo("도쿄도");
 		assertThat(OriginDisplayUtil.toDetailOriginKr(null, "Osaka-fu, Neyagawa-shi")).isEqualTo("오사카부");
 		assertThat(OriginDisplayUtil.toDetailOriginKr(null, "Mongolia, Töv")).isEqualTo("투브");
+		assertThat(OriginDisplayUtil.toDetailOriginKr(null, "Mongolia, Gobi-Altai")).isEqualTo("고비알타이");
 		assertThat(OriginDisplayUtil.toDetailOriginKr(null, "Russia, Tuva Republic, Kyzyl")).isEqualTo("투바 공화국 크즐");
 
 		// 일본어
@@ -46,6 +47,7 @@ class OriginDisplayUtilTest {
 		assertThat(OriginDisplayUtil.toDetailOriginJp("Tokyo-to, Edogawa-ku")).isEqualTo("東京都");
 		assertThat(OriginDisplayUtil.toDetailOriginJp("Osaka-fu, Neyagawa-shi")).isEqualTo("大阪府");
 		assertThat(OriginDisplayUtil.toDetailOriginJp("Mongolia, Töv")).isEqualTo("トゥブ");
+		assertThat(OriginDisplayUtil.toDetailOriginJp("Mongolia, Gobi-Altai")).isEqualTo("ゴビ・アルタイ");
 		assertThat(OriginDisplayUtil.toDetailOriginJp("Russia, Tuva Republic, Kyzyl")).isEqualTo("トゥヴァ共和国クズル");
 	}
 

@@ -134,6 +134,7 @@ public final class OriginDisplayUtil {
 		city("Inner Mongolia", "내몽골", "内モンゴル");
 		city("Province of Laguna", "라구나", "ラグナ");
 		city("Töv", "투브", "トゥブ");
+		city("Gobi-Altai", "고비알타이", "ゴビ・アルタイ");
 		city("Tuva Republic, Kyzyl", "투바 공화국 크즐", "トゥヴァ共和国クズル");
 	}
 
