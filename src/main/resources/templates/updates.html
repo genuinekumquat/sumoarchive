@@ -48,6 +48,13 @@
 
         h1 { font-size: 20px; letter-spacing: 1px; margin: 0 0 6px; }
         .lead { font-size: 14px; color: var(--sumi-soft); margin: 0 0 22px; }
+        .month { border-top: 2px solid var(--sumi); margin-bottom: 8px; }
+        .month summary {
+            cursor: pointer; padding: 12px 0;
+            font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 15px; font-weight: 700; letter-spacing: 1px;
+        }
+        .month summary:hover { color: var(--shu); }
+        .month summary .count { font-weight: 400; font-size: 13px; color: var(--sumi-faint); margin-left: 4px; }
         .entry { display: flex; gap: 18px; border-top: 1px solid var(--washi-line); padding: 16px 0 10px; }
         .entry time {
             flex: 0 0 92px;
@@ -77,18 +84,21 @@
         <th:block th:replace="~{fragments/common :: langSwitch}"></th:block>
     </header>
 
-    <!-- 내용은 resources/updates.json (UpdatesController). 한쪽 언어 문구가 없는 항목은 그 언어에서 숨긴다 -->
+    <!-- 내용은 resources/updates.json (UpdatesController). 월별로 접고, 한쪽 언어 문구가 없는 항목은 컨트롤러에서 이미 빠져 있다 -->
     <h1 th:text="#{footer.updates}">업데이트 소식</h1>
     <p class="lead" th:text="#{updates.lead}">사이트에서 새로 생기거나 바뀐 것을 날짜별로 모아둡니다.</p>
 
     <th:block th:with="isJa=${#locale.language == 'ja'}">
-        <section class="entry" th:each="e : ${entries}">
-            <time th:datetime="${e.date}" th:text="${#temporals.format(e.date, 'yyyy.MM.dd')}">2026.10.12</time>
-            <ul>
-                <li th:each="item : ${e.items}" th:if="${(isJa ? item.ja : item.ko) != null}"
-                    th:text="${isJa ? item.ja : item.ko}">변경 내용</li>
-            </ul>
-        </section>
+        <details class="month" th:each="m : ${months}" th:open="${m.open}">
+            <summary><span th:text="#{updates.month(${'' + m.month.year}, ${'' + m.month.monthValue})}">2026년 11월</span>
+                <span class="count" th:text="'(' + ${m.count} + ')'">(3)</span></summary>
+            <section class="entry" th:each="e : ${m.entries}">
+                <time th:datetime="${e.date}" th:text="${#temporals.format(e.date, 'yyyy.MM.dd')}">2026.10.12</time>
+                <ul>
+                    <li th:each="item : ${e.items}" th:text="${isJa ? item.ja : item.ko}">변경 내용</li>
+                </ul>
+            </section>
+        </details>
     </th:block>
 
     <footer><span th:text="#{main.footer}">SUMOARCHIVE — 韓国語で見る大相撲情報アーカイブ</span><th:block th:replace="~{fragments/common :: footerNote}"></th:block></footer>
