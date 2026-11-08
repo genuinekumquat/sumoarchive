@@ -112,13 +112,16 @@ class TorikumiDayServiceTest {
 		TorikumiDayDTO.Bout first = dto.bouts().get(0);
 		assertThat(first.scheduled()).isTrue();
 		assertThat(first.east().nameKr()).isEqualTo("호쇼류");
+		// 예정 경기는 그 경기 전 성적 (1일째 패)
 		assertThat(first.east().wins() + "-" + first.east().losses()).isEqualTo("0-1");
 		TorikumiDayDTO.Bout second = dto.bouts().get(1);
 		assertThat(second.scheduled()).isFalse();
 		assertThat(second.winner()).isEqualTo("EAST");
 		assertThat(second.torikumiId()).isEqualTo(102);
 		assertThat(second.west().rankKr()).isEqualTo("동 요코즈나");
-		assertThat(second.west().wins() + "-" + second.west().losses()).isEqualTo("1-0");
+		// 결과가 나온 경기는 그날까지 포함: 이긴 쪽 1-0, 진 쪽은 1일째 승 + 2일째 패 = 1-1
+		assertThat(second.east().wins() + "-" + second.east().losses()).isEqualTo("1-0");
+		assertThat(second.west().wins() + "-" + second.west().losses()).isEqualTo("1-1");
 		assertThat(second.kimariteKr()).isNotBlank();
 	}
 

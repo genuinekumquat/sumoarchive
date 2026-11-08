@@ -38,7 +38,7 @@ public record TorikumiDayDTO(
 			Integer torikumiId
 	) {}
 
-	/** 한쪽 선수. 성적(wins/losses)은 이 경기 전날까지의 정규 경기 기준 */
+	/** 한쪽 선수. 성적(wins/losses)은 정규 경기 기준: 결과가 나온 경기는 그날까지, 예정 경기는 그 전날까지 */
 	public record Side(
 			Integer rikishiId,
 			String nameKr,

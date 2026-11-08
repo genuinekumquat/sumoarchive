@@ -90,7 +90,9 @@ public class TorikumiDayService {
 		}
 		rows.sort(Comparator.comparing(Row::matchNo, Comparator.nullsLast(Comparator.naturalOrder())));
 
-		Map<Integer, int[]> records = recordsBefore(done, shown);
+		// 이름 옆 성적: 결과가 나온 경기는 그날까지(이긴 쪽이 1-0), 아직 안 치른 예정 경기는 그 경기 전까지
+		Map<Integer, int[]> recordsBefore = recordsBefore(done, shown);
+		Map<Integer, int[]> recordsThrough = recordsBefore(done, shown + 1);
 		Set<Integer> ids = new HashSet<>();
 		rows.forEach(r -> { ids.add(r.east().getId()); ids.add(r.west().getId()); });
 		Map<Integer, BanzukeEntity> banzuke = ids.isEmpty() ? Map.of()
@@ -99,7 +101,7 @@ public class TorikumiDayService {
 		// 지난 바쇼를 고르면 이름도 그 바쇼 당시 시코나로 (예: 2025년 하쿠노후지 → 하쿠오호)
 		ShikonaAtBasho oldNames = ShikonaAtBasho.load(rikishiShikonaHistoryRepository, ids);
 		List<TorikumiDayDTO.Bout> bouts = rows.stream()
-				.map(r -> toBout(r, records, banzuke, oldNames, basho.getStartDate()))
+				.map(r -> toBout(r, r.done() != null ? recordsThrough : recordsBefore, banzuke, oldNames, basho.getStartDate()))
 				.toList();
 		return new TorikumiDayDTO(basho.getId(), labelKr, labelJp, shown, days, bouts);
 	}
@@ -143,7 +145,7 @@ public class TorikumiDayService {
 		return days.isEmpty() ? null : days.get(days.size() - 1).day();
 	}
 
-	/** rikishiId → {승, 패}: 이 일차 전날까지의 정규 경기(결정전 제외, 부전 포함) */
+	/** rikishiId → {승, 패}: 이 일차 전날까지의 정규 경기(결정전 제외, 부전 포함). 그날까지 포함하려면 day + 1 */
 	static Map<Integer, int[]> recordsBefore(List<TorikumiEntity> done, int day) {
 		Map<Integer, int[]> map = new HashMap<>();
 		for (TorikumiEntity t : done) {
