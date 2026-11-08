@@ -62,10 +62,14 @@ class TorikumiDayServiceTest {
 	private final RikishiEntity d = rikishi(4, "코토자쿠라", "琴櫻");
 
 	@Test
-	@DisplayName("기본 일차 - 발표된 예정일이 있으면 그날, 없으면 마지막으로 치른 날(결정전 제외)")
+	@DisplayName("기본 일차 - 결과가 있으면 마지막으로 치른 날(결정전 제외), 없으면(개막 전) 첫 예정일")
 	void defaultDay() {
+		// 바쇼 중: 다음 날 대진이 발표돼 있어도 결과가 있는 날이 먼저
 		assertThat(TorikumiDayService.defaultDay(List.of(
-				new DayStatus(1, Status.DONE), new DayStatus(2, Status.DONE), new DayStatus(3, Status.SCHEDULED)))).isEqualTo(3);
+				new DayStatus(1, Status.DONE), new DayStatus(2, Status.DONE), new DayStatus(3, Status.SCHEDULED)))).isEqualTo(2);
+		// 개막 전: 첫날·둘째 날 대진만 있으면 첫날
+		assertThat(TorikumiDayService.defaultDay(List.of(
+				new DayStatus(1, Status.SCHEDULED), new DayStatus(2, Status.SCHEDULED)))).isEqualTo(1);
 		assertThat(TorikumiDayService.defaultDay(List.of(
 				new DayStatus(14, Status.DONE), new DayStatus(15, Status.DONE), new DayStatus(16, Status.DONE)))).isEqualTo(15);
 		assertThat(TorikumiDayService.defaultDay(List.of())).isNull();

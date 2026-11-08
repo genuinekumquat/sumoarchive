@@ -52,7 +52,7 @@ public class TorikumiDayService {
 
 	/**
 	 * @param bashoId 없으면 반즈케가 있는 가장 최근 바쇼
-	 * @param day     없으면 기본 일차(발표된 다음 날 대진이 있으면 그날, 아니면 마지막으로 치른 날)
+	 * @param day     없으면 기본 일차(결과가 있으면 마지막으로 치른 날, 없으면 첫 예정일)
 	 */
 	@Transactional(readOnly = true)
 	public TorikumiDayDTO getDay(Integer bashoId, Division division, Integer day) {
@@ -118,7 +118,11 @@ public class TorikumiDayService {
 		return byDay.entrySet().stream().map(e -> new TorikumiDayDTO.DayStatus(e.getKey(), e.getValue())).toList();
 	}
 
-	/** 발표된 예정일이 있으면 그중 가장 이른 날, 없으면 마지막으로 치른 날 (결정전은 기본값으로 고르지 않음) */
+	/**
+	 * 결과가 있으면 마지막으로 치른 날, 아직 없으면(개막 전) 발표된 예정일 중 가장 이른 날.
+	 * 바쇼 중에는 결과를 보러 오는 사람이 많아서 결과를 먼저 보여 주고, 다음 날 대진은 › 버튼으로 넘겨 본다.
+	 * 결정전은 기본값으로 고르지 않는다.
+	 */
 	static Integer defaultDay(List<TorikumiDayDTO.DayStatus> days) {
 		Integer firstScheduled = null;
 		Integer lastDone = null;
@@ -130,11 +134,11 @@ public class TorikumiDayService {
 				lastDone = d.day();
 			}
 		}
-		if (firstScheduled != null) {
-			return firstScheduled;
-		}
 		if (lastDone != null) {
 			return lastDone;
+		}
+		if (firstScheduled != null) {
+			return firstScheduled;
 		}
 		return days.isEmpty() ? null : days.get(days.size() - 1).day();
 	}
