@@ -203,13 +203,8 @@ public class BashoAutoImportScheduler {
 		}
 	}
 
-	/** 시작일 - 2일 ≤ 오늘 ≤ 종료일 + 1일. 일정이 비어 있는 바쇼는 대상이 아니다. */
+	/** 바쇼 기간(시작일 - 2일 ~ 종료일 + 1일)이면 임포트 대상. 일정이 비어 있는 바쇼는 대상이 아니다. */
 	static boolean isDue(BashoEntity basho, LocalDate today) {
-		LocalDate start = basho.getStartDate();
-		LocalDate end = basho.getEndDate();
-		if (start == null || end == null) {
-			return false;
-		}
-		return !today.isBefore(start.minusDays(2)) && !today.isAfter(end.plusDays(1));
+		return basho.isInBashoPeriod(today);
 	}
 }

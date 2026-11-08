@@ -101,6 +101,15 @@ public class BanzukeService {
 	}
 
 	/**
+	 * 오늘이 어느 바쇼의 기간({@link BashoEntity#isInBashoPeriod})에 들어가는지. 메인 화면이 이때 대진 탭으로 열린다.
+	 * 날짜에 따라 답이 바뀌어서 캐시하지 않는다 (바쇼 행은 수십 개뿐).
+	 */
+	public boolean isBashoPeriod(LocalDate today) {
+		return bashoRepository.findAllByOrderByStartDateDesc().stream()
+				.anyMatch(b -> b.isInBashoPeriod(today));
+	}
+
+	/**
 	 * 메인 페이지 "일문" 탭 - 반즈케가 있는 최신 바쇼 기준 일문(一門)별 헤야, 그 안에 세키토리(마쿠우치+주료) 명단.
 	 * 현재 세키토리가 없는 헤야도 목록에는 남는다(전체 헤야 구조를 보여주는 게 목적). 단 그 바쇼 반즈케에
 	 * 소속 선수가 아예 없는 헤야(폐업, 개명 전 옛 이름)는 뺀다.

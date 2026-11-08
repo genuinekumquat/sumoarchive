@@ -724,14 +724,15 @@
 
     <!-- 반즈케 / 일문 탭 전환. 일문 탭은 최신 바쇼 기준으로 서버에서 통째로 렌더링해두고
          (하단 .ichimon-panel), JS는 단순히 두 패널의 hidden만 토글한다. -->
-    <div class="view-tabs">
-        <button type="button" class="view-tab active" id="tabBanzuke" th:text="#{main.tab.banzuke}">반즈케</button>
-        <button type="button" class="view-tab" id="tabTorikumi" th:text="#{main.tab.torikumi}">대진</button>
+    <!-- 처음 열 탭(defaultTab)은 서버가 정한다: 바쇼 기간이면 대진, 아니면 반즈케. 깜빡임 없이 처음부터 그 탭으로 그린다. -->
+    <div class="view-tabs" th:with="startTorikumi=${defaultTab == 'torikumi'}" th:data-default-tab="${defaultTab}">
+        <button type="button" class="view-tab" th:classappend="${startTorikumi} ? '' : 'active'" id="tabBanzuke" th:text="#{main.tab.banzuke}">반즈케</button>
+        <button type="button" class="view-tab" th:classappend="${startTorikumi} ? 'active' : ''" id="tabTorikumi" th:text="#{main.tab.torikumi}">대진</button>
         <button type="button" class="view-tab" id="tabIchimon" th:text="#{main.tab.ichimon}">일문/헤야</button>
         <button type="button" class="view-tab" id="tabKimarite" th:text="#{main.tab.kimarite}">키마리테</button>
     </div>
 
-    <div class="banzuke" id="banzukePanel">
+    <div class="banzuke" id="banzukePanel" th:hidden="${defaultTab == 'torikumi'}">
         <div class="banzuke-inner">
             <div class="banzuke-title">
                 <span class="jp">番付</span>
@@ -777,7 +778,7 @@
 
     <!-- ===== 대진(取組) 탭 - 날짜별 결과·예정 대진. 처음 탭을 열 때 /api/torikumi/day로 불러온다.
          주소로 바로 들어오기: /?tab=torikumi&day=6&division=Juryo&bashoId=… -->
-    <div class="banzuke torikumi-panel" id="torikumiPanel" hidden>
+    <div class="banzuke torikumi-panel" id="torikumiPanel" th:hidden="${defaultTab != 'torikumi'}">
         <div class="banzuke-inner">
             <div class="banzuke-title">
                 <span class="jp">取組</span>
@@ -1398,7 +1399,9 @@
         });
 
         // /?tab=torikumi 로 바로 들어온 경우. /?tab=ichimon 은 헤야 페이지의 「일문」 링크에서 온다.
-        var startTab = new URLSearchParams(location.search).get('tab');
+        // 주소에 tab이 없으면 서버가 정한 기본 탭(바쇼 기간이면 대진)을 연다.
+        var startTab = new URLSearchParams(location.search).get('tab')
+            || document.querySelector('.view-tabs').dataset.defaultTab;
         if (startTab === 'torikumi' || startTab === 'ichimon') {
             show(startTab);
         }

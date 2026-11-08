@@ -60,6 +60,18 @@ public class BashoEntity {
 		this.endDate = endDate;
 	}
 
+	/**
+	 * 바쇼 기간인지: 시작일 - 2일 ≤ 오늘 ≤ 종료일 + 1일. 일정이 비어 있으면 false.
+	 * 시작 이틀 전(금)에 첫날·둘째 날 대진이 발표되고, 센슈라쿠 다음 날까지 결과를 찾는 사람이 많아서 이 범위로 잡았다.
+	 * 자동 임포트 대상과 메인 화면 기본 탭(대진)이 같은 기준을 쓴다.
+	 */
+	public boolean isInBashoPeriod(LocalDate today) {
+		if (startDate == null || endDate == null) {
+			return false;
+		}
+		return !today.isBefore(startDate.minusDays(2)) && !today.isAfter(endDate.plusDays(1));
+	}
+
 	/** sumo-api 바쇼 임포트에서 기간 + 외부 식별자를 갱신 (연도·월은 매칭 키라 그대로). */
 	public void updateFromApi(String externalBashoId, LocalDate startDate, LocalDate endDate) {
 		this.externalBashoId = externalBashoId;
