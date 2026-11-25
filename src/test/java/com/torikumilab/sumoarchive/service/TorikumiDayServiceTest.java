@@ -36,6 +36,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 
 @ExtendWith(MockitoExtension.class)
@@ -93,9 +94,11 @@ class TorikumiDayServiceTest {
 	@DisplayName("하루치 - 결과와 아직 결과 없는 예정 경기를 경기 순서대로 섞고, 결과가 있는 짝은 예정에서 뺌")
 	void mergesDoneAndScheduled() {
 		given(bashoRepository.findLatestWithBanzuke()).willReturn(Optional.of(kyushu));
-		given(torikumiRepository.findByBashoAndDivisionFetch(10, Division.Makuuchi)).willReturn(List.of(
+		List<TorikumiEntity> done = List.of(
 				bout(1, 1, a, b, a, ResultType.NORMAL, "yorikiri", false, 101),
-				bout(2, 2, c, a, c, ResultType.NORMAL, "hatakikomi", false, 102)));
+				bout(2, 2, c, a, c, ResultType.NORMAL, "hatakikomi", false, 102));
+		given(torikumiRepository.findByBashoAndDivisionFetch(10, Division.Makuuchi)).willReturn(done);
+		given(torikumiRepository.findRegularByBashoAndRikishiIn(eq(10), anyCollection())).willReturn(done);
 		given(scheduledBoutRepository.findByBashoAndDivisionFetch(10, Division.Makuuchi)).willReturn(List.of(
 				scheduled(2, 1, b, d),
 				scheduled(2, 2, c, a))); // 결과가 이미 들어온 짝 - 중복으로 나오면 안 됨
@@ -123,6 +126,28 @@ class TorikumiDayServiceTest {
 		assertThat(second.east().wins() + "-" + second.east().losses()).isEqualTo("1-0");
 		assertThat(second.west().wins() + "-" + second.west().losses()).isEqualTo("1-1");
 		assertThat(second.kimariteKr()).isNotBlank();
+	}
+
+	@Test
+	@DisplayName("성적은 디비전을 가리지 않음 - 마쿠시타 선수가 주료 대진에 올라가도 마쿠시타 경기까지 합쳐서")
+	void recordsAcrossDivisions() {
+		given(bashoRepository.findLatestWithBanzuke()).willReturn(Optional.of(kyushu));
+		// 주료 대진: 15일째 c(주료) vs a(마쿠시타에서 올라옴), a 승
+		TorikumiEntity juryoBout = withDivision(bout(15, 1, c, a, a, ResultType.NORMAL, "yorikiri", false, 201), Division.Juryo);
+		given(torikumiRepository.findByBashoAndDivisionFetch(10, Division.Juryo)).willReturn(List.of(juryoBout));
+		given(scheduledBoutRepository.findByBashoAndDivisionFetch(10, Division.Juryo)).willReturn(List.of());
+		// a는 그 전에 마쿠시타에서 5승 1패
+		List<TorikumiEntity> aBouts = new java.util.ArrayList<>();
+		for (int day = 1; day <= 11; day += 2) {
+			aBouts.add(withDivision(bout(day, 1, a, b, day == 9 ? b : a, ResultType.NORMAL, "oshidashi", false, 300 + day), Division.Makushita));
+		}
+		aBouts.add(juryoBout);
+		given(torikumiRepository.findRegularByBashoAndRikishiIn(eq(10), anyCollection())).willReturn(aBouts);
+
+		TorikumiDayDTO.Bout bout = service.getDay(null, Division.Juryo, 15).bouts().get(0);
+
+		assertThat(bout.west().wins() + "-" + bout.west().losses()).isEqualTo("6-1");
+		assertThat(bout.east().wins() + "-" + bout.east().losses()).isEqualTo("0-1");
 	}
 
 	@Test
@@ -163,6 +188,11 @@ class TorikumiDayServiceTest {
 		return withId(TorikumiEntity.builder().bashoEntity(kyushu).day(day).matchNo(matchNo).division(Division.Makuuchi)
 				.eastRikishiEntity(east).westRikishiEntity(west).winnerRikishiEntity(winner)
 				.loserRikishiEntity(winner == east ? west : east).resultType(type).kimarite(kimarite).isExtraMatch(extra).build(), id);
+	}
+
+	private static TorikumiEntity withDivision(TorikumiEntity t, Division division) {
+		ReflectionTestUtils.setField(t, "division", division);
+		return t;
 	}
 
 	private ScheduledBoutEntity scheduled(int day, int matchNo, RikishiEntity east, RikishiEntity west) {

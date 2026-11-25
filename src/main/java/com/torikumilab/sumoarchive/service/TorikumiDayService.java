@@ -34,7 +34,8 @@ import java.util.TreeMap;
  * 메인 "대진" 탭. 한 바쇼·디비전의 하루치 경기를 결과(torikumi)와 예정 대진(scheduled_bout)에서 모아
  * 실제 경기 순서(match_no)대로 돌려준다. 선수 옆 성적은 그 경기 전날까지의 정규 경기 기준(반즈케표·중계 방식).
  *
- * <p>쿼리: 바쇼 1 + 그 디비전 경기 전부 1(최대 수백 건) + 예정 대진 1 + 그날 선수 반즈케 1.
+ * <p>쿼리: 바쇼 1 + 그 디비전 경기 전부 1(최대 수백 건) + 예정 대진 1 + 그날 선수들의 그 바쇼 전 디비전 경기 1
+ * + 그날 선수 반즈케 1.
  * 결과가 매일 바뀌어서 캐시는 쓰지 않는다.</p>
  */
 @Service
@@ -90,11 +91,14 @@ public class TorikumiDayService {
 		}
 		rows.sort(Comparator.comparing(Row::matchNo, Comparator.nullsLast(Comparator.naturalOrder())));
 
-		// 이름 옆 성적: 결과가 나온 경기는 그날까지(이긴 쪽이 1-0), 아직 안 치른 예정 경기는 그 경기 전까지
-		Map<Integer, int[]> recordsBefore = recordsBefore(done, shown);
-		Map<Integer, int[]> recordsThrough = recordsBefore(done, shown + 1);
 		Set<Integer> ids = new HashSet<>();
 		rows.forEach(r -> { ids.add(r.east().getId()); ids.add(r.west().getId()); });
+		// 이름 옆 성적: 결과가 나온 경기는 그날까지(이긴 쪽이 1-0), 아직 안 치른 예정 경기는 그 경기 전까지.
+		// 디비전을 가리지 않고 센다 - 마쿠시타 선수가 주료 상대로 올라가 치른 경기(그 반대도)도 성적에 들어간다.
+		List<TorikumiEntity> ownBouts = ids.isEmpty() ? List.of()
+				: torikumiRepository.findRegularByBashoAndRikishiIn(basho.getId(), ids);
+		Map<Integer, int[]> recordsBefore = recordsBefore(ownBouts, shown);
+		Map<Integer, int[]> recordsThrough = recordsBefore(ownBouts, shown + 1);
 		Map<Integer, BanzukeEntity> banzuke = ids.isEmpty() ? Map.of()
 				: NextBouts.byRikishiId(banzukeRepository.findByBashoEntityIdAndRikishiEntityIdIn(basho.getId(), List.copyOf(ids)));
 
