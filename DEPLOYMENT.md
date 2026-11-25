@@ -320,6 +320,15 @@ sudo nginx -t && sudo systemctl reload nginx
 나중에 새 서비스(반즈케 시뮬레이터 등)는 `banzuke.sumoarchive.com` 같은 서브도메인이나 `/banzuke` 경로로 붙인다 (2절 아래).
 
 ```nginx
+# 요청 제한 (IP당). sites-enabled 파일은 http 블록 안에 include되므로 zone을 여기서 정의해도 된다.
+# 2026-11-25 도입: 11/9 리키시·헤야 상세를 초당 40건 넘게 긁는 크롤러(구버전 Chrome 위장, IP 3개)에
+# DB 커넥션 풀(10개)이 45초간 바닥나 500이 났다. 사람은 페이지 이동이 초당 1~2번이라 걸릴 일이 없다.
+# Cloudflare는 DNS only라 $binary_remote_addr가 실제 클라이언트 IP다.
+limit_req_zone $binary_remote_addr zone=perip:10m rate=10r/s;    # 동적 요청 전체 (페이지 + /api)
+limit_req_zone $binary_remote_addr zone=detail:10m rate=2r/s;    # DB를 많이 읽는 리키시·헤야 상세
+limit_req_status 429;
+limit_req_log_level warn;
+
 # http → https (모든 주소)
 server {
     listen 80;
@@ -356,6 +365,8 @@ server {
     gzip_min_length 1000;
 
     location / {
+        # 페이지 하나에 /api 호출이 몇 개 따라붙으므로 burst를 넉넉히 (nodelay: 한도 안에서는 지연 없음)
+        limit_req zone=perip burst=30 nodelay;
         proxy_pass http://127.0.0.1:8080;
         proxy_http_version 1.1;
 
@@ -377,6 +388,7 @@ server {
     # (측정: 바쇼 1개 일괄 임포트 약 17초, 로스터 약 1.4초 / 연 단위 일괄 임포트는 바쇼 6개라 100초 안팎)
     # 60초를 넘기면 브라우저엔 504가 뜨지만 서버에서는 임포트가 계속 돌아 결과를 알 수 없게 된다.
     location /admin/ {
+        limit_req zone=perip burst=30 nodelay;
         proxy_pass http://127.0.0.1:8080;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
@@ -392,6 +404,22 @@ server {
         proxy_set_header Host $host;
         expires 7d;
         add_header Cache-Control "public, max-age=604800, immutable";
+    }
+
+    # 리키시·헤야 상세: 일반 한도에 더해 IP당 초당 2건(burst 10)까지.
+    # 정규식 location은 위에서부터 고르므로 정적 리소스(.css 등)는 위 블록이 먼저 가져간다.
+    location ~ ^/(rikishi|heya)/ {
+        limit_req zone=detail burst=10 nodelay;
+        limit_req zone=perip burst=30 nodelay;
+        proxy_pass http://127.0.0.1:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
     }
 }
 ```
